@@ -32,9 +32,6 @@ RUN npm ci --only=production
 # Copy built files from builder
 COPY --from=builder /workspace/backend/dist ./dist
 
-# Copy frontend build if it exists (for combined deployment)
-COPY --from=builder /app/frontend-dist ./frontend-dist 2>/dev/null || true
-
 # Expose port
 EXPOSE 8080
 
