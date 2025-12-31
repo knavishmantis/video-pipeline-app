@@ -1,16 +1,23 @@
 # Build stage
 FROM node:18-alpine AS builder
 
-WORKDIR /app
+# Create the project root structure
+WORKDIR /workspace
 
-# Copy package files
-COPY package*.json ./
+# Copy shared types first (needed for imports)
+COPY shared ./shared
+
+# Copy backend package files
+COPY backend/package*.json ./backend/
+WORKDIR /workspace/backend
 RUN npm ci
 
-# Copy source
-COPY . .
+# Copy backend source
+WORKDIR /workspace
+COPY backend/ ./backend/
 
-# Build TypeScript
+# Build TypeScript (from backend directory to match tsconfig)
+WORKDIR /workspace/backend
 RUN npm run build
 
 # Production stage
@@ -19,11 +26,11 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci --only=production
 
 # Copy built files from builder
-COPY --from=builder /app/dist ./dist
+COPY --from=builder /workspace/backend/dist ./dist
 
 # Copy frontend build if it exists (for combined deployment)
 COPY --from=builder /app/frontend-dist ./frontend-dist 2>/dev/null || true

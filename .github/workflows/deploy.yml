@@ -45,10 +45,12 @@ jobs:
         run: gcloud auth configure-docker
 
       - name: Build and push Docker image
-        working-directory: ./backend
         run: |
           docker build -t gcr.io/$GCP_PROJECT_ID/$SERVICE_BACKEND:$GITHUB_SHA \
-                       -t gcr.io/$GCP_PROJECT_ID/$SERVICE_BACKEND:latest .
+                       -t gcr.io/$GCP_PROJECT_ID/$SERVICE_BACKEND:latest \
+                       -f backend/Dockerfile \
+                       --build-arg BUILDKIT_INLINE_CACHE=1 \
+                       .
           docker push gcr.io/$GCP_PROJECT_ID/$SERVICE_BACKEND:$GITHUB_SHA
           docker push gcr.io/$GCP_PROJECT_ID/$SERVICE_BACKEND:latest
 
