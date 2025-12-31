@@ -126,13 +126,14 @@ jobs:
           EXPOSE 80
           EOF
           
-          docker build -t gcr.io/$GCP_PROJECT_ID/$SERVICE_FRONTEND:$GITHUB_SHA \
-                       -t gcr.io/$GCP_PROJECT_ID/$SERVICE_FRONTEND:latest .
-          docker push gcr.io/$GCP_PROJECT_ID/$SERVICE_FRONTEND:$GITHUB_SHA
-          docker push gcr.io/$GCP_PROJECT_ID/$SERVICE_FRONTEND:latest
+          ARTIFACT_REGISTRY=${{ env.GCP_REGION }}-docker.pkg.dev/$GCP_PROJECT_ID/docker-repo
+          docker build -t $ARTIFACT_REGISTRY/$SERVICE_FRONTEND:$GITHUB_SHA \
+                       -t $ARTIFACT_REGISTRY/$SERVICE_FRONTEND:latest .
+          docker push $ARTIFACT_REGISTRY/$SERVICE_FRONTEND:$GITHUB_SHA
+          docker push $ARTIFACT_REGISTRY/$SERVICE_FRONTEND:latest
           
           gcloud run deploy $SERVICE_FRONTEND \
-            --image gcr.io/$GCP_PROJECT_ID/$SERVICE_FRONTEND:$GITHUB_SHA \
+            --image $ARTIFACT_REGISTRY/$SERVICE_FRONTEND:$GITHUB_SHA \
             --platform managed \
             --region $GCP_REGION \
             --allow-unauthenticated \
