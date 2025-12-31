@@ -60,7 +60,7 @@ Value: ghs.googlehosted.com
 
 ```bash
 # Check domain mapping status
-gcloud run domain-mappings list --platform managed --region $REGION
+gcloud beta run domain-mappings list --region $REGION
 
 # Test (after DNS propagates)
 curl https://api.$DOMAIN/health
