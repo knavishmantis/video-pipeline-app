@@ -3,13 +3,24 @@ import cors from 'cors';
 import path from 'path';
 import { setupRoutes } from './routes';
 import { initDatabase } from './db';
-import { config } from './config/env';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 
+// Load config with error handling
+let config: any;
+let PORT: number;
+try {
+  const configModule = require('./config/env');
+  config = configModule.config;
+  PORT = config.port;
+} catch (error: any) {
+  console.error('Failed to load configuration:', error.message);
+  console.error('Required environment variables: DATABASE_URL, JWT_SECRET, FRONTEND_URL');
+  process.exit(1);
+}
+
 const app = express();
-const PORT = config.port;
 
 // Middleware
 app.use(cors({
@@ -69,9 +80,33 @@ if (config.nodeEnv === 'production') {
   });
 }
 
-app.listen(PORT, '0.0.0.0', () => {
-  logger.info(`Server running on port ${PORT}`, { 
-    environment: config.nodeEnv,
-    port: PORT 
+// Start server with error handling
+try {
+  app.listen(PORT, '0.0.0.0', () => {
+    logger.info(`Server running on port ${PORT}`, { 
+      environment: config.nodeEnv,
+      port: PORT 
+    });
+    console.log(`Server started successfully on port ${PORT}`);
+  }).on('error', (error: Error) => {
+    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', { error });
+    process.exit(1);
   });
+} catch (error: any) {
+  console.error('Failed to start server:', error);
+  logger.error('Failed to start server', { error });
+  process.exit(1);
+}
+
+// Handle uncaught errors gracefully
+process.on('uncaughtException', (error: Error) => {
+  console.error('Uncaught exception:', error);
+  logger.error('Uncaught exception', { error });
+  // Don't exit immediately - let Cloud Run handle it
+});
+
+process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  console.error('Unhandled rejection:', reason);
+  logger.error('Unhandled rejection', { reason });
 });

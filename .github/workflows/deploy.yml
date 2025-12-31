@@ -63,7 +63,7 @@ jobs:
             --platform managed \
             --region $GCP_REGION \
             --allow-unauthenticated \
-            --set-env-vars NODE_ENV=production,DATABASE_URL=${{ secrets.DATABASE_URL }},JWT_SECRET=${{ secrets.JWT_SECRET }},GCP_KEY_FILE=${{ secrets.GCP_KEY_FILE }},FRONTEND_URL=${{ secrets.FRONTEND_URL }} \
+            --set-env-vars NODE_ENV=production,DATABASE_URL=${{ secrets.DATABASE_URL }},JWT_SECRET=${{ secrets.JWT_SECRET }},FRONTEND_URL=${{ secrets.FRONTEND_URL }},GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }},GCP_BUCKET_NAME=${{ secrets.GCP_BUCKET_NAME }},GCP_KEY_FILE=${{ secrets.GCP_KEY_FILE }} \
             --memory 512Mi \
             --cpu 1 \
             --min-instances 0 \
