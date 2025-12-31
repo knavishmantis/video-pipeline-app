@@ -4,6 +4,7 @@ export type UserRole = 'admin' | 'script_writer' | 'clipper' | 'editor';
 export type ShortStatus = 'idea' | 'script' | 'clipping' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'completed' | 'ready_to_upload' | 'uploaded';
 export type FileType = 'script' | 'clip' | 'audio' | 'final_video' | 'clips_zip';
 export type PaymentStatus = 'pending' | 'paid';
+export type PaymentRole = 'script_writer' | 'clipper' | 'editor';
 export type AssignmentRole = 'script_writer' | 'clipper' | 'editor';
 
 export interface User {

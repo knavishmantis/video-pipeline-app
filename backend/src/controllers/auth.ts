@@ -45,7 +45,7 @@ export const authController = {
       const user: User = result.rows[0];
       const token = jwt.sign(
         { userId: user.id, role: user.role },
-        config.jwtSecret,
+        config.jwtSecret as string,
         { expiresIn: config.jwtExpiresIn }
       );
 
@@ -155,7 +155,7 @@ export const authController = {
       const primaryRole = user.roles?.includes('admin') ? 'admin' : (user.roles?.[0] || 'script_writer');
       const token = jwt.sign(
         { userId: user.id, roles: user.roles, role: primaryRole },
-        config.jwtSecret,
+        config.jwtSecret as string,
         { expiresIn: config.jwtExpiresIn }
       );
 

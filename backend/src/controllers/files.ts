@@ -175,7 +175,7 @@ export const filesController = {
       
       // Get signed URLs for each file
       const filesWithUrls = await Promise.all(
-        result.rows.map(async (file) => {
+        result.rows.map(async (file: any) => {
           try {
             const url = await getSignedUrl(file.gcp_bucket_path);
             return { ...file, download_url: url };
