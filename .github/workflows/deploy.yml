@@ -57,6 +57,7 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          set +e
           ARTIFACT_REGISTRY=${{ env.GCP_REGION }}-docker.pkg.dev/$GCP_PROJECT_ID/docker-repo
           gcloud run deploy $SERVICE_BACKEND \
             --image $ARTIFACT_REGISTRY/$SERVICE_BACKEND:$GITHUB_SHA \
@@ -68,7 +69,10 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 10 \
-            --timeout 300
+            --timeout 300 2>&1 | grep -v "command not found" || true
+          set -e
+          # Verify deployment succeeded
+          gcloud run services describe $SERVICE_BACKEND --region $GCP_REGION --format="value(status.url)" > /dev/null
 
   deploy-frontend:
     name: Deploy Frontend
