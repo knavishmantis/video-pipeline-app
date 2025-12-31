@@ -217,6 +217,12 @@ resource "google_project_iam_member" "github_actions_iam_user" {
   member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
 
+resource "google_project_iam_member" "github_actions_artifact_registry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
+}
+
 # Service Account Key for GitHub Actions
 resource "google_service_account_key" "github_actions_key" {
   service_account_id = google_service_account.github_actions.id
