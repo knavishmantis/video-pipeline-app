@@ -1,0 +1,10 @@
+# Example backend configuration
+# Copy this to backend.tf and replace the bucket name
+
+terraform {
+  backend "gcs" {
+    bucket = "your-project-terraform-state"
+    prefix = "terraform/state"
+  }
+}
+

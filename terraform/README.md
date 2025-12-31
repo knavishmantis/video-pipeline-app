@@ -18,13 +18,73 @@ This Terraform configuration provisions the GCP resources needed for the video p
    gcloud auth application-default login
    ```
 
+## Remote State Setup
+
+This configuration uses **remote state** stored in a GCS bucket. This allows:
+- State sharing across team members
+- State locking to prevent concurrent modifications
+- State versioning and history
+- Better security than local state files
+
+### Initial Setup (One-time)
+
+1. **Create the state bucket** (run once):
+   ```bash
+   cd terraform
+   chmod +x bootstrap-state.sh
+   ./bootstrap-state.sh your-gcp-project-id your-project-terraform-state
+   ```
+   
+   Or manually:
+   ```bash
+   gsutil mb -p your-gcp-project-id -c STANDARD -l us-central1 gs://your-project-terraform-state
+   gsutil versioning set on gs://your-project-terraform-state
+   ```
+
+2. **Configure the backend** in `backend.tf`:
+   ```hcl
+   terraform {
+     backend "gcs" {
+       bucket = "your-project-terraform-state"
+       prefix = "terraform/state"
+     }
+   }
+   ```
+
+3. **Initialize Terraform** with remote state:
+   ```bash
+   terraform init
+   ```
+   
+   If you have existing local state, Terraform will ask if you want to migrate it:
+   ```bash
+   terraform init -migrate-state
+   ```
+
+### State Organization
+
+The remote state uses a prefix pattern to organize state files:
+- Dev state: `terraform/state/default.tfstate` (or use workspaces)
+- Prod state: Use Terraform workspaces (see below)
+
+### Using Workspaces with Remote State
+
+Workspaces allow separate state files for dev/prod:
+
 ## Setup
 
-### 1. Initialize Terraform
+### 1. Initialize Terraform (with Remote State)
+
+After configuring `backend.tf`:
 
 ```bash
 cd terraform
 terraform init
+```
+
+If migrating from local state:
+```bash
+terraform init -migrate-state
 ```
 
 ### 2. Create Dev Environment
@@ -40,6 +100,7 @@ This will:
 - Create a storage bucket: `your-project-id-video-pipeline-dev`
 - Create a service account: `video-pipeline-dev@your-project-id.iam.gserviceaccount.com`
 - Generate a service account key file
+- Store state in: `gs://your-state-bucket/terraform/state/dev/default.tfstate`
 
 ### 3. Create Prod Environment
 
@@ -49,6 +110,8 @@ terraform workspace select prod
 
 terraform apply -var="project_id=your-gcp-project-id" -var="environment=prod"
 ```
+
+State will be stored in: `gs://your-state-bucket/terraform/state/prod/default.tfstate`
 
 ### 4. Save Service Account Keys
 
@@ -93,7 +156,7 @@ terraform destroy -var="project_id=your-gcp-project-id" -var="environment=dev"
 
 ## Workspace Management
 
-Terraform workspaces allow you to manage dev and prod separately:
+Terraform workspaces allow you to manage dev and prod separately with separate state files:
 
 ```bash
 # List workspaces
@@ -105,6 +168,39 @@ terraform workspace select prod
 
 # Show current workspace
 terraform workspace show
+
+# Create new workspace
+terraform workspace new <name>
+```
+
+Each workspace maintains its own state file in the remote GCS bucket:
+- Dev: `terraform/state/dev/default.tfstate`
+- Prod: `terraform/state/prod/default.tfstate`
+
+## State Management
+
+### Viewing State
+
+State is stored remotely in GCS. To view:
+```bash
+terraform state list
+terraform state show <resource>
+```
+
+### State Locking
+
+Terraform automatically locks state during operations when using GCS backend. If a lock is stuck:
+```bash
+# View lock info
+terraform force-unlock <lock-id>
+```
+
+### Backing Up State
+
+State is automatically versioned in GCS (if versioning is enabled). You can also:
+```bash
+# Pull state locally for backup
+terraform state pull > state-backup.json
 ```
 
 ## Outputs
