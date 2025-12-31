@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -117,7 +117,7 @@ export const filesApi = {
     const response = await api.get(`/files/short/${shortId}`);
     return response.data;
   },
-  upload: async (shortId: number, fileType: string, file: File): Promise<File> => {
+  upload: async (shortId: number, fileType: string, file: globalThis.File): Promise<FileType> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('short_id', shortId.toString());

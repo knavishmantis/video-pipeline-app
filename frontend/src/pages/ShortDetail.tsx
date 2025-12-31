@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link, Navigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAlert } from '../hooks/useAlert';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
 import { shortsApi, assignmentsApi, filesApi, usersApi } from '../services/api';
-import { Short, Assignment, File, FileType, User } from '../../../shared/types';
+import { Short, File, FileType, User } from '../../../shared/types';
 import { triggerConfetti } from '../utils/confetti';
 
 // Helper to get profile picture (emoji, image URL, or fallback)
@@ -143,7 +143,7 @@ export default function ShortDetail() {
     }
   };
 
-  const handleFileUpload = async (fileType: FileType, file: File) => {
+  const handleFileUpload = async (fileType: FileType, file: globalThis.File) => {
     if (!id) return;
     setUploading(fileType);
     try {
@@ -163,7 +163,7 @@ export default function ShortDetail() {
     }
   };
 
-  const handleDownload = async (file: File) => {
+  const handleDownload = async (file: FileType) => {
     if (!file.download_url) {
       showAlert('Download URL not available', { type: 'error' });
       return;
@@ -240,11 +240,11 @@ export default function ShortDetail() {
     );
   }
 
-  const clips = short.files?.filter(f => f.file_type === 'clip') || [];
+  // const clips = short.files?.filter(f => f.file_type === 'clip') || [];
   const clipsZip = short.files?.filter(f => f.file_type === 'clips_zip') || [];
   const audioFiles = short.files?.filter(f => f.file_type === 'audio') || [];
   const finalVideos = short.files?.filter(f => f.file_type === 'final_video') || [];
-  const scriptPdf = short.files?.find(f => f.file_type === 'script' || f.file_type === 'script_pdf');
+  const scriptPdf = short.files?.find(f => f.file_type === 'script');
   
   const clipperAssignment = short.assignments?.find(a => a.role === 'clipper');
   const editorAssignment = short.assignments?.find(a => a.role === 'editor');

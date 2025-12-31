@@ -112,7 +112,7 @@ export function BackgroundBeamsWithCollision({
 function Beam({ beamOptions }: { beamOptions: BeamOptions }) {
   const {
     initialX = 0,
-    translateX = 0,
+    translateX: _translateX = 0,
     initialY = "-200px",
     translateY = "calc(100vh + 200px)",
     rotate = 0,

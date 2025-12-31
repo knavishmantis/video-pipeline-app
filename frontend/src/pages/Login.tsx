@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-const BottomGradient = () => {
+const _BottomGradient = () => {
   return (
     <>
       <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
@@ -75,7 +75,7 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSignIn = () => {
+  const _handleGoogleSignIn = () => {
     if (!googleReady || !window.google) {
       setError('Google Sign-In not ready. Please refresh the page.');
       return;
@@ -88,7 +88,7 @@ export default function Login() {
         window.google.accounts.oauth2.initTokenClient({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           scope: 'email profile',
-          callback: (response: any) => {
+          callback: (_response: any) => {
             // This won't work for OAuth2, we need to use the ID token flow
             // So we'll render the button instead
             const buttonContainer = document.getElementById('google-signin-button');

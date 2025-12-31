@@ -33,7 +33,7 @@ const LabelInputContainer = ({
 
 export default function ProfileCompletion() {
   const { user, logout } = useAuth();
-  const [profile, setProfile] = useState<User | null>(null);
+  const [_profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

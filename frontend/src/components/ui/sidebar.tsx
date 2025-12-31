@@ -153,7 +153,7 @@ interface SidebarLinkProps {
 }
 
 export const SidebarLink = ({ link, className, onClick }: SidebarLinkProps) => {
-  const { open, setOpen, isExpanded } = useSidebar();
+  const { setOpen, isExpanded } = useSidebar();
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
     

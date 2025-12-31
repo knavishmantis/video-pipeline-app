@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useAlert } from '../hooks/useAlert';
@@ -403,7 +403,7 @@ function SortableCard({
       )}
       {/* Upload Status Icons - Show checkmark when uploaded, clock when in progress */}
       {(() => {
-        const hasScript = short.files?.some(f => f.file_type === 'script' || f.file_type === 'script_pdf');
+        const hasScript = short.files?.some(f => f.file_type === 'script');
         const hasAudio = short.files?.some(f => f.file_type === 'audio');
         const hasClipsZip = short.files?.some(f => f.file_type === 'clips_zip');
         const hasFinalVideo = short.files?.some(f => f.file_type === 'final_video');
@@ -419,7 +419,7 @@ function SortableCard({
         
         let clipsUploaded = false;
         if (column.id === 'clips') {
-          clipsUploaded = hasClipsZip;
+          clipsUploaded = hasClipsZip ?? false;
         } else if (column.id === 'clip_changes') {
           // Only show checkmark if clips_zip was uploaded after entering clip_changes
           if (hasClipsZip && short.entered_clip_changes_at) {
@@ -434,7 +434,7 @@ function SortableCard({
         
         let editingUploaded = false;
         if (column.id === 'editing') {
-          editingUploaded = hasFinalVideo;
+          editingUploaded = hasFinalVideo ?? false;
         } else if (column.id === 'editing_changes') {
           // Only show checkmark if final_video was uploaded after entering editing_changes
           if (hasFinalVideo && short.entered_editing_changes_at) {
@@ -798,9 +798,9 @@ export default function Dashboard() {
   const [contentColumn, setContentColumn] = useState<ColumnType | null>(null);
   const [contentForm, setContentForm] = useState({
     script_content: '',
-    file: null as File | null,
-    scriptFile: null as File | null,
-    audioFile: null as File | null,
+    file: null as globalThis.File | null,
+    scriptFile: null as globalThis.File | null,
+    audioFile: null as globalThis.File | null,
   });
   const [uploading, setUploading] = useState(false);
 
@@ -1714,7 +1714,7 @@ export default function Dashboard() {
               color: '#1E293B',
             }}>
               {contentColumn === 'script' && (() => {
-                const hasScript = contentShort.files?.some(f => f.file_type === 'script' || f.file_type === 'script_pdf');
+                const hasScript = contentShort.files?.some(f => f.file_type === 'script');
                 const hasAudio = contentShort.files?.some(f => f.file_type === 'audio');
                 return (hasScript || hasAudio) ? 'Replace Script & Audio' : 'Upload Script & Audio';
               })()}
@@ -1743,8 +1743,8 @@ export default function Dashboard() {
                       <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
                         File Status:
                       </div>
-                      <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'script' || f.file_type === 'script_pdf') ? '#0C4A6E' : '#64748B', marginBottom: '4px' }}>
-                        {contentShort.files.some(f => f.file_type === 'script' || f.file_type === 'script_pdf') ? '✓ Script PDF uploaded' : '✗ Script PDF not uploaded'}
+                      <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'script') ? '#0C4A6E' : '#64748B', marginBottom: '4px' }}>
+                        {contentShort.files.some(f => f.file_type === 'script') ? '✓ Script PDF uploaded' : '✗ Script PDF not uploaded'}
                       </div>
                       <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'audio') ? '#0C4A6E' : '#64748B' }}>
                         {contentShort.files.some(f => f.file_type === 'audio') ? '✓ Audio MP3 uploaded' : '✗ Audio MP3 not uploaded'}
@@ -1845,7 +1845,7 @@ export default function Dashboard() {
                       : contentShort.files?.find(f => f.file_type === 'final_video');
                     
                     // Get dependency files
-                    const scriptPdf = contentShort.files?.find(f => f.file_type === 'script' || f.file_type === 'script_pdf');
+                    const scriptPdf = contentShort.files?.find(f => f.file_type === 'script');
                     const audioFile = contentShort.files?.find(f => f.file_type === 'audio');
                     const clipsZip = contentShort.files?.find(f => f.file_type === 'clips_zip');
                     
@@ -2360,7 +2360,7 @@ export default function Dashboard() {
                     ? 'Uploading...' 
                     : (() => {
                         if (contentColumn === 'script') {
-                          const hasScript = contentShort.files?.some(f => f.file_type === 'script' || f.file_type === 'script_pdf');
+                          const hasScript = contentShort.files?.some(f => f.file_type === 'script');
                           const hasAudio = contentShort.files?.some(f => f.file_type === 'audio');
                           return (hasScript || hasAudio) ? 'Replace' : 'Upload';
                         } else if (contentColumn === 'clips' || contentColumn === 'clip_changes') {
