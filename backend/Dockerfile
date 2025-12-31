@@ -32,14 +32,6 @@ RUN npm ci --only=production
 # Copy built files from builder
 COPY --from=builder /workspace/backend/dist ./dist
 
-# Verify the structure
-RUN echo "=== Dist folder structure ===" && \
-    ls -la dist/ && \
-    echo "=== Looking for index.js ===" && \
-    find dist -name "index.js" -type f && \
-    echo "=== Contents of dist/src (if exists) ===" && \
-    ls -la dist/src/ 2>/dev/null || echo "dist/src does not exist"
-
 # Expose port
 EXPOSE 8080
 
@@ -47,6 +39,6 @@ EXPOSE 8080
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start server - find index.js dynamically
-CMD ["sh", "-c", "INDEX_FILE=$(find dist -name 'index.js' -type f | head -1); if [ -z \"$INDEX_FILE\" ]; then echo 'ERROR: index.js not found in dist/'; find dist -type f; exit 1; else echo \"Starting server with: $INDEX_FILE\"; node \"$INDEX_FILE\"; fi"]
+# Start server - use the main index.js (not db/index.js or routes/index.js)
+CMD ["sh", "-c", "INDEX_FILE=$(find dist -path '*/src/index.js' -not -path '*/db/*' -not -path '*/routes/*' | head -1); if [ -z \"$INDEX_FILE\" ]; then echo 'ERROR: index.js not found'; find dist -name 'index.js' -type f; exit 1; else echo \"Starting server with: $INDEX_FILE\"; node \"$INDEX_FILE\"; fi"]
 
