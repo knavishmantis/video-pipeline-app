@@ -32,6 +32,9 @@ RUN npm ci --only=production
 # Copy built files from builder
 COPY --from=builder /workspace/backend/dist ./dist
 
+# Debug: List what was copied (remove in production if needed)
+RUN ls -la dist/ && ls -la dist/src/ 2>/dev/null || echo "dist/src not found, checking dist structure:" && find dist -name "index.js" -type f
+
 # Expose port
 EXPOSE 8080
 
@@ -39,6 +42,6 @@ EXPOSE 8080
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start server (TypeScript outputs to dist/src/index.js)
-CMD ["node", "dist/src/index.js"]
+# Start server - try different possible paths
+CMD ["sh", "-c", "if [ -f dist/src/index.js ]; then node dist/src/index.js; elif [ -f dist/index.js ]; then node dist/index.js; else echo 'Error: index.js not found'; find dist -name 'index.js' -type f; exit 1; fi"]
 
