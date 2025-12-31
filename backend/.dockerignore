@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.*
+*.log
+gcp-key*.json
+.vscode
+.idea
+*.swp
+*.swo
+

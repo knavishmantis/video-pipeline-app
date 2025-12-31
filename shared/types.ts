@@ -1,0 +1,120 @@
+// Shared types between frontend and backend
+
+export type UserRole = 'admin' | 'script_writer' | 'clipper' | 'editor';
+export type ShortStatus = 'idea' | 'script' | 'clipping' | 'editing' | 'completed' | 'ready_to_upload';
+export type FileType = 'script' | 'clip' | 'audio' | 'final_video';
+export type PaymentStatus = 'pending' | 'paid';
+export type AssignmentRole = 'script_writer' | 'clipper' | 'editor';
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  roles: UserRole[]; // Multiple roles support
+  discord_username?: string;
+  paypal_email?: string;
+  profile_picture?: string; // Emoji string or image URL
+  timezone?: string;
+  created_at: string;
+  updated_at: string;
+  // Legacy field for backward compatibility (will be removed)
+  role?: UserRole;
+}
+
+export interface Short {
+  id: number;
+  title: string;
+  description?: string;
+  idea?: string;
+  script_content?: string;
+  script_writer_id?: number;
+  status: ShortStatus;
+  created_at: string;
+  updated_at: string;
+  // Populated fields
+  script_writer?: User;
+  assignments?: Assignment[];
+  files?: File[];
+}
+
+export interface Assignment {
+  id: number;
+  short_id: number;
+  user_id: number;
+  role: AssignmentRole;
+  due_date?: string;
+  default_time_range: number; // hours
+  rate?: number; // Payment rate for this assignment
+  rate_description?: string; // e.g., "$25 base + $10 if 200k views"
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Populated fields
+  user?: User;
+  short?: Short;
+}
+
+export interface File {
+  id: number;
+  short_id: number;
+  file_type: FileType;
+  gcp_bucket_path: string;
+  file_name: string;
+  file_size?: number;
+  mime_type?: string;
+  uploaded_by?: number;
+  uploaded_at: string;
+  // Populated fields
+  uploader?: User;
+}
+
+export interface Payment {
+  id: number;
+  user_id: number;
+  short_id?: number;
+  assignment_id?: number;
+  amount: number;
+  status: PaymentStatus;
+  role?: 'clipper' | 'editor'; // Which role this payment is for
+  rate_description?: string; // e.g., "$25 base + $10 if 200k views"
+  admin_notes?: string;
+  completed_at?: string; // When the work was completed
+  paid_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Populated fields
+  user?: User;
+  short?: Short;
+  assignment?: Assignment;
+}
+
+export interface CreateShortInput {
+  title: string;
+  description?: string;
+  idea?: string;
+}
+
+export interface UpdateShortInput {
+  title?: string;
+  description?: string;
+  idea?: string;
+  script_content?: string;
+  status?: ShortStatus;
+  script_writer_id?: number | null;
+}
+
+export interface CreateAssignmentInput {
+  short_id: number;
+  user_id: number;
+  role: AssignmentRole;
+  due_date?: string;
+  default_time_range?: number;
+  rate?: number;
+  rate_description?: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
