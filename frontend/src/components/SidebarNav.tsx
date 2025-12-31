@@ -1,8 +1,7 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera } from "@tabler/icons-react";
 import { motion } from "framer-motion";
-import { cn } from "../lib/utils";
 import { useAuth } from "../contexts/AuthContext";
 
 export function SidebarNav() {
@@ -14,6 +13,7 @@ export function SidebarNav() {
   }
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
+  const isClipper = user?.roles?.includes('clipper') || user?.role === 'clipper';
 
   // Get profile picture - emoji, image URL, or fallback
   const getProfilePicture = () => {
@@ -34,22 +34,38 @@ export function SidebarNav() {
       label: "Dashboard",
       href: "/",
       icon: (
-        <IconDashboard className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+        <IconDashboard className="h-5 w-5 shrink-0 text-neutral-700" />
       ),
     },
+    {
+      label: "Payments",
+      href: "/payments",
+      icon: (
+        <IconCurrencyDollar className="h-5 w-5 shrink-0 text-neutral-700" />
+      ),
+    },
+    {
+      label: "Guide",
+      href: "/guide",
+      icon: (
+        <IconHelp className="h-5 w-5 shrink-0 text-neutral-700" />
+      ),
+    },
+    ...((isClipper || isAdmin) ? [
+      {
+        label: "Flashback Reference",
+        href: "/flashback-reference",
+        icon: (
+          <IconCamera className="h-5 w-5 shrink-0 text-neutral-700" />
+        ),
+      },
+    ] : []),
     ...(isAdmin ? [
       {
         label: "Users",
         href: "/users",
         icon: (
-          <IconUsers className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-        ),
-      },
-      {
-        label: "Payments",
-        href: "/payments",
-        icon: (
-          <IconCurrencyDollar className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+          <IconUsers className="h-5 w-5 shrink-0 text-neutral-700" />
         ),
       },
     ] : []),
@@ -73,7 +89,7 @@ export function SidebarNav() {
               href: "#",
               icon: (
                 user?.profile_picture && !user.profile_picture.startsWith('http') ? (
-                  <div className="h-5 w-5 shrink-0 rounded-full flex items-center justify-center text-base bg-gray-100 dark:bg-neutral-800">
+                  <div className="h-5 w-5 shrink-0 rounded-full flex items-center justify-center text-base bg-gray-100">
                     {user.profile_picture}
                   </div>
                 ) : (
@@ -97,10 +113,10 @@ export function SidebarNav() {
               label: "Logout",
               href: "#",
               icon: (
-                <IconLogout className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
+                <IconLogout className="h-5 w-5 shrink-0 text-neutral-700" />
               ),
             }}
-            className="!text-red-600 hover:!bg-red-50 hover:!text-red-700 dark:!text-red-400 dark:hover:!bg-red-900/20"
+            className="!text-red-600 hover:!bg-red-50 hover:!text-red-700"
             onClick={(e) => {
               e.preventDefault();
               logout();
@@ -131,7 +147,7 @@ const SidebarLogo = () => {
           width: isExpanded ? 'auto' : 0,
         }}
         transition={{ duration: 0.2 }}
-        className="text-base font-medium whitespace-pre text-neutral-900 dark:text-white overflow-hidden"
+        className="text-base font-medium whitespace-pre text-neutral-900 overflow-hidden"
       >
         Knavish Video Pipeline
       </motion.span>
@@ -145,11 +161,11 @@ export const Logo = () => {
       href="/"
       className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
     >
-      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black" />
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="font-medium whitespace-pre text-black dark:text-white"
+        className="font-medium whitespace-pre text-black"
       >
         Knavish Video Pipeline
       </motion.span>
@@ -163,7 +179,7 @@ export const LogoIcon = () => {
       href="/"
       className="relative z-20 flex items-center justify-center py-1 text-sm font-normal text-black"
     >
-      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black" />
     </a>
   );
 };

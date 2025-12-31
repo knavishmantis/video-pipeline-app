@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useConfirm } from '../hooks/useConfirm';
+import { useToast } from '../hooks/useToast';
 import { usersApi } from '../services/api';
 import { User, UserRole } from '../../../shared/types';
 import { Label } from '../components/ui/label';
@@ -17,6 +20,8 @@ const BottomGradient = () => {
 
 export default function UserManagement() {
   const { user } = useAuth();
+  const { confirm, ConfirmComponent } = useConfirm();
+  const { showToast, ToastComponent } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterRole, setFilterRole] = useState<string>('all');
@@ -40,9 +45,16 @@ export default function UserManagement() {
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
+  // Redirect non-admins immediately
+  if (user && !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
   useEffect(() => {
-    loadUsers();
-  }, [filterRole]);
+    if (isAdmin) {
+      loadUsers();
+    }
+  }, [filterRole, isAdmin]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -130,16 +142,22 @@ export default function UserManagement() {
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: 'Delete User',
+      message: 'Are you sure you want to delete this user? This action cannot be undone.',
+      variant: 'danger',
+      confirmText: 'Delete',
+    });
+    if (!confirmed) return;
 
     setDeletingUserId(userId);
     try {
       await usersApi.delete(userId);
       await loadUsers();
+      showToast('User deleted successfully', 'success');
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to delete user');
+      showToast(err.response?.data?.error || err.message || 'Failed to delete user', 'error');
     } finally {
       setDeletingUserId(null);
     }
@@ -487,6 +505,8 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+      <ConfirmComponent />
+      <ToastComponent />
     </div>
   );
 }

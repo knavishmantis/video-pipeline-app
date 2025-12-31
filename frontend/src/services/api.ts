@@ -76,6 +76,14 @@ export const shortsApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/shorts/${id}`);
   },
+  markClipsComplete: async (id: number): Promise<Short> => {
+    const response = await api.post(`/shorts/${id}/mark-clips-complete`);
+    return response.data;
+  },
+  markEditingComplete: async (id: number): Promise<Short> => {
+    const response = await api.post(`/shorts/${id}/mark-editing-complete`);
+    return response.data;
+  },
 };
 
 export const assignmentsApi = {
@@ -153,16 +161,16 @@ export const usersApi = {
 };
 
 export const paymentsApi = {
-  getAll: async (params?: { user_id?: number }): Promise<Payment[]> => {
+  getAll: async (params?: { user_id?: number; month?: number; year?: number }): Promise<Payment[]> => {
     const response = await api.get('/payments', { params });
     return response.data;
   },
-  getPending: async (params?: { user_id?: number }): Promise<Payment[]> => {
+  getPending: async (params?: { user_id?: number; month?: number; year?: number }): Promise<Payment[]> => {
     const response = await api.get('/payments/pending', { params });
     return response.data;
   },
-  getMyPayments: async (): Promise<Payment[]> => {
-    const response = await api.get('/payments/my-payments');
+  getMyPayments: async (params?: { month?: number; year?: number }): Promise<Payment[]> => {
+    const response = await api.get('/payments/my-payments', { params });
     return response.data;
   },
   create: async (payment: Partial<Payment>): Promise<Payment> => {
@@ -173,8 +181,16 @@ export const paymentsApi = {
     const response = await api.put(`/payments/${id}`, updates);
     return response.data;
   },
-  markPaid: async (id: number): Promise<Payment> => {
-    const response = await api.post(`/payments/${id}/mark-paid`);
+  markPaid: async (id: number, paypalTransactionLink: string): Promise<Payment> => {
+    const response = await api.post(`/payments/${id}/mark-paid`, { paypal_transaction_link: paypalTransactionLink });
+    return response.data;
+  },
+  addIncentive: async (payment: { user_id: number; short_id?: number; amount: number; description?: string }): Promise<Payment> => {
+    const response = await api.post('/payments/incentive', payment);
+    return response.data;
+  },
+  getStats: async (params?: { user_id?: number; month?: number; year?: number }): Promise<any> => {
+    const response = await api.get('/payments/stats', { params });
     return response.data;
   },
 };

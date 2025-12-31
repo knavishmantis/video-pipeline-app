@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { UserRole } from '../../../shared/types';
 import { getPool } from '../db';
+import { config } from '../config/env';
+import { UnauthorizedError, ForbiddenError } from './errorHandler';
 
 export interface AuthRequest extends Request {
   userId?: number;
@@ -19,7 +21,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as { 
+    const decoded = jwt.verify(token, config.jwtSecret) as { 
       userId: number; 
       roles?: UserRole[]; 
       role?: UserRole;
@@ -29,7 +31,7 @@ export function authenticateToken(req: AuthRequest, res: Response, next: NextFun
     req.userRole = decoded.role || decoded.roles?.[0]; // Primary role for backward compatibility
     next();
   } catch (error) {
-    res.status(403).json({ error: 'Invalid token' });
+    next(new UnauthorizedError('Invalid or expired token'));
   }
 }
 
@@ -46,7 +48,7 @@ export function requireRole(...roles: UserRole[]) {
         if (req.userRole) {
           req.userRoles = [req.userRole];
         } else {
-          res.status(403).json({ error: 'Insufficient permissions' });
+          next(new ForbiddenError('Insufficient permissions'));
           return;
         }
       }
@@ -55,7 +57,7 @@ export function requireRole(...roles: UserRole[]) {
     // Check if user has at least one of the required roles
     const hasRole = req.userRoles.some(role => roles.includes(role));
     if (!hasRole) {
-      res.status(403).json({ error: 'Insufficient permissions' });
+      next(new ForbiddenError('Insufficient permissions'));
       return;
     }
     

@@ -2,32 +2,65 @@
 node_modules/
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+.env.production
+.env.development
 
 # Build outputs
 dist/
 build/
 *.log
+*.tsbuildinfo
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-*
 
 # OS
 .DS_Store
 Thumbs.db
+.DS_Store?
 
-# GCP
-gcp-key.json
-service-account-key.json
+# GCP Keys and Credentials
+gcp-key*.json
+service-account-key*.json
+*-key.json
+*.json.key
+github-actions-key.json
 
 # Database
 *.db
 *.sqlite
+*.sqlite3
+*.db-journal
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js.snap
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
 

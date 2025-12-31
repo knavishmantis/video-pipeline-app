@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { usersApi, filesApi } from '../services/api';
+import { usersApi, filesApi, authApi } from '../services/api';
 import { User } from '../../../shared/types';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import TimezoneSelect, { type ITimezone } from 'react-timezone-select';
@@ -171,8 +171,18 @@ export default function ProfileCompletion() {
       console.log('Updating profile with:', updateData);
       const result = await usersApi.update(user!.id, updateData);
       console.log('Profile updated successfully:', result);
-      // Reload page to refresh auth state
-      window.location.reload();
+      
+      // Refresh user data from the server and navigate to dashboard
+      try {
+        const updatedUser = await authApi.getMe();
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        // Use window.location to force a full page reload and navigation
+        window.location.href = '/';
+      } catch (error) {
+        console.error('Failed to refresh user data:', error);
+        // Still navigate even if refresh fails
+        window.location.href = '/';
+      }
     } catch (error: any) {
       console.error('Profile update error:', error);
       const errorMsg = error.response?.data?.error || error.message || 'Failed to update profile';

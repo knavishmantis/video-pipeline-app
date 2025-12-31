@@ -1,35 +1,53 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useAlert } from '../hooks/useAlert';
+import { useToast } from '../hooks/useToast';
 import { paymentsApi, usersApi, assignmentsApi } from '../services/api';
 import { Payment, User, Assignment } from '../../../shared/types';
 
 export default function PaymentTracking() {
   const { user } = useAuth();
+  const { showAlert, AlertComponent } = useAlert();
+  const { showToast, ToastComponent } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterUserId, setFilterUserId] = useState<number | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [editingRate, setEditingRate] = useState<{ assignmentId: number; rate: number; description: string } | null>(null);
+  const [showMarkPaidModal, setShowMarkPaidModal] = useState<Payment | null>(null);
+  const [paypalLink, setPaypalLink] = useState('');
+  const [showIncentiveModal, setShowIncentiveModal] = useState(false);
+  const [incentiveForm, setIncentiveForm] = useState({ user_id: '', short_id: '', amount: '', description: '' });
+  const [stats, setStats] = useState<any>(null);
+  const [statsMonth, setStatsMonth] = useState<number | null>(null);
+  const [statsYear, setStatsYear] = useState<number | null>(null);
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
   useEffect(() => {
     loadData();
-  }, [filterUserId, showPendingOnly]);
+    loadStats();
+  }, [filterUserId, showPendingOnly, statsMonth, statsYear]);
+
+  useEffect(() => {
+    loadStats();
+  }, [statsMonth, statsYear]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       if (isAdmin) {
-        const params = filterUserId ? { user_id: filterUserId } : undefined;
+        const params: any = {};
+        if (filterUserId) params.user_id = filterUserId;
+        if (statsMonth) params.month = statsMonth;
+        if (statsYear) params.year = statsYear;
+        
         const [paymentsData, usersData, assignmentsData] = await Promise.all([
           showPendingOnly 
-            ? paymentsApi.getPending(params)
-            : paymentsApi.getAll(params),
+            ? paymentsApi.getPending(Object.keys(params).length > 0 ? params : undefined)
+            : paymentsApi.getAll(Object.keys(params).length > 0 ? params : undefined),
           usersApi.getAll(),
           assignmentsApi.getAll(),
         ]);
@@ -37,8 +55,12 @@ export default function PaymentTracking() {
         setUsers(usersData);
         setAssignments(assignmentsData);
       } else {
+        const params: any = {};
+        if (statsMonth) params.month = statsMonth;
+        if (statsYear) params.year = statsYear;
+        
         const [paymentsData, assignmentsData] = await Promise.all([
-          paymentsApi.getMyPayments(),
+          paymentsApi.getMyPayments(Object.keys(params).length > 0 ? params : undefined),
           assignmentsApi.getMyAssignments(),
         ]);
         setPayments(paymentsData);
@@ -51,14 +73,59 @@ export default function PaymentTracking() {
     }
   };
 
-  const handleMarkPaid = async (id: number) => {
-    if (!isAdmin) return;
+  const handleMarkPaid = async () => {
+    if (!showMarkPaidModal || !paypalLink.trim()) {
+      showAlert('Please enter PayPal transaction link', { type: 'warning' });
+      return;
+    }
     try {
-      await paymentsApi.markPaid(id);
+      await paymentsApi.markPaid(showMarkPaidModal.id, paypalLink);
+      setShowMarkPaidModal(null);
+      setPaypalLink('');
       await loadData();
-    } catch (error) {
+      await loadStats();
+      showToast('Payment marked as paid successfully', 'success');
+    } catch (error: any) {
       console.error('Failed to mark payment as paid:', error);
-      alert('Failed to mark payment as paid');
+      showAlert(error.response?.data?.error || 'Failed to mark payment as paid', { type: 'error' });
+    }
+  };
+
+  const handleAddIncentive = async () => {
+    if (!incentiveForm.user_id || !incentiveForm.amount) {
+      showAlert('User and amount are required', { type: 'warning' });
+      return;
+    }
+    try {
+      await paymentsApi.addIncentive({
+        user_id: parseInt(incentiveForm.user_id),
+        short_id: incentiveForm.short_id ? parseInt(incentiveForm.short_id) : undefined,
+        amount: parseFloat(incentiveForm.amount),
+        description: incentiveForm.description || undefined,
+      });
+      setShowIncentiveModal(false);
+      setIncentiveForm({ user_id: '', short_id: '', amount: '', description: '' });
+      await loadData();
+      await loadStats();
+      showToast('Incentive payment added successfully', 'success');
+    } catch (error: any) {
+      console.error('Failed to add incentive:', error);
+      showAlert(error.response?.data?.error || 'Failed to add incentive', { type: 'error' });
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const params: any = {};
+      if (statsMonth) params.month = statsMonth;
+      if (statsYear) params.year = statsYear;
+      if (!isAdmin && user) {
+        params.user_id = user.id;
+      }
+      const data = await paymentsApi.getStats(params);
+      setStats(data);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
     }
   };
 
@@ -71,9 +138,10 @@ export default function PaymentTracking() {
       });
       setEditingRate(null);
       await loadData();
+      showToast('Rate updated successfully', 'success');
     } catch (error) {
       console.error('Failed to update rate:', error);
-      alert('Failed to update rate');
+      showAlert('Failed to update rate', { type: 'error' });
     }
   };
 
@@ -94,7 +162,7 @@ export default function PaymentTracking() {
   const getTotalOwed = () => {
     return payments
       .filter(p => p.status === 'pending')
-      .reduce((sum, p) => sum + p.amount, 0);
+      .reduce((sum, p) => sum + Number(p.amount), 0);
   };
 
   // Get user's current rates from assignments
@@ -166,11 +234,73 @@ export default function PaymentTracking() {
           </p>
         </div>
 
+        {/* Payment Statistics Section */}
+        {stats && (
+          <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-neutral-200">
+              <h2 className="text-xl font-semibold text-neutral-900">
+                {isAdmin ? 'Payment Statistics' : 'Your Statistics'}
+              </h2>
+            </div>
+            <div className="px-6 py-4">
+              {isAdmin ? (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-sm font-medium text-green-700 mb-1">Total Paid</div>
+                    <div className="text-2xl font-bold text-green-900">
+                      ${Number(stats.total_paid || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="text-sm font-medium text-amber-700 mb-1">Total Pending</div>
+                    <div className="text-2xl font-bold text-amber-900">
+                      ${Number(stats.total_pending || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="text-sm font-medium text-blue-700 mb-1">Videos Posted</div>
+                    <div className="text-2xl font-bold text-blue-900">
+                      {stats.videos_posted || 0}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                    <div className="text-sm font-medium text-green-700 mb-1">Total Earned</div>
+                    <div className="text-2xl font-bold text-green-900">
+                      ${Number(stats.total_earned || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                    <div className="text-sm font-medium text-amber-700 mb-1">Total Pending</div>
+                    <div className="text-2xl font-bold text-amber-900">
+                      ${Number(stats.total_pending || 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    <div className="text-sm font-medium text-orange-700 mb-1">Clip Sets Completed</div>
+                    <div className="text-2xl font-bold text-orange-900">
+                      {stats.clips_completed || 0}
+                    </div>
+                  </div>
+                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="text-sm font-medium text-purple-700 mb-1">Edits Completed</div>
+                    <div className="text-2xl font-bold text-purple-900">
+                      {stats.edits_completed || 0}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {/* User View - Rates Section */}
         {!isAdmin && userRates.length > 0 && (
           <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
             <div className="px-6 py-4 border-b border-neutral-200">
-              <h2 className="text-xl font-semibold text-neutral-900">Current Rates</h2>
+              <h2 className="text-xl font-semibold text-neutral-900">Your Rates</h2>
             </div>
             <div className="px-6 py-4 space-y-3">
               {userRates.map((rate) => (
@@ -179,7 +309,7 @@ export default function PaymentTracking() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-neutral-900">{rate.role} Rate:</span>
-                        <span className="text-lg font-bold text-green-600">${rate.rate.toFixed(2)}</span>
+                        <span className="text-lg font-bold text-green-600">${Number(rate.rate).toFixed(2)}</span>
                       </div>
                       {rate.description && (
                         <p className="text-sm text-neutral-600 mt-1">{rate.description}</p>
@@ -200,15 +330,15 @@ export default function PaymentTracking() {
                 <h3 className="font-semibold text-amber-900">
                   {isAdmin ? 'Total Pending Payments' : 'Total Owed to You'}
                 </h3>
-                <p className="text-2xl font-bold text-amber-700 mt-1">${totalOwed.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-amber-700 mt-1">${Number(totalOwed).toFixed(2)}</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* Filters (Admin Only) */}
-        {isAdmin && (
-          <div className="mb-6 flex gap-4 items-center flex-wrap">
+        {/* Filters */}
+        <div className="mb-6 flex gap-4 items-center flex-wrap">
+          {isAdmin && (
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-neutral-700">Filter by User:</label>
               <select
@@ -224,6 +354,36 @@ export default function PaymentTracking() {
                 ))}
               </select>
             </div>
+          )}
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-neutral-700">Month:</label>
+            <select
+              value={statsMonth || ''}
+              onChange={(e) => setStatsMonth(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                <option key={month} value={month}>
+                  {new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-neutral-700">Year:</label>
+            <select
+              value={statsYear || ''}
+              onChange={(e) => setStatsYear(e.target.value ? parseInt(e.target.value) : null)}
+              className="px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">All</option>
+              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
+          {isAdmin && (
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -233,8 +393,8 @@ export default function PaymentTracking() {
               />
               <span className="text-sm font-medium text-neutral-700">Show Pending Only</span>
             </label>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Payments List */}
         <section className="bg-white rounded-xl border border-neutral-200 shadow-sm">
@@ -263,7 +423,7 @@ export default function PaymentTracking() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           <span className="text-2xl font-bold text-neutral-900">
-                            ${payment.amount.toFixed(2)}
+                            ${Number(payment.amount).toFixed(2)}
                           </span>
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
@@ -282,7 +442,7 @@ export default function PaymentTracking() {
                                   : 'bg-green-100 text-green-800'
                               }`}
                             >
-                              {payment.role === 'clipper' ? 'Clipping' : 'Editing'}
+                              {payment.role === 'clipper' ? 'Clipping' : payment.role === 'editor' ? 'Editing' : 'Incentive'}
                             </span>
                           )}
                         </div>
@@ -336,11 +496,27 @@ export default function PaymentTracking() {
                       
                       {isAdmin && payment.status === 'pending' && (
                         <button
-                          onClick={() => handleMarkPaid(payment.id)}
+                          onClick={() => setShowMarkPaidModal(payment)}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium ml-4"
                         >
                           Mark Paid
                         </button>
+                      )}
+                      {payment.paypal_transaction_link && (isAdmin || (payment.status === 'paid' && payment.user_id === user?.id)) && (
+                        <a
+                          href={(() => {
+                            const link = payment.paypal_transaction_link;
+                            if (link.startsWith('http://') || link.startsWith('https://')) {
+                              return link;
+                            }
+                            return `https://${link}`;
+                          })()}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline ml-2"
+                        >
+                          View PayPal Transaction
+                        </a>
                       )}
                     </div>
                   </div>
@@ -385,7 +561,7 @@ export default function PaymentTracking() {
                               <div>
                                 <span className="text-sm text-neutral-600">Current Rate: </span>
                                 <span className="font-medium text-neutral-900">
-                                  {assignment.rate ? `$${assignment.rate.toFixed(2)}` : 'Not set'}
+                                  {assignment.rate ? `$${Number(assignment.rate).toFixed(2)}` : 'Not set'}
                                 </span>
                               </div>
                               {assignment.rate_description && (
@@ -467,7 +643,149 @@ export default function PaymentTracking() {
             </div>
           </div>
         )}
+
+        {/* Mark Paid Modal */}
+        {showMarkPaidModal && isAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+              <h2 className="text-xl font-bold text-neutral-900 mb-4">Mark Payment as Paid</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-neutral-600 mb-2">
+                    Payment to: {showMarkPaidModal.user?.discord_username || showMarkPaidModal.user?.name || 'Unknown'}
+                  </p>
+                  <p className="text-sm text-neutral-600 mb-4">
+                    Amount: ${Number(showMarkPaidModal.amount).toFixed(2)}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    PayPal Transaction Link <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={paypalLink}
+                    onChange={(e) => setPaypalLink(e.target.value)}
+                    placeholder="https://www.paypal.com/activity/payment/..."
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-neutral-500 mt-1">
+                    Required for record keeping
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleMarkPaid}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                >
+                  Mark Paid
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMarkPaidModal(null);
+                    setPaypalLink('');
+                  }}
+                  className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Incentive Modal */}
+        {showIncentiveModal && isAdmin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
+              <h2 className="text-xl font-bold text-neutral-900 mb-4">Add Incentive Payment</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    User <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={incentiveForm.user_id}
+                    onChange={(e) => setIncentiveForm({ ...incentiveForm, user_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select user...</option>
+                    {users.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.discord_username || u.name || u.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Short (optional)
+                  </label>
+                  <input
+                    type="number"
+                    value={incentiveForm.short_id}
+                    onChange={(e) => setIncentiveForm({ ...incentiveForm, short_id: e.target.value })}
+                    placeholder="Short ID"
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Amount ($) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={incentiveForm.amount}
+                    onChange={(e) => setIncentiveForm({ ...incentiveForm, amount: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                    Description (optional)
+                  </label>
+                  <textarea
+                    value={incentiveForm.description}
+                    onChange={(e) => setIncentiveForm({ ...incentiveForm, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={3}
+                    placeholder="Incentive description..."
+                  />
+                </div>
+              </div>
+              
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleAddIncentive}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Add Incentive
+                </button>
+                <button
+                  onClick={() => {
+                    setShowIncentiveModal(false);
+                    setIncentiveForm({ user_id: '', short_id: '', amount: '', description: '' });
+                  }}
+                  className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+      <AlertComponent />
+      <ToastComponent />
     </div>
   );
 }

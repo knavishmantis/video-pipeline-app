@@ -9,13 +9,20 @@ function getStorage(): Storage {
     const projectId = process.env.GCP_PROJECT_ID;
     
     if (!keyFilename || !projectId) {
-      throw new Error('GCP_KEY_FILE and GCP_PROJECT_ID environment variables are required for file uploads. See SETUP.md for configuration.');
+      console.warn('GCP_KEY_FILE and GCP_PROJECT_ID not configured. File uploads will be disabled.');
+      return null as any; // Return null to allow graceful degradation
     }
     
-    storage = new Storage({
-      projectId: projectId,
-      keyFilename: path.resolve(keyFilename),
-    });
+    try {
+      storage = new Storage({
+        projectId: projectId,
+        keyFilename: path.resolve(keyFilename),
+      });
+      console.log(`GCP Storage initialized. Using bucket: ${process.env.GCP_BUCKET_NAME || 'NOT SET'}`);
+    } catch (error) {
+      console.error('Failed to initialize GCP Storage:', error);
+      throw error;
+    }
   }
   return storage;
 }
@@ -30,10 +37,11 @@ export async function uploadFile(
   const storage = getStorage();
   const bucketName = process.env.GCP_BUCKET_NAME;
   
-  if (!bucketName) {
-    throw new Error('GCP_BUCKET_NAME environment variable is required');
+  if (!storage || !bucketName) {
+    throw new Error('GCP storage not configured. Please set GCP_BUCKET_NAME, GCP_PROJECT_ID, and GCP_KEY_FILE environment variables.');
   }
   
+  console.log(`Uploading to bucket: ${bucketName}`);
   const bucket = storage.bucket(bucketName);
   let fileName: string;
   

@@ -1,36 +1,61 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { setupRoutes } from './routes';
 import { initDatabase } from './db';
-
-dotenv.config();
+import { config } from './config/env';
+import { logger } from './utils/logger';
+import { errorHandler } from './middleware/errorHandler';
+import { apiLimiter } from './middleware/rateLimiter';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = config.port;
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: config.frontendUrl,
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Rate limiting (apply to all API routes)
+app.use('/api', apiLimiter);
+
 // Initialize database
-initDatabase().catch(console.error);
+initDatabase().catch((error) => {
+  logger.error('Failed to initialize database', { error });
+  process.exit(1);
+});
 
 // API Routes
 setupRoutes(app);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check with database status
+app.get('/health', async (req, res) => {
+  try {
+    const db = await import('./db').then(m => m.getPool());
+    await db.query('SELECT 1');
+    res.json({ 
+      status: 'ok', 
+      database: 'connected',
+      timestamp: new Date().toISOString() 
+    });
+  } catch (error) {
+    logger.error('Health check failed', { error });
+    res.status(503).json({ 
+      status: 'error', 
+      database: 'disconnected',
+      timestamp: new Date().toISOString() 
+    });
+  }
 });
 
+// Error handling middleware (must be last)
+app.use(errorHandler);
+
 // Serve static files from React app in production
-if (process.env.NODE_ENV === 'production') {
+if (config.nodeEnv === 'production') {
   const frontendPath = path.join(__dirname, '../frontend-dist');
   app.use(express.static(frontendPath));
   
@@ -45,6 +70,8 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  logger.info(`Server running on port ${PORT}`, { 
+    environment: config.nodeEnv,
+    port: PORT 
+  });
 });

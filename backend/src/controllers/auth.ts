@@ -2,9 +2,12 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
-import { query } from '../db';
+import { query, getPool } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { User, AuthResponse, UserRole } from '../../../shared/types';
+import { config } from '../config/env';
+import { logger } from '../utils/logger';
+import { AppError } from '../middleware/errorHandler';
 
 // Helper to get user roles
 async function getUserRoles(userId: number): Promise<UserRole[]> {
@@ -17,8 +20,8 @@ async function getUserRoles(userId: number): Promise<UserRole[]> {
   }
 }
 
-const googleClient = process.env.GOOGLE_CLIENT_ID 
-  ? new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
+const googleClient = config.google.clientId 
+  ? new OAuth2Client(config.google.clientId)
   : null;
 
 export const authController = {
@@ -42,8 +45,8 @@ export const authController = {
       const user: User = result.rows[0];
       const token = jwt.sign(
         { userId: user.id, role: user.role },
-        process.env.JWT_SECRET || 'secret',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        config.jwtSecret,
+        { expiresIn: config.jwtExpiresIn }
       );
 
       const response: AuthResponse = { user, token };
@@ -52,8 +55,8 @@ export const authController = {
       if (error.code === '23505') { // Unique violation
         res.status(409).json({ error: 'Email already exists' });
       } else {
-        console.error('Registration error:', error);
-        res.status(500).json({ error: 'Registration failed' });
+        logger.error('Registration error', { error });
+        throw new AppError(500, 'Registration failed');
       }
     }
   },
@@ -66,14 +69,13 @@ export const authController = {
 
       // Google OAuth login
       if (googleToken) {
-        if (!googleClient || !process.env.GOOGLE_CLIENT_ID) {
-          res.status(500).json({ error: 'Google OAuth not configured on server' });
-          return;
+        if (!googleClient || !config.google.clientId) {
+          throw new AppError(500, 'Google OAuth not configured on server');
         }
         try {
           const ticket = await googleClient.verifyIdToken({
             idToken: googleToken,
-            audience: process.env.GOOGLE_CLIENT_ID,
+            audience: config.google.clientId,
           });
           const payload = ticket.getPayload();
           
@@ -109,11 +111,10 @@ export const authController = {
           // Get roles
           const roles = await getUserRoles(user.id);
           user.roles = roles;
-        } catch (error: any) {
-          console.error('Google OAuth error:', error);
-          const errorMsg = error.message || 'Invalid Google token';
-          res.status(401).json({ error: `Google authentication failed: ${errorMsg}` });
-          return;
+        } catch (error: unknown) {
+          logger.error('Google OAuth error', { error });
+          const errorMsg = error instanceof Error ? error.message : 'Invalid Google token';
+          throw new AppError(401, `Google authentication failed: ${errorMsg}`);
         }
       } 
       // Password login (fallback)
@@ -154,15 +155,15 @@ export const authController = {
       const primaryRole = user.roles?.includes('admin') ? 'admin' : (user.roles?.[0] || 'script_writer');
       const token = jwt.sign(
         { userId: user.id, roles: user.roles, role: primaryRole },
-        process.env.JWT_SECRET || 'secret',
-        { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+        config.jwtSecret,
+        { expiresIn: config.jwtExpiresIn }
       );
 
       const response: AuthResponse = { user, token };
       res.json(response);
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(500).json({ error: 'Login failed' });
+      logger.error('Login error', { error });
+      throw new AppError(500, 'Login failed');
     }
   },
 
@@ -187,8 +188,8 @@ export const authController = {
       const roles = await getUserRoles(user.id);
       res.json({ ...user, roles });
     } catch (error) {
-      console.error('Get me error:', error);
-      res.status(500).json({ error: 'Failed to get user' });
+      logger.error('Get me error', { error });
+      throw new AppError(500, 'Failed to get user');
     }
   },
 
@@ -221,8 +222,8 @@ export const authController = {
         }
       });
     } catch (error) {
-      console.error('Check profile complete error:', error);
-      res.status(500).json({ error: 'Failed to check profile' });
+      logger.error('Check profile complete error', { error });
+      throw new AppError(500, 'Failed to check profile');
     }
   }
 };

@@ -38,11 +38,12 @@ Open http://localhost:3000 and sign in with Google OAuth.
 
 ## Documentation
 
-- **[Setup Guide](docs/SETUP.md)** - Complete setup instructions
 - **[Quick Start](docs/QUICK_START.md)** - Fast setup reference
-- **[Local Testing](docs/LOCAL_TESTING.md)** - Testing without GCP
-- **[GCP Setup](docs/GCP_SETUP.md)** - Configure Google Cloud Storage
+- **[Setup Guide](docs/SETUP.md)** - Complete setup instructions
+- **[Dev Environment Setup](docs/DEV_ENV_SETUP.md)** - GCP dev environment configuration
+- **[GCP Dev/Prod Setup](docs/GCP_DEV_PROD_SETUP.md)** - Separate dev/prod buckets
 - **[Google OAuth](docs/GOOGLE_OAUTH_SETUP.md)** - OAuth configuration
+- **[Local Testing](docs/LOCAL_TESTING.md)** - Testing without GCP
 - **[Deployment](docs/DEPLOYMENT.md)** - Production deployment guide
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and patterns
 

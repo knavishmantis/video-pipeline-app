@@ -6,6 +6,12 @@ import { CreateAssignmentInput } from '../../../shared/types';
 export const assignmentsController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can view all assignments' });
+        return;
+      }
+
       const db = getPool();
       const result = await db.query(
         `SELECT a.*
@@ -77,6 +83,12 @@ export const assignmentsController = {
 
   async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can view assignment details' });
+        return;
+      }
+
       const { id } = req.params;
       const db = getPool();
       
@@ -103,6 +115,12 @@ export const assignmentsController = {
 
   async create(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can create assignments' });
+        return;
+      }
+
       const input: CreateAssignmentInput = req.body;
       const db = getPool();
       
@@ -134,6 +152,12 @@ export const assignmentsController = {
 
   async update(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can update assignments' });
+        return;
+      }
+
       const { id } = req.params;
       const { due_date, default_time_range, rate, rate_description } = req.body;
       const db = getPool();
@@ -186,6 +210,12 @@ export const assignmentsController = {
 
   async markComplete(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can mark assignments as complete' });
+        return;
+      }
+
       const { id } = req.params;
       const db = getPool();
       
@@ -243,6 +273,12 @@ export const assignmentsController = {
 
   async delete(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can delete assignments' });
+        return;
+      }
+
       const { id } = req.params;
       const db = getPool();
       

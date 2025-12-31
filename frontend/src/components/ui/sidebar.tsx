@@ -101,7 +101,7 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
             width: isExpanded ? 280 : 80,
           }}
           transition={{ duration: animate ? 0.3 : 0, ease: "easeInOut" }}
-          className="relative h-full bg-gray-100 dark:bg-neutral-800 flex-shrink-0 overflow-hidden"
+          className="relative h-full bg-gray-100 flex-shrink-0 overflow-hidden"
         >
           {children}
         </motion.div>
@@ -110,7 +110,7 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
         {!open && isMobile && (
           <button
             onClick={() => setOpen(true)}
-            className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 shadow-lg dark:bg-neutral-800"
+            className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 shadow-lg"
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
@@ -190,8 +190,8 @@ export const SidebarLink = ({ link, className, onClick }: SidebarLinkProps) => {
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-pointer relative",
         isActive
-          ? "bg-neutral-100 text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100"
-          : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100",
+          ? "bg-neutral-100 text-neutral-900"
+          : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
         className
       )}
       title={!isExpanded ? link.label : undefined}

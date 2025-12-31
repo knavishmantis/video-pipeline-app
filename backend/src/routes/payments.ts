@@ -14,8 +14,10 @@ paymentsRouter.get('/my-payments', paymentsController.getMyPayments);
 // Admin-only routes
 paymentsRouter.get('/', requireRole('admin'), paymentsController.getAll);
 paymentsRouter.get('/pending', requireRole('admin'), paymentsController.getPending);
+paymentsRouter.get('/stats', paymentsController.getStats); // Available to all users
 paymentsRouter.get('/:id', requireRole('admin'), paymentsController.getById);
 paymentsRouter.post('/', requireRole('admin'), paymentsController.create);
+paymentsRouter.post('/incentive', requireRole('admin'), paymentsController.addIncentive);
 paymentsRouter.put('/:id', requireRole('admin'), paymentsController.update);
 paymentsRouter.post('/:id/mark-paid', requireRole('admin'), paymentsController.markPaid);
 

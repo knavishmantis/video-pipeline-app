@@ -27,6 +27,12 @@ async function setUserRoles(userId: number, roles: UserRole[]): Promise<void> {
 export const usersController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can view all users' });
+        return;
+      }
+
       const { role } = req.query;
       
       let sqlQuery = 'SELECT id, email, name, discord_username, paypal_email, profile_picture, timezone, created_at, updated_at FROM users';
@@ -58,6 +64,12 @@ export const usersController = {
 
   async getById(req: AuthRequest, res: Response): Promise<void> {
     try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can view user details' });
+        return;
+      }
+
       const { id } = req.params;
       
       const result = await query(

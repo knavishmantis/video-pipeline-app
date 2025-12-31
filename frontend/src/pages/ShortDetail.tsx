@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useAlert } from '../hooks/useAlert';
+import { useConfirm } from '../hooks/useConfirm';
+import { useToast } from '../hooks/useToast';
 import { shortsApi, assignmentsApi, filesApi, usersApi } from '../services/api';
 import { Short, Assignment, File, FileType, User } from '../../../shared/types';
+import { triggerConfetti } from '../utils/confetti';
 
 // Helper to get profile picture (emoji, image URL, or fallback)
 const getProfilePicture = (user: User | undefined): string => {
@@ -22,8 +26,12 @@ export default function ShortDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showAlert, AlertComponent } = useAlert();
+  const { confirm, ConfirmComponent } = useConfirm();
+  const { showToast, ToastComponent } = useToast();
   const [short, setShort] = useState<Short | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState<string | null>(null); // Track which file type is uploading
   const [users, setUsers] = useState<User[]>([]);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [assignRole, setAssignRole] = useState<'script_writer' | 'clipper' | 'editor'>('clipper');
@@ -32,6 +40,7 @@ export default function ShortDetail() {
   const [assignTimeRange, setAssignTimeRange] = useState('4');
   const [assignRate, setAssignRate] = useState('');
   const [assignRateDescription, setAssignRateDescription] = useState('');
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
@@ -47,8 +56,18 @@ export default function ShortDetail() {
     try {
       const data = await shortsApi.getById(parseInt(id));
       setShort(data);
-    } catch (error) {
+      setAccessDenied(false);
+    } catch (error: any) {
       console.error('Failed to load short:', error);
+      // If 403 (forbidden), show access denied message
+      if (error.response?.status === 403) {
+        setAccessDenied(true);
+        setShort(null);
+      } else {
+        // For other errors (404, etc.), just set short to null
+        setShort(null);
+        setAccessDenied(false);
+      }
     } finally {
       setLoading(false);
     }
@@ -98,12 +117,18 @@ export default function ShortDetail() {
       loadShort();
     } catch (error) {
       console.error('Failed to create assignment:', error);
-      alert('Failed to create assignment');
+      showAlert('Failed to create assignment', { type: 'error' });
     }
   };
 
   const handleDeleteAssignment = async (assignmentId: number, role: string) => {
-    if (!confirm('Are you sure you want to remove this assignment?')) return;
+    const confirmed = await confirm({
+      title: 'Remove Assignment',
+      message: 'Are you sure you want to remove this assignment?',
+      variant: 'danger',
+      confirmText: 'Remove',
+    });
+    if (!confirmed) return;
     try {
       if (role === 'script_writer') {
         await shortsApi.update(parseInt(id!), { script_writer_id: null } as any);
@@ -111,20 +136,70 @@ export default function ShortDetail() {
         await assignmentsApi.delete(assignmentId);
       }
       loadShort();
+      showToast('Assignment removed successfully', 'success');
     } catch (error) {
       console.error('Failed to delete assignment:', error);
-      alert('Failed to delete assignment');
+      showAlert('Failed to delete assignment', { type: 'error' });
     }
   };
 
   const handleFileUpload = async (fileType: FileType, file: File) => {
     if (!id) return;
+    setUploading(fileType);
     try {
       await filesApi.upload(parseInt(id), fileType, file);
-      loadShort();
+      await loadShort();
+      showToast('File uploaded successfully', 'success');
+      
+      // Trigger confetti for specific file types
+      if (fileType === 'script' || fileType === 'audio' || fileType === 'clips_zip' || fileType === 'final_video') {
+        triggerConfetti();
+      }
     } catch (error) {
       console.error('Failed to upload file:', error);
-      alert('Failed to upload file');
+      showAlert('Failed to upload file', { type: 'error' });
+    } finally {
+      setUploading(null);
+    }
+  };
+
+  const handleDownload = async (file: File) => {
+    if (!file.download_url) {
+      showAlert('Download URL not available', { type: 'error' });
+      return;
+    }
+    try {
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement('a');
+      link.href = file.download_url;
+      link.download = file.file_name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to download file:', error);
+      showAlert('Failed to download file', { type: 'error' });
+    }
+  };
+
+  const handleDeleteFile = async (fileId: number) => {
+    if (!id) return;
+    const confirmed = await confirm({
+      title: 'Delete File',
+      message: 'Are you sure you want to delete this file? This action cannot be undone.',
+      variant: 'danger',
+      confirmText: 'Delete',
+    });
+    if (!confirmed) return;
+    
+    try {
+      await filesApi.delete(fileId);
+      await loadShort();
+      showToast('File deleted successfully', 'success');
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      showAlert('Failed to delete file', { type: 'error' });
     }
   };
 
@@ -146,6 +221,17 @@ export default function ShortDetail() {
     );
   }
   
+  if (accessDenied) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-neutral-900 mb-2">Access Denied</h1>
+          <p className="text-lg text-neutral-600">Oops, you don't have access to view this page.</p>
+        </div>
+      </div>
+    );
+  }
+  
   if (!short) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -155,9 +241,10 @@ export default function ShortDetail() {
   }
 
   const clips = short.files?.filter(f => f.file_type === 'clip') || [];
+  const clipsZip = short.files?.filter(f => f.file_type === 'clips_zip') || [];
   const audioFiles = short.files?.filter(f => f.file_type === 'audio') || [];
   const finalVideos = short.files?.filter(f => f.file_type === 'final_video') || [];
-  const scriptPdf = short.files?.find(f => f.file_type === 'script');
+  const scriptPdf = short.files?.find(f => f.file_type === 'script' || f.file_type === 'script_pdf');
   
   const clipperAssignment = short.assignments?.find(a => a.role === 'clipper');
   const editorAssignment = short.assignments?.find(a => a.role === 'editor');
@@ -462,64 +549,253 @@ export default function ShortDetail() {
         <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
           <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-neutral-900">Script</h2>
-            {scriptPdf ? (
-              <a
-                href={scriptPdf.download_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-              >
-                View PDF
-              </a>
-            ) : (
-              <span className="text-sm text-neutral-400">No script uploaded</span>
+            <div className="flex gap-2 items-center">
+              {(scriptWriterUser?.id === user?.id || isAdmin || (user?.roles?.includes('script_writer') && !scriptWriterUser)) && (
+                <>
+                  <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
+                    uploading === 'script' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
+                  }`}>
+                    {uploading === 'script' ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      scriptPdf ? 'Replace Script PDF' : 'Upload Script PDF'
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload('script', file);
+                      }}
+                      className="hidden"
+                      disabled={uploading === 'script'}
+                    />
+                  </label>
+                  <label className={`px-4 py-2 bg-green-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
+                    uploading === 'audio' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-green-700'
+                  }`}>
+                    {uploading === 'audio' ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Uploading...
+                      </>
+                    ) : (
+                      audioFiles.length > 0 ? 'Replace Audio MP3' : 'Upload Audio MP3'
+                    )}
+                    <input
+                      type="file"
+                      accept="audio/mpeg,.mp3"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileUpload('audio', file);
+                      }}
+                      className="hidden"
+                      disabled={uploading === 'audio'}
+                    />
+                  </label>
+                </>
+              )}
+              {scriptPdf && (
+                <button
+                  onClick={() => handleDownload(scriptPdf)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download PDF
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="px-6 py-4">
+            {short.idea && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-neutral-700 mb-2">Idea</h3>
+                <p className="text-neutral-600 whitespace-pre-wrap">{short.idea}</p>
+              </div>
+            )}
+            {scriptPdf && (
+              <div className="mt-4">
+                <h3 className="text-sm font-medium text-neutral-700 mb-2">Script PDF</h3>
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-blue-700 font-medium">{scriptPdf.file_name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleDownload(scriptPdf)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1"
+                        title="Download file"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                      </button>
+                      {(isAdmin || scriptWriterUser?.id === user?.id) && (
+                        <button
+                          onClick={() => handleDeleteFile(scriptPdf.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          title="Delete file"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      )}
+                      <span className="text-xs text-neutral-500">
+                        {new Date(scriptPdf.uploaded_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {audioFiles.length > 0 && (
+              <div className="mt-4">
+                <h3 className="text-sm font-medium text-neutral-700 mb-2">Audio Files ({audioFiles.length})</h3>
+                <div className="space-y-2">
+                  {audioFiles.map((audio) => (
+                    <div key={audio.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.617l3.766-3.793a1 1 0 011.617.793zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
+                        </svg>
+                        <span className="text-green-700 font-medium">{audio.file_name}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => handleDownload(audio)}
+                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          title="Download file"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download
+                        </button>
+                        {(isAdmin || scriptWriterUser?.id === user?.id) && (
+                          <button
+                            onClick={() => handleDeleteFile(audio.id)}
+                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                            title="Delete file"
+                          >
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        )}
+                        <span className="text-xs text-neutral-500">
+                          {new Date(audio.uploaded_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!scriptPdf && !audioFiles.length && (
+              <p className="text-sm text-neutral-400">No script or audio uploaded yet</p>
             )}
           </div>
-          {short.idea && (
-            <div className="px-6 py-4">
-              <h3 className="text-sm font-medium text-neutral-700 mb-2">Idea</h3>
-              <p className="text-neutral-600 whitespace-pre-wrap">{short.idea}</p>
-            </div>
-          )}
         </section>
 
         {/* Clips Section */}
         <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
           <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-neutral-900">Clips ({clips.length})</h2>
+            <h2 className="text-xl font-semibold text-neutral-900">Clips ({clipsZip.length})</h2>
             {(clipperAssignment?.user_id === user?.id || isAdmin) && (
-              <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium cursor-pointer">
-                Upload Clip
+              <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
+                uploading === 'clips_zip' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
+              }`}>
+                {uploading === 'clips_zip' ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Uploading...
+                  </>
+                ) : (
+                  clipsZip.length > 0 ? 'Replace Zip of Clips' : 'Upload Zip of Clips'
+                )}
                 <input
                   type="file"
-                  accept="video/*"
+                  accept=".zip,application/zip"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) handleFileUpload('clip', file);
+                    if (file) handleFileUpload('clips_zip', file);
                   }}
                   className="hidden"
+                  disabled={uploading === 'clips_zip'}
                 />
               </label>
             )}
           </div>
           <div className="px-6 py-4">
-            {clips.length > 0 ? (
+            {clipsZip.length > 0 ? (
               <div className="space-y-2">
-                {clips.map((clip) => (
+                {clipsZip.map((clip) => (
                   <div key={clip.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg border border-neutral-200">
-                    <a 
-                      href={clip.download_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      {clip.file_name}
-                    </a>
-                    <span className="text-xs text-neutral-500">
-                      {new Date(clip.uploaded_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-blue-700 font-medium">{clip.file_name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleDownload(clip)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1"
+                        title="Download file"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                      </button>
+                      {(isAdmin || clipperAssignment?.user_id === user?.id) && (
+                        <button
+                          onClick={() => handleDeleteFile(clip.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          title="Delete file"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      )}
+                      <span className="text-xs text-neutral-500">
+                        {new Date(clip.uploaded_at).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 ))}
+              </div>
+            ) : uploading === 'clips_zip' ? (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-blue-700 font-medium">Uploading clips zip file...</span>
               </div>
             ) : (
               <p className="text-neutral-400">No clips uploaded yet</p>
@@ -531,46 +807,158 @@ export default function ShortDetail() {
         <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
           <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-neutral-900">Final Video ({finalVideos.length})</h2>
-            {(editorAssignment?.user_id === user?.id || isAdmin) && (
-              <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium cursor-pointer">
-                Upload Final Video
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileUpload('final_video', file);
+            <div className="flex gap-2">
+              {(editorAssignment?.user_id === user?.id || isAdmin) && (
+                <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
+                  uploading === 'final_video' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
+                }`}>
+                  {uploading === 'final_video' ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading...
+                    </>
+                  ) : (
+                    finalVideos.length > 0 ? 'Replace Final Video' : 'Upload Final Video'
+                  )}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileUpload('final_video', file);
+                    }}
+                    className="hidden"
+                    disabled={uploading === 'final_video'}
+                  />
+                </label>
+              )}
+              {isAdmin && (short.status === 'editing' || short.status === 'editing_changes') && finalVideos.length > 0 && (
+                <button
+                  onClick={async () => {
+                    const confirmed = await confirm({
+                      title: 'Mark Editing Complete',
+                      message: 'Mark editing as complete? This will create payments for the clipper and editor.',
+                      confirmText: 'Mark Complete',
+                    });
+                    if (confirmed) {
+                      try {
+                        await shortsApi.markEditingComplete(short.id);
+                        await loadShort();
+                        showToast('Editing marked as complete! Payments have been created.', 'success');
+                      } catch (error: any) {
+                        showAlert(error.response?.data?.error || 'Failed to mark editing complete', { type: 'error' });
+                      }
+                    }
                   }}
-                  className="hidden"
-                />
-              </label>
-            )}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                >
+                  Mark Editing Complete
+                </button>
+              )}
+            </div>
           </div>
           <div className="px-6 py-4">
             {finalVideos.length > 0 ? (
               <div className="space-y-2">
                 {finalVideos.map((video) => (
                   <div key={video.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg border border-neutral-200">
-                    <a 
-                      href={video.download_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      {video.file_name}
-                    </a>
-                    <span className="text-xs text-neutral-500">
-                      {new Date(video.uploaded_at).toLocaleDateString()}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                      </svg>
+                      <span className="text-blue-700 font-medium">{video.file_name}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleDownload(video)}
+                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1"
+                        title="Download file"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Download
+                      </button>
+                      {(isAdmin || editorAssignment?.user_id === user?.id) && (
+                        <button
+                          onClick={() => handleDeleteFile(video.id)}
+                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          title="Delete file"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Delete
+                        </button>
+                      )}
+                      <span className="text-xs text-neutral-500">
+                        {new Date(video.uploaded_at).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 ))}
+              </div>
+            ) : uploading === 'final_video' ? (
+              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-blue-700 font-medium">Uploading final video...</span>
               </div>
             ) : (
               <p className="text-neutral-400">No final video uploaded yet</p>
             )}
           </div>
         </section>
+
+        {/* Settings Section (Admin only) */}
+        {isAdmin && (
+          <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
+            <div className="px-6 py-4 border-b border-neutral-200">
+              <h2 className="text-xl font-semibold text-neutral-900">Settings</h2>
+            </div>
+            <div className="px-6 py-4">
+              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+                <h3 className="text-lg font-semibold text-red-900 mb-2">Danger Zone</h3>
+                <p className="text-sm text-red-700 mb-4">
+                  Deleting this short will permanently remove it and all associated files, assignments, and payments. This action cannot be undone.
+                </p>
+                <button
+                  onClick={async () => {
+                    const confirmed = await confirm({
+                      title: 'Delete Short',
+                      message: `Are you sure you want to delete "${short.title}"? This action cannot be undone and will delete all associated files, assignments, and payments.`,
+                      variant: 'danger',
+                      confirmText: 'Delete',
+                    });
+                    if (confirmed) {
+                      try {
+                        await shortsApi.delete(short.id);
+                        showToast('Short deleted successfully', 'success');
+                        navigate('/');
+                      } catch (error: any) {
+                        console.error('Failed to delete short:', error);
+                        const errorMessage = error.response?.data?.error || 'Failed to delete short';
+                        showAlert(errorMessage, { type: 'error' });
+                      }
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  Delete Short
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
+      <AlertComponent />
+      <ConfirmComponent />
+      <ToastComponent />
     </div>
   );
 }

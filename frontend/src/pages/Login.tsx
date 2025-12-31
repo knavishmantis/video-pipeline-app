@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { IconHelp } from '@tabler/icons-react';
 
 declare global {
   interface Window {
@@ -137,6 +138,21 @@ export default function Login() {
         <p className="mb-6 text-sm text-neutral-600 dark:text-neutral-400">
           Sign in to continue
         </p>
+
+        <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+          <div className="flex items-start gap-2">
+            <IconHelp className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <strong>New to the app?</strong> Check out the{' '}
+                <Link to="/guide" className="underline font-medium hover:text-blue-900 dark:hover:text-blue-200">
+                  User Guide
+                </Link>{' '}
+                after signing in to learn how to use the platform.
+              </p>
+            </div>
+          </div>
+        </div>
 
         {error && (
           <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">

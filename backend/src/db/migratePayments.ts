@@ -5,7 +5,7 @@ dotenv.config();
 
 const MIGRATE_PAYMENTS_PG = `
 -- Add new columns to payments table
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS role VARCHAR(50) CHECK (role IN ('clipper', 'editor'));
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS role VARCHAR(50) CHECK (role IN ('clipper', 'editor', 'incentive'));
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS rate_description TEXT;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS assignment_id INTEGER REFERENCES assignments(id) ON DELETE SET NULL;
