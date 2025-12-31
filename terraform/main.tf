@@ -23,6 +23,35 @@ provider "google" {
   region  = var.region
 }
 
+# Enable required GCP APIs
+resource "google_project_service" "artifact_registry" {
+  project = var.project_id
+  service = "artifactregistry.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "cloud_run" {
+  project = var.project_id
+  service = "run.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "cloud_build" {
+  project = var.project_id
+  service = "cloudbuild.googleapis.com"
+
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "container_registry" {
+  project = var.project_id
+  service = "containerregistry.googleapis.com"
+
+  disable_on_destroy = false
+}
+
 # Service Account for the application
 resource "google_service_account" "app_service_account" {
   account_id   = "video-pipeline-${var.environment}"
@@ -79,22 +108,22 @@ resource "google_service_account_key" "app_key" {
 # For "prod", we'll use a data source to reference the existing instance
 resource "google_sql_database_instance" "shared" {
   count            = var.environment == "dev" ? 1 : 0 # Only create once (with dev)
-  name             = "video-pipeline-shared" # Shared instance for both dev and prod
+  name             = "video-pipeline-shared"          # Shared instance for both dev and prod
   database_version = "POSTGRES_15"
   region           = var.region
 
   settings {
     tier              = "db-f1-micro" # FREE tier - only one free instance per billing account
-    availability_type = "ZONAL" # No high availability needed - saves ~20% cost
-    
+    availability_type = "ZONAL"       # No high availability needed - saves ~20% cost
+
     disk_size = 10 # 10GB is enough for both dev and prod (just metadata, not videos)
     disk_type = "PD_SSD"
-    
+
     backup_configuration {
       enabled                        = true
       start_time                     = "03:00"
       point_in_time_recovery_enabled = true
-      transaction_log_retention_days  = 7
+      transaction_log_retention_days = 7
       backup_retention_settings {
         retained_backups = 7 # 7 days is enough
         retention_unit   = "COUNT"
@@ -138,9 +167,9 @@ data "google_sql_database_instance" "shared" {
 
 # Use the created instance (dev) or data source (prod)
 locals {
-  sql_instance_name = var.environment == "dev" ? google_sql_database_instance.shared[0].name : data.google_sql_database_instance.shared[0].name
+  sql_instance_name            = var.environment == "dev" ? google_sql_database_instance.shared[0].name : data.google_sql_database_instance.shared[0].name
   sql_instance_connection_name = var.environment == "dev" ? google_sql_database_instance.shared[0].connection_name : data.google_sql_database_instance.shared[0].connection_name
-  sql_instance_public_ip = var.environment == "dev" ? google_sql_database_instance.shared[0].public_ip_address : data.google_sql_database_instance.shared[0].public_ip_address
+  sql_instance_public_ip       = var.environment == "dev" ? google_sql_database_instance.shared[0].public_ip_address : data.google_sql_database_instance.shared[0].public_ip_address
 }
 
 # Database - separate database for each environment within the shared instance
