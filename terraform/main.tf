@@ -27,29 +27,47 @@ provider "google" {
 resource "google_project_service" "artifact_registry" {
   project = var.project_id
   service = "artifactregistry.googleapis.com"
-
+  
   disable_on_destroy = false
 }
 
 resource "google_project_service" "cloud_run" {
   project = var.project_id
   service = "run.googleapis.com"
-
+  
   disable_on_destroy = false
 }
 
 resource "google_project_service" "cloud_build" {
   project = var.project_id
   service = "cloudbuild.googleapis.com"
-
+  
   disable_on_destroy = false
 }
 
 resource "google_project_service" "container_registry" {
   project = var.project_id
   service = "containerregistry.googleapis.com"
-
+  
   disable_on_destroy = false
+}
+
+# Artifact Registry repository for Docker images
+# Using a standard repository name (gcr.io is a special format that auto-creates)
+# We'll create a proper Artifact Registry repository
+resource "google_artifact_registry_repository" "docker_repo" {
+  location      = var.region
+  repository_id = "docker-repo"
+  description   = "Docker repository for video pipeline app"
+  format        = "DOCKER"
+}
+
+# Grant GitHub Actions permission to create repositories (for gcr.io auto-creation)
+# This is needed because gcr.io format auto-creates repositories
+resource "google_project_iam_member" "github_actions_artifact_registry_admin" {
+  project = var.project_id
+  role    = "roles/artifactregistry.admin"
+  member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
 
 # Service Account for the application
