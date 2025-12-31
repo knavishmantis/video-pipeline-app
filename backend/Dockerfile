@@ -39,6 +39,6 @@ EXPOSE 8080
 ENV NODE_ENV=production
 ENV PORT=8080
 
-# Start server
-CMD ["node", "dist/index.js"]
+# Start server (TypeScript outputs to dist/src/index.js)
+CMD ["node", "dist/src/index.js"]
 
