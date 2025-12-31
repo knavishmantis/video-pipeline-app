@@ -5,7 +5,7 @@ import { useAlert } from '../hooks/useAlert';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
 import { shortsApi, assignmentsApi, filesApi, usersApi } from '../services/api';
-import { Short, File, FileType, User } from '../../../shared/types';
+import { Short, File as FileInterface, FileType, User } from '../../../shared/types';
 import { triggerConfetti } from '../utils/confetti';
 
 // Helper to get profile picture (emoji, image URL, or fallback)
@@ -163,7 +163,7 @@ export default function ShortDetail() {
     }
   };
 
-  const handleDownload = async (file: FileType) => {
+  const handleDownload = async (file: FileInterface) => {
     if (!file.download_url) {
       showAlert('Download URL not available', { type: 'error' });
       return;
