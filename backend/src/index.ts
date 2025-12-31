@@ -22,10 +22,10 @@ app.use(express.urlencoded({ extended: true }));
 // Rate limiting (apply to all API routes)
 app.use('/api', apiLimiter);
 
-// Initialize database
+// Initialize database (non-blocking - server will start even if DB init fails)
 initDatabase().catch((error) => {
   logger.error('Failed to initialize database', { error });
-  process.exit(1);
+  // Don't exit - let the server start and health check will show DB status
 });
 
 // API Routes
