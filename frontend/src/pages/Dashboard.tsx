@@ -258,7 +258,9 @@ export default function Dashboard() {
           return;
         }
         // Calculate total file size for accurate progress
-        const totalSize = contentForm.scriptFile.size + contentForm.audioFile.size;
+        const scriptFileSize = contentForm.scriptFile.size;
+        const audioFileSize = contentForm.audioFile.size;
+        const totalSize = scriptFileSize + audioFileSize;
         let uploadedBytes = 0;
         
         // Upload script file with progress (0-50% of total)
@@ -278,7 +280,7 @@ export default function Dashboard() {
           'audio', 
           contentForm.audioFile,
           (progress) => {
-            uploadedBytes = contentForm.scriptFile.size + progress.loaded;
+            uploadedBytes = scriptFileSize + progress.loaded;
             const percent = Math.round((uploadedBytes / totalSize) * 100);
             setUploadProgress(Math.min(percent, 100));
           }
