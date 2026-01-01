@@ -111,7 +111,8 @@ export const usersController = {
       
       const user = result.rows[0];
       const roles = await getUserRoles(user.id);
-      res.json({ ...user, roles });
+      const profilePicture = await processProfilePicture(user.profile_picture);
+      res.json({ ...user, roles, profile_picture: profilePicture });
     } catch (error) {
       console.error('Get user error:', error);
       res.status(500).json({ error: 'Failed to fetch user' });
