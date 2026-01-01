@@ -2461,10 +2461,10 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-      <AlertComponent />
-      <ToastComponent />
-      <ConfirmComponent />
     </div>
+    <AlertComponent />
+    <ToastComponent />
+    <ConfirmComponent />
     </>
   );
 }
