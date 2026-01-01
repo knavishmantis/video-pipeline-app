@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole } from '../../../shared/types';
-import { getSignedUrl } from '../services/gcpStorage';
+import { processProfilePicture } from '../utils/profilePicture';
 
 // Helper to get user roles
 async function getUserRoles(userId: number): Promise<UserRole[]> {
