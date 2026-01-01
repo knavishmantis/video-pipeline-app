@@ -5,6 +5,7 @@ import { initDatabase } from './db';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { requestLogger } from './middleware/requestLogger';
 
 // Load config with error handling
 let config: any;
