@@ -114,6 +114,16 @@ export const authController = {
           // Get roles
           const roles = await getUserRoles(user.id);
           user.roles = roles;
+          
+          // Process profile picture (convert bucket path to signed URL if needed)
+          if (user.profile_picture && !user.profile_picture.startsWith('http') && user.profile_picture.includes('/')) {
+            try {
+              const { getSignedUrl } = await import('../services/gcpStorage');
+              user.profile_picture = await getSignedUrl(user.profile_picture, 3600);
+            } catch (error) {
+              console.error('Failed to generate signed URL for profile picture:', error);
+            }
+          }
         } catch (error: unknown) {
           logger.error('Google OAuth error', { error });
           const errorMsg = error instanceof Error ? error.message : 'Invalid Google token';
@@ -149,6 +159,16 @@ export const authController = {
         // Get roles
         const roles = await getUserRoles(user.id);
         user.roles = roles;
+        
+        // Process profile picture (convert bucket path to signed URL if needed)
+        if (user.profile_picture && !user.profile_picture.startsWith('http') && user.profile_picture.includes('/')) {
+          try {
+            const { getSignedUrl } = await import('../services/gcpStorage');
+            user.profile_picture = await getSignedUrl(user.profile_picture, 3600);
+          } catch (error) {
+            console.error('Failed to generate signed URL for profile picture:', error);
+          }
+        }
       } else {
         res.status(400).json({ error: 'Email/password or Google token required' });
         return;
