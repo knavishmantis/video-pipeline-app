@@ -144,30 +144,6 @@ export default function Guide() {
               </div>
             </section>
           )}
-
-
-          {/* General Tips */}
-          <section className="bg-white rounded-xl border border-neutral-200 shadow-sm p-6">
-            <h2 className="text-2xl font-semibold text-neutral-900 mb-4">General Tips</h2>
-            <div className="space-y-3 text-neutral-700">
-              <div className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <p>Use the Dashboard filters to focus on your assigned work</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <p>Check the Payments section regularly to track your earnings</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <p>Make sure to complete your profile with PayPal email for payments</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <span className="text-blue-600 font-bold">•</span>
-                <p>Contact an admin if you have questions about assignments or payments</p>
-              </div>
-            </div>
-          </section>
         </div>
       </div>
     </div>
