@@ -28,7 +28,9 @@ logger.info('Configuration loaded', {
 const app = express();
 
 // Trust proxy - required for Cloud Run (behind Google's load balancer)
-app.set('trust proxy', true);
+// Trust only the first proxy (Cloud Run's load balancer)
+// This prevents IP spoofing while still allowing rate limiting to work correctly
+app.set('trust proxy', 1);
 
 // Middleware - normalize URLs (remove trailing slashes) for CORS comparison
 app.use(cors({
