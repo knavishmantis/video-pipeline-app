@@ -136,13 +136,14 @@ export const filesApi = {
     
     // Calculate timeout based on file size: 
     // - Upload time: 1 minute per 100MB
-    // - Server processing time: 2 minutes per 100MB (for GCS upload and processing)
-    // - Minimum 10 minutes, maximum 60 minutes
+    // - Server processing time: 5 minutes per 100MB (for GCS upload - can be slow for large files)
+    // - Minimum 15 minutes, maximum 120 minutes (2 hours)
+    // Note: Cloud Run max is 60 minutes, but we set higher client timeout to handle edge cases
     const fileSizeMB = file.size / (1024 * 1024);
     const uploadTimeMinutes = Math.ceil(fileSizeMB / 100);
-    const processingTimeMinutes = Math.ceil(fileSizeMB / 50); // Server needs time to upload to GCS
+    const processingTimeMinutes = Math.ceil(fileSizeMB / 20); // More time for GCS upload (can be slow)
     const totalMinutes = uploadTimeMinutes + processingTimeMinutes;
-    const timeoutMinutes = Math.min(60, Math.max(10, totalMinutes));
+    const timeoutMinutes = Math.min(120, Math.max(15, totalMinutes)); // Up to 2 hours
     const timeoutMs = timeoutMinutes * 60 * 1000;
     
     const response = await api.post('/files/upload', formData, {

@@ -108,7 +108,7 @@ export const filesController = {
           await db.query('DELETE FROM files WHERE id = $1', [existingFile.id]);
         }
         
-        // Upload new file
+        // Upload new file to GCS (this can take time for large files)
         const bucketPath = await uploadFile(req.file, parseInt(short_id), file_type, req.userId);
         
         const result = await db.query(
