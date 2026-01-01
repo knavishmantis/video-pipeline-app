@@ -21,26 +21,21 @@ try {
 
 const app = express();
 
-// Middleware
+// Middleware - normalize URLs (remove trailing slashes) for CORS comparison
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with or without trailing slash
-    const allowedOrigins = [
-      config.frontendUrl,
-      config.frontendUrl.replace(/\/$/, ''), // without trailing slash
-      config.frontendUrl + '/', // with trailing slash
-    ];
-    
-    // Remove duplicates
-    const uniqueOrigins = [...new Set(allowedOrigins)];
+    // Normalize URLs by removing trailing slashes for comparison
+    const normalizedFrontendUrl = config.frontendUrl.replace(/\/$/, '');
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (uniqueOrigins.some(allowed => origin === allowed || origin === allowed + '/' || origin === allowed.replace(/\/$/, ''))) {
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    
+    if (normalizedOrigin === normalizedFrontendUrl) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`Not allowed by CORS. Origin: ${origin}, Allowed: ${config.frontendUrl}`));
     }
   },
   credentials: true
