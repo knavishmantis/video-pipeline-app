@@ -23,7 +23,26 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: config.frontendUrl,
+  origin: (origin, callback) => {
+    // Allow requests with or without trailing slash
+    const allowedOrigins = [
+      config.frontendUrl,
+      config.frontendUrl.replace(/\/$/, ''), // without trailing slash
+      config.frontendUrl + '/', // with trailing slash
+    ];
+    
+    // Remove duplicates
+    const uniqueOrigins = [...new Set(allowedOrigins)];
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (uniqueOrigins.some(allowed => origin === allowed || origin === allowed + '/' || origin === allowed.replace(/\/$/, ''))) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
