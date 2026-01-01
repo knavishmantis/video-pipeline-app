@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import { setupRoutes } from './routes';
 import { initDatabase } from './db';
 import { logger } from './utils/logger';
@@ -65,20 +64,7 @@ app.get('/health', async (req, res) => {
 // Error handling middleware (must be last)
 app.use(errorHandler);
 
-// Serve static files from React app in production
-if (config.nodeEnv === 'production') {
-  const frontendPath = path.join(__dirname, '../frontend-dist');
-  app.use(express.static(frontendPath));
-  
-  // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
-    // Don't serve index.html for API routes
-    if (req.path.startsWith('/api')) {
-      return res.status(404).json({ error: 'API route not found' });
-    }
-    res.sendFile(path.join(frontendPath, 'index.html'));
-  });
-}
+// Note: Frontend is deployed separately to Cloud Run, so we don't serve static files here
 
 // Start server with error handling
 try {
