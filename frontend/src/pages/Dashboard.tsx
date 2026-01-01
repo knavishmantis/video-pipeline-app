@@ -698,7 +698,7 @@ export default function Dashboard() {
         zIndex: 10,
         fontFamily: 'monospace',
       }}>
-        v1.1.2
+        v1.1.3
       </div>
     </React.Fragment>
   );
