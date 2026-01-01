@@ -134,9 +134,15 @@ export const filesApi = {
     formData.append('short_id', shortId.toString());
     formData.append('file_type', fileType);
     
-    // Calculate timeout based on file size: 1 minute per 100MB, minimum 5 minutes, maximum 30 minutes
+    // Calculate timeout based on file size: 
+    // - Upload time: 1 minute per 100MB
+    // - Server processing time: 2 minutes per 100MB (for GCS upload and processing)
+    // - Minimum 10 minutes, maximum 60 minutes
     const fileSizeMB = file.size / (1024 * 1024);
-    const timeoutMinutes = Math.min(30, Math.max(5, Math.ceil(fileSizeMB / 100)));
+    const uploadTimeMinutes = Math.ceil(fileSizeMB / 100);
+    const processingTimeMinutes = Math.ceil(fileSizeMB / 50); // Server needs time to upload to GCS
+    const totalMinutes = uploadTimeMinutes + processingTimeMinutes;
+    const timeoutMinutes = Math.min(60, Math.max(10, totalMinutes));
     const timeoutMs = timeoutMinutes * 60 * 1000;
     
     const response = await api.post('/files/upload', formData, {

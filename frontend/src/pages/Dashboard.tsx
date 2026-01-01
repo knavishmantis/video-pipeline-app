@@ -349,10 +349,42 @@ export default function Dashboard() {
       
       // Handle network errors
       if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
-        showAlert(
-          'Network error: Unable to connect to the server. Please check your internet connection and try again.',
-          { type: 'error' }
-        );
+        // If upload reached 100%, the file likely uploaded successfully but server processing timed out
+        if (uploadProgress === 100 || uploadProgress === null) {
+          showToast('Upload completed but server is still processing. Checking...', 'info');
+          // Wait a bit then check if file exists
+          setTimeout(async () => {
+            try {
+              await loadData();
+              // Try to reload the short to see if file was uploaded
+              if (contentShort) {
+                const updatedShort = await shortsApi.getById(contentShort.id);
+                setContentShort(updatedShort);
+                // Check if the file exists
+                const expectedFileType = contentColumn === 'script' ? 'script' : 
+                                       (contentColumn === 'clips' || contentColumn === 'clip_changes') ? 'clips_zip' : 'final_video';
+                const fileExists = updatedShort.files?.some(f => f.file_type === expectedFileType);
+                if (fileExists) {
+                  showToast('File uploaded successfully!', 'success');
+                  triggerConfetti();
+                  setShowContentModal(false);
+                  setContentShort(null);
+                  setContentColumn(null);
+                  setContentForm({ script_content: '', file: null, scriptFile: null, audioFile: null });
+                } else {
+                  showAlert('Upload may have completed, but file not found. Please refresh the page to check.', { type: 'warning' });
+                }
+              }
+            } catch (checkError) {
+              showAlert('Upload may have completed, but could not verify. Please refresh the page to check.', { type: 'warning' });
+            }
+          }, 2000);
+        } else {
+          showAlert(
+            'Network error: Unable to connect to the server. Please check your internet connection and try again.',
+            { type: 'error' }
+          );
+        }
       } else if (error?.code === 'ECONNABORTED') {
         // Timeout error
         if (uploadProgress === 100) {
