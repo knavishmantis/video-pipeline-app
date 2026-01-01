@@ -823,15 +823,31 @@ export default function Dashboard() {
     try {
       // Load shorts based on toggle (all users can toggle)
       const shouldShowAssignedOnly = showAssignedOnly;
-      const [shortsData, assignmentsData, usersData] = await Promise.all([
-        shouldShowAssignedOnly ? shortsApi.getAssigned() : shortsApi.getAll(),
-        // Non-admin users can't call getAll() on assignments, so use getMyAssignments or empty array
-        isAdmin ? assignmentsApi.getAll() : assignmentsApi.getMyAssignments().catch(() => []),
-        isAdmin ? usersApi.getAll() : Promise.resolve([]), // Non-admins don't need all users
-      ]);
+      
+      // Load shorts first (required for all users)
+      const shortsData = shouldShowAssignedOnly ? await shortsApi.getAssigned() : await shortsApi.getAll();
       setShorts(shortsData);
-      setAssignments(assignmentsData || []);
-      setUsers(usersData || []);
+      
+      // Load assignments and users (only if admin, or use my assignments for non-admin)
+      if (isAdmin) {
+        const [assignmentsData, usersData] = await Promise.all([
+          assignmentsApi.getAll(),
+          usersApi.getAll(),
+        ]);
+        setAssignments(assignmentsData || []);
+        setUsers(usersData || []);
+      } else {
+        // Non-admin users only need their own assignments to check edit permissions
+        try {
+          const assignmentsData = await assignmentsApi.getMyAssignments();
+          setAssignments(assignmentsData || []);
+        } catch (error) {
+          console.error('Failed to load my assignments:', error);
+          setAssignments([]);
+        }
+        // Non-admins don't need all users - set empty array
+        setUsers([]);
+      }
     } catch (error) {
       console.error('Failed to load data:', error);
       // Don't fail completely - at least try to load shorts
