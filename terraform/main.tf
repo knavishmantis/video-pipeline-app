@@ -95,7 +95,7 @@ resource "google_storage_bucket" "video_storage" {
   }
 
   cors {
-    origin          = var.environment == "dev" ? ["http://localhost:3000"] : ["https://yourdomain.com"]
+    origin          = var.environment == "dev" ? ["http://localhost:3000"] : ["https://knavishproductions.com", "https://www.knavishproductions.com"]
     method          = ["GET", "HEAD", "PUT", "POST", "DELETE"]
     response_header = ["*"]
     max_age_seconds = 3600
