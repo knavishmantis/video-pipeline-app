@@ -5,8 +5,9 @@ import { useAlert } from '../hooks/useAlert';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
 import { shortsApi, assignmentsApi, filesApi, usersApi } from '../services/api';
-import { Short, File as FileInterface, FileType, User } from '../../../shared/types';
+import { Short, File as FileInterface, FileType, User, ShortStatus, AssignmentRole } from '../../../shared/types';
 import { triggerConfetti } from '../utils/confetti';
+import { getErrorMessage } from '../utils/errorHandler';
 
 // Helper to get profile picture (emoji, image URL, or fallback)
 const getProfilePicture = (user: User | undefined): string => {
@@ -57,10 +58,10 @@ export default function ShortDetail() {
       const data = await shortsApi.getById(parseInt(id));
       setShort(data);
       setAccessDenied(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to load short:', error);
       // If 403 (forbidden), show access denied message
-      if (error.response?.status === 403) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
         setAccessDenied(true);
         setShort(null);
       } else {
@@ -87,7 +88,7 @@ export default function ShortDetail() {
     try {
       // If assigning script_writer, update the short directly
       if (assignRole === 'script_writer') {
-        await shortsApi.update(parseInt(id), { script_writer_id: parseInt(assignUserId) } as any);
+        await shortsApi.update(parseInt(id), { script_writer_id: parseInt(assignUserId) });
       } else {
         // Delete existing assignment for this role first
         const existingAssignments = short?.assignments?.filter(a => a.role === assignRole) || [];
@@ -131,7 +132,7 @@ export default function ShortDetail() {
     if (!confirmed) return;
     try {
       if (role === 'script_writer') {
-        await shortsApi.update(parseInt(id!), { script_writer_id: null } as any);
+        await shortsApi.update(parseInt(id!), { script_writer_id: null });
       } else {
         await assignmentsApi.delete(assignmentId);
       }
@@ -206,7 +207,7 @@ export default function ShortDetail() {
   const handleStatusChange = async (status: string) => {
     if (!id) return;
     try {
-      await shortsApi.update(parseInt(id), { status: status as any });
+      await shortsApi.update(parseInt(id), { status: status as ShortStatus });
       loadShort();
     } catch (error) {
       console.error('Failed to update status:', error);
@@ -317,7 +318,7 @@ export default function ShortDetail() {
                   <label className="block text-sm font-medium text-neutral-700 mb-2">Role</label>
                   <select
                     value={assignRole}
-                    onChange={(e) => setAssignRole(e.target.value as any)}
+                    onChange={(e) => setAssignRole(e.target.value as AssignmentRole)}
                     className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="script_writer">Script Writer</option>
@@ -848,8 +849,8 @@ export default function ShortDetail() {
                         await shortsApi.markEditingComplete(short.id);
                         await loadShort();
                         showToast('Editing marked as complete! Payments have been created.', 'success');
-                      } catch (error: any) {
-                        showAlert(error.response?.data?.error || 'Failed to mark editing complete', { type: 'error' });
+                      } catch (error: unknown) {
+                        showAlert(getErrorMessage(error, 'Failed to mark editing complete'), { type: 'error' });
                       }
                     }
                   }}
@@ -940,10 +941,9 @@ export default function ShortDetail() {
                         await shortsApi.delete(short.id);
                         showToast('Short deleted successfully', 'success');
                         navigate('/');
-                      } catch (error: any) {
+                      } catch (error: unknown) {
                         console.error('Failed to delete short:', error);
-                        const errorMessage = error.response?.data?.error || 'Failed to delete short';
-                        showAlert(errorMessage, { type: 'error' });
+                        showAlert(getErrorMessage(error, 'Failed to delete short'), { type: 'error' });
                       }
                     }
                   }}

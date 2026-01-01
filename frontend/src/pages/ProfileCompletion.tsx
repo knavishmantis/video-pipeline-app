@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { usersApi, filesApi, authApi } from '../services/api';
 import { User } from '../../../shared/types';
+import { getErrorMessage } from '../utils/errorHandler';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import TimezoneSelect, { type ITimezone } from 'react-timezone-select';
 import { Label } from '../components/ui/label';
@@ -134,9 +135,9 @@ export default function ProfileCompletion() {
           // Store the bucket path instead of signed URL (signed URLs are too long and expire)
           // We'll generate signed URLs on-demand when displaying
           profilePictureValue = uploadResult.gcp_bucket_path || uploadResult.url || '';
-        } catch (uploadError: any) {
+        } catch (uploadError: unknown) {
           console.error('Image upload error:', uploadError);
-          const errorMsg = uploadError.response?.data?.error || uploadError.message || 'Image upload failed';
+          const errorMsg = getErrorMessage(uploadError, 'Image upload failed');
           setError(`${errorMsg}. Please try again or use an emoji instead.`);
           setSaving(false);
           return;
@@ -185,9 +186,9 @@ export default function ProfileCompletion() {
         // Still navigate even if refresh fails
         window.location.href = '/';
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Profile update error:', error);
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to update profile';
+      const errorMsg = getErrorMessage(error, 'Failed to update profile');
       setError(errorMsg);
       setSaving(false);
     }

@@ -5,6 +5,7 @@ import {
   closestCenter,
   DragStartEvent,
   DragEndEvent,
+  useSensors,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -22,7 +23,7 @@ interface KanbanBoardProps {
   users: User[];
   isAdmin: boolean;
   currentUserId?: number;
-  sensors: any;
+  sensors: ReturnType<typeof useSensors>;
   activeId: string | null;
   activeShort: Short | null;
   onDragStart: (event: DragStartEvent) => void;

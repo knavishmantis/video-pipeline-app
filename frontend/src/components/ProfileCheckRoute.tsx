@@ -27,9 +27,9 @@ export default function ProfileCheckRoute({ children, requiredRole }: ProfileChe
     try {
       const response = await authApi.checkProfileComplete();
       setProfileComplete(response.complete);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If 403, profile is incomplete
-      if (error.response?.status === 403) {
+      if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
         setProfileComplete(false);
       } else {
         console.error('Failed to check profile:', error);

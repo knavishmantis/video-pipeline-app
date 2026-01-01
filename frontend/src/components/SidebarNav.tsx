@@ -6,6 +6,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { usersApi, filesApi } from "../services/api";
 import { useToast } from "../hooks/useToast";
 import { useAlert } from "../hooks/useAlert";
+import { getErrorMessage } from "../utils/errorHandler";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 
 export function SidebarNav() {
@@ -119,9 +120,9 @@ export function SidebarNav() {
           // Store the bucket path instead of signed URL (signed URLs are too long and expire)
           // We'll generate signed URLs on-demand when displaying
           profilePictureValue = uploadResult.gcp_bucket_path || uploadResult.url || '';
-        } catch (uploadError: any) {
+        } catch (uploadError: unknown) {
           console.error('Image upload error:', uploadError);
-          const errorMsg = uploadError.response?.data?.error || uploadError.message || 'Image upload failed';
+          const errorMsg = getErrorMessage(uploadError, 'Image upload failed');
           showAlert(`${errorMsg}. Please try again or use an emoji instead.`, { type: 'error' });
           setSaving(false);
           return;
@@ -141,9 +142,9 @@ export function SidebarNav() {
       await refreshUser(); // Refresh user data in auth context
       setShowProfileModal(false);
       showToast('Profile updated successfully', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update profile:', error);
-      showAlert(error.response?.data?.error || 'Failed to update profile', { type: 'error' });
+      showAlert(getErrorMessage(error, 'Failed to update profile'), { type: 'error' });
     } finally {
       setSaving(false);
     }

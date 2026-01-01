@@ -1,10 +1,10 @@
-import { Short } from '../../../shared/types';
+import { Short, Assignment, User } from '../../../shared/types';
 import { ColumnType, Column } from '../utils/dashboardUtils';
 import { shortsApi } from '../services/api';
 
 interface UseCardClickProps {
-  assignments: any[];
-  user: any;
+  assignments: Assignment[];
+  user: User | null;
   isAdmin: boolean;
   setContentShort: (short: Short | null) => void;
   setContentColumn: (column: ColumnType | null) => void;

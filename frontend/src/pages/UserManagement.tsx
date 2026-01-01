@@ -5,6 +5,7 @@ import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
 import { usersApi } from '../services/api';
 import { User, UserRole } from '../../../shared/types';
+import { getErrorMessage } from '../utils/errorHandler';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { cn } from '../lib/utils';
@@ -93,8 +94,8 @@ export default function UserManagement() {
       setShowAddModal(false);
       setNewUser({ email: '', roles: [] });
       await loadUsers();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to create user');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to create user'));
     } finally {
       setCreating(false);
     }
@@ -134,8 +135,8 @@ export default function UserManagement() {
       setShowEditModal(false);
       setEditingUser(null);
       await loadUsers();
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to update user');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to update user'));
     } finally {
       setUpdating(false);
     }
@@ -155,9 +156,10 @@ export default function UserManagement() {
       await usersApi.delete(userId);
       await loadUsers();
       showToast('User deleted successfully', 'success');
-    } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'Failed to delete user');
-      showToast(err.response?.data?.error || err.message || 'Failed to delete user', 'error');
+    } catch (err: unknown) {
+      const errorMsg = getErrorMessage(err, 'Failed to delete user');
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setDeletingUserId(null);
     }

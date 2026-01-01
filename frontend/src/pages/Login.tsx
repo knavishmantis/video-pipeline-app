@@ -5,7 +5,7 @@ import { IconHelp } from '@tabler/icons-react';
 
 declare global {
   interface Window {
-    google: any;
+    google: any; // Google OAuth SDK types
   }
 }
 

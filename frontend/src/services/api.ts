@@ -46,7 +46,7 @@ export const authApi = {
     const response = await api.get('/auth/me');
     return response.data;
   },
-  checkProfileComplete: async (): Promise<{ complete: boolean; missing: any }> => {
+  checkProfileComplete: async (): Promise<{ complete: boolean; missing: { discord_username?: boolean; paypal_email?: boolean } }> => {
     const response = await api.get('/auth/profile-complete');
     return response.data;
   },

@@ -4,6 +4,7 @@ import { useAlert } from '../hooks/useAlert';
 import { useToast } from '../hooks/useToast';
 import { paymentsApi, usersApi, assignmentsApi } from '../services/api';
 import { Payment, User, Assignment } from '../../../shared/types';
+import { getErrorMessage } from '../utils/errorHandler';
 
 export default function PaymentTracking() {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ export default function PaymentTracking() {
     setLoading(true);
     try {
       if (isAdmin) {
-        const params: any = {};
+        const params: Record<string, string | number> = {};
         if (filterUserId) params.user_id = filterUserId;
         if (statsMonth) params.month = statsMonth;
         if (statsYear) params.year = statsYear;
@@ -55,7 +56,7 @@ export default function PaymentTracking() {
         setUsers(usersData);
         setAssignments(assignmentsData);
       } else {
-        const params: any = {};
+        const params: Record<string, string | number> = {};
         if (statsMonth) params.month = statsMonth;
         if (statsYear) params.year = statsYear;
         
@@ -85,9 +86,9 @@ export default function PaymentTracking() {
       await loadData();
       await loadStats();
       showToast('Payment marked as paid successfully', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to mark payment as paid:', error);
-      showAlert(error.response?.data?.error || 'Failed to mark payment as paid', { type: 'error' });
+      showAlert(getErrorMessage(error, 'Failed to mark payment as paid'), { type: 'error' });
     }
   };
 
@@ -108,9 +109,9 @@ export default function PaymentTracking() {
       await loadData();
       await loadStats();
       showToast('Incentive payment added successfully', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to add incentive:', error);
-      showAlert(error.response?.data?.error || 'Failed to add incentive', { type: 'error' });
+      showAlert(getErrorMessage(error, 'Failed to add incentive'), { type: 'error' });
     }
   };
 
