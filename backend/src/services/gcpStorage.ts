@@ -73,17 +73,36 @@ export async function uploadFile(
   
   const fileUpload = bucket.file(fileName);
   
+  // Use resumable upload for large files (automatic for files > 5MB, but we'll make it explicit)
+  // Resumable uploads handle timeouts and network issues automatically
   const stream = fileUpload.createWriteStream({
     metadata: {
       contentType: file.mimetype,
     },
+    resumable: file.size > 5 * 1024 * 1024, // Use resumable for files > 5MB
+    timeout: 0, // No timeout (let GCS handle it)
+    validation: 'crc32c', // Validate upload integrity
   });
   
   return new Promise((resolve, reject) => {
-    stream.on('error', reject);
+    let bytesUploaded = 0;
+    
+    stream.on('error', (error) => {
+      logger.error('GCS upload stream error', { fileName, error, bytesUploaded, fileSize: file.size });
+      reject(error);
+    });
+    
+    stream.on('progress', (progress) => {
+      bytesUploaded = progress.bytesWritten;
+      logger.debug('GCS upload progress', { fileName, bytesUploaded, fileSize: file.size });
+    });
+    
     stream.on('finish', () => {
+      logger.info('File uploaded to GCS successfully', { fileName, fileSize: file.size });
       resolve(fileName);
     });
+    
+    // Write the buffer to the stream
     stream.end(file.buffer);
   });
 }
