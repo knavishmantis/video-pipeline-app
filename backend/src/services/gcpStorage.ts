@@ -5,20 +5,30 @@ let storage: Storage | null = null;
 
 function getStorage(): Storage {
   if (!storage) {
-    const keyFilename = process.env.GCP_KEY_FILE;
     const projectId = process.env.GCP_PROJECT_ID;
+    const keyFilename = process.env.GCP_KEY_FILE;
     
-    if (!keyFilename || !projectId) {
-      console.warn('GCP_KEY_FILE and GCP_PROJECT_ID not configured. File uploads will be disabled.');
+    if (!projectId) {
+      console.warn('GCP_PROJECT_ID not configured. File uploads will be disabled.');
       return null as any; // Return null to allow graceful degradation
     }
     
     try {
-      storage = new Storage({
-        projectId: projectId,
-        keyFilename: path.resolve(keyFilename),
-      });
-      console.log(`GCP Storage initialized. Using bucket: ${process.env.GCP_BUCKET_NAME || 'NOT SET'}`);
+      // If GCP_KEY_FILE is set, use it (for local dev or if key file is provided)
+      // Otherwise, use Application Default Credentials (for Cloud Run with service account)
+      if (keyFilename) {
+        storage = new Storage({
+          projectId: projectId,
+          keyFilename: path.resolve(keyFilename),
+        });
+        console.log(`GCP Storage initialized with key file. Using bucket: ${process.env.GCP_BUCKET_NAME || 'NOT SET'}`);
+      } else {
+        // Use Application Default Credentials (works with Cloud Run service accounts)
+        storage = new Storage({
+          projectId: projectId,
+        });
+        console.log(`GCP Storage initialized with Application Default Credentials. Using bucket: ${process.env.GCP_BUCKET_NAME || 'NOT SET'}`);
+      }
     } catch (error) {
       console.error('Failed to initialize GCP Storage:', error);
       throw error;
