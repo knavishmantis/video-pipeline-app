@@ -779,6 +779,7 @@ export default function Dashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  // Non-admin users should always see all shorts (read-only), only admins can filter to "assigned only"
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
   // Initialize visible columns - exclude 'uploaded' and 'ready_to_upload' by default
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnType>>(
