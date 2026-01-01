@@ -166,12 +166,16 @@ export const authController = {
       const response: AuthResponse = { user, token };
       res.json(response);
     } catch (error) {
-      logger.error('Login error', { error });
+      logger.error('Login error', { 
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ error: error.message });
         return;
       }
-      res.status(500).json({ error: 'Login failed' });
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      res.status(500).json({ error: errorMessage });
     }
   },
 
