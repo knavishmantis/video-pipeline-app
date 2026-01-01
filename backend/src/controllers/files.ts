@@ -188,10 +188,20 @@ export const filesController = {
       const filesWithUrls = await Promise.all(
         result.rows.map(async (file: any) => {
           try {
+            if (!file.gcp_bucket_path) {
+              logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
+              return { ...file, download_url: null };
+            }
             const url = await getSignedUrl(file.gcp_bucket_path);
             return { ...file, download_url: url };
           } catch (error) {
-            logger.error('Failed to get signed URL for file', { fileId: file.id, error });
+            logger.error('Failed to get signed URL for file', { 
+              fileId: file.id, 
+              fileName: file.file_name,
+              bucketPath: file.gcp_bucket_path,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            });
             return { ...file, download_url: null };
           }
         })

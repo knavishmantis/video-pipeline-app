@@ -71,13 +71,20 @@ export const shortsController = {
           const filesWithUrls = await Promise.all(
             filesResult.rows.map(async (file: any) => {
               try {
-                if (file.gcp_bucket_path) {
-                  const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-                  return { ...file, download_url: url };
+                if (!file.gcp_bucket_path) {
+                  logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
+                  return { ...file, download_url: null };
                 }
-                return { ...file, download_url: null };
+                const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
+                return { ...file, download_url: url };
               } catch (error) {
-                logger.error(`Failed to get signed URL for file ${file.id}`, { fileId: file.id, error });
+                logger.error(`Failed to get signed URL for file ${file.id}`, { 
+                  fileId: file.id, 
+                  fileName: file.file_name,
+                  bucketPath: file.gcp_bucket_path,
+                  error: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined
+                });
                 return { ...file, download_url: null };
               }
             })
@@ -148,13 +155,20 @@ export const shortsController = {
           const filesWithUrls = await Promise.all(
             filesResult.rows.map(async (file: any) => {
               try {
-                if (file.gcp_bucket_path) {
-                  const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-                  return { ...file, download_url: url };
+                if (!file.gcp_bucket_path) {
+                  logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
+                  return { ...file, download_url: null };
                 }
-                return { ...file, download_url: null };
+                const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
+                return { ...file, download_url: url };
               } catch (error) {
-                logger.error(`Failed to get signed URL for file ${file.id}`, { fileId: file.id, error });
+                logger.error(`Failed to get signed URL for file ${file.id}`, { 
+                  fileId: file.id, 
+                  fileName: file.file_name,
+                  bucketPath: file.gcp_bucket_path,
+                  error: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined
+                });
                 return { ...file, download_url: null };
               }
             })
@@ -212,16 +226,28 @@ export const shortsController = {
         }
       }
       
-      // Only admins can view the detail page
+      // Check if user is admin or assigned to this short
       const isAdmin = userRoles?.includes('admin');
       
-      if (!isAdmin) {
-        logger.debug('Access denied - admin only', { shortId: id });
-        res.status(403).json({ error: 'You do not have permission to view this short. Admin access required.' });
-        return;
+      if (!isAdmin && req.userId) {
+        // Check if user is assigned to this short
+        const assignmentResult = await query(
+          `SELECT * FROM assignments 
+           WHERE short_id = $1 AND user_id = $2 AND role IN ('clipper', 'editor', 'script_writer')`,
+          [id, req.userId]
+        );
+        
+        // Also check if user is the script writer
+        const isScriptWriter = short.script_writer_id === req.userId;
+        
+        if (assignmentResult.rows.length === 0 && !isScriptWriter) {
+          logger.debug('Access denied - not assigned', { shortId: id, userId: req.userId });
+          res.status(403).json({ error: 'You do not have permission to view this short.' });
+          return;
+        }
       }
       
-      logger.debug('Access granted - admin user, loading full short data', { shortId: id });
+      logger.debug('Access granted, loading full short data', { shortId: id, isAdmin, userId: req.userId });
       
       // Get assignments to populate data
       const assignmentsResult = await query(
@@ -275,13 +301,20 @@ export const shortsController = {
       const filesWithUrls = await Promise.all(
         filesResult.rows.map(async (file: any) => {
           try {
-            if (file.gcp_bucket_path) {
-              const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-              return { ...file, download_url: url };
+            if (!file.gcp_bucket_path) {
+              logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
+              return { ...file, download_url: null };
             }
-            return { ...file, download_url: null };
+            const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
+            return { ...file, download_url: url };
           } catch (error) {
-            logger.error('Failed to get signed URL for file', { fileId: file.id, error });
+            logger.error('Failed to get signed URL for file', { 
+              fileId: file.id, 
+              fileName: file.file_name,
+              bucketPath: file.gcp_bucket_path,
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            });
             return { ...file, download_url: null };
           }
         })

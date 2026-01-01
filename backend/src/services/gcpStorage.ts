@@ -96,13 +96,39 @@ export async function getSignedUrl(bucketPath: string, expiresIn: number = 3600)
     throw new Error('GCP_BUCKET_NAME environment variable is required');
   }
   
-  const file = storage.bucket(bucketName).file(bucketPath);
-  const [url] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + expiresIn * 1000,
-  });
+  if (!storage) {
+    throw new Error('GCP Storage is not initialized. Check GCP_PROJECT_ID configuration.');
+  }
   
-  return url;
+  if (!bucketPath) {
+    throw new Error('bucketPath is required');
+  }
+  
+  try {
+    const file = storage.bucket(bucketName).file(bucketPath);
+    
+    // Check if file exists before generating signed URL
+    const [exists] = await file.exists();
+    if (!exists) {
+      logger.warn('File does not exist in bucket', { bucketPath, bucketName });
+      throw new Error(`File not found in bucket: ${bucketPath}`);
+    }
+    
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + expiresIn * 1000,
+    });
+    
+    return url;
+  } catch (error) {
+    logger.error('Error generating signed URL', { 
+      bucketPath, 
+      bucketName, 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    throw error;
+  }
 }
 
 export async function deleteFile(bucketPath: string): Promise<void> {

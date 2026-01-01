@@ -14,6 +14,7 @@ interface ContentModalProps {
     audioFile: File | null;
   };
   uploading: boolean;
+  uploadProgress: number | null;
   assignments: Assignment[];
   user: User | null;
   isAdmin: boolean;
@@ -39,6 +40,7 @@ export function ContentModal({
   contentColumn,
   contentForm,
   uploading,
+  uploadProgress,
   assignments,
   user,
   isAdmin,
@@ -100,23 +102,30 @@ export function ContentModal({
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px',
-      }}
-      onClick={() => {
-        if (!uploading) {
-          onClose();
+    <>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-      }}
-    >
+      `}</style>
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px',
+        }}
+        onClick={() => {
+          if (!uploading) {
+            onClose();
+          }
+        }}
+      >
       <div
         style={{
           background: 'white',
@@ -671,6 +680,54 @@ export function ContentModal({
             </div>
           )}
           
+          {/* Upload Progress Indicator */}
+          {uploading && uploadProgress !== null && (
+            <div style={{
+              marginTop: '20px',
+              padding: '16px',
+              background: '#F0F9FF',
+              borderRadius: '8px',
+              border: '1px solid #BAE6FD',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px',
+              }}>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#0369A1',
+                }}>
+                  Uploading...
+                </span>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#0369A1',
+                }}>
+                  {uploadProgress}%
+                </span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                background: '#E0F2FE',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: `${uploadProgress}%`,
+                  height: '100%',
+                  background: '#3B82F6',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+            </div>
+          )}
+          
           <div style={{
             display: 'flex',
             gap: '12px',
@@ -723,7 +780,7 @@ export function ContentModal({
                 </svg>
               )}
               {uploading 
-                ? 'Uploading...' 
+                ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : 'Uploading...')
                 : (() => {
                     if (contentColumn === 'script') {
                       const hasScript = contentShort.files?.some(f => f.file_type === 'script');
@@ -744,6 +801,7 @@ export function ContentModal({
         </form>
       </div>
     </div>
+    </>
   );
 }
 

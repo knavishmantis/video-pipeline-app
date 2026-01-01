@@ -117,13 +117,33 @@ export const filesApi = {
     const response = await api.get(`/files/short/${shortId}`);
     return response.data;
   },
-  upload: async (shortId: number, fileType: string, file: globalThis.File): Promise<FileType> => {
+  upload: async (
+    shortId: number, 
+    fileType: string, 
+    file: globalThis.File,
+    onUploadProgress?: (progressEvent: { loaded: number; total: number }) => void
+  ): Promise<FileType> => {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('short_id', shortId.toString());
     formData.append('file_type', fileType);
+    
+    // Calculate timeout based on file size: 1 minute per 100MB, minimum 5 minutes, maximum 30 minutes
+    const fileSizeMB = file.size / (1024 * 1024);
+    const timeoutMinutes = Math.min(30, Math.max(5, Math.ceil(fileSizeMB / 100)));
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    
     const response = await api.post('/files/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: timeoutMs,
+      onUploadProgress: onUploadProgress ? (progressEvent) => {
+        if (progressEvent.total) {
+          onUploadProgress({
+            loaded: progressEvent.loaded,
+            total: progressEvent.total,
+          });
+        }
+      } : undefined,
     });
     return response.data;
   },

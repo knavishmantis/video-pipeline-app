@@ -62,6 +62,7 @@ export default function Dashboard() {
     audioFile: File | null;
   }>({ script_content: '', file: null, scriptFile: null, audioFile: null });
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -247,24 +248,67 @@ export default function Dashboard() {
     if (!contentShort || !contentColumn) return;
 
     setUploading(true);
+    setUploadProgress(0);
     try {
       if (contentColumn === 'script') {
         if (!contentForm.scriptFile || !contentForm.audioFile) {
           showAlert('Both Script PDF and Audio MP3 are required', { type: 'warning' });
           setUploading(false);
+          setUploadProgress(null);
           return;
         }
-        await filesApi.upload(contentShort.id, 'script', contentForm.scriptFile);
-        await filesApi.upload(contentShort.id, 'audio', contentForm.audioFile);
+        // Calculate total file size for accurate progress
+        const totalSize = contentForm.scriptFile.size + contentForm.audioFile.size;
+        let uploadedBytes = 0;
+        
+        // Upload script file with progress (0-50% of total)
+        await filesApi.upload(
+          contentShort.id, 
+          'script', 
+          contentForm.scriptFile,
+          (progress) => {
+            uploadedBytes = progress.loaded;
+            const percent = Math.round((uploadedBytes / totalSize) * 100);
+            setUploadProgress(Math.min(percent, 50));
+          }
+        );
+        // Upload audio file with progress (50-100% of total)
+        await filesApi.upload(
+          contentShort.id, 
+          'audio', 
+          contentForm.audioFile,
+          (progress) => {
+            uploadedBytes = contentForm.scriptFile.size + progress.loaded;
+            const percent = Math.round((uploadedBytes / totalSize) * 100);
+            setUploadProgress(Math.min(percent, 100));
+          }
+        );
       } else if ((contentColumn === 'clips' || contentColumn === 'clip_changes') && contentForm.file) {
-        await filesApi.upload(contentShort.id, 'clips_zip', contentForm.file);
+        await filesApi.upload(
+          contentShort.id, 
+          'clips_zip', 
+          contentForm.file,
+          (progress) => {
+            // Use actual upload progress (0-100%)
+            const percent = Math.round((progress.loaded / progress.total) * 100);
+            setUploadProgress(percent);
+          }
+        );
       } else if ((contentColumn === 'editing' || contentColumn === 'editing_changes') && contentForm.file) {
-        await filesApi.upload(contentShort.id, 'final_video', contentForm.file);
+        await filesApi.upload(
+          contentShort.id, 
+          'final_video', 
+          contentForm.file,
+          (progress) => {
+            // Use actual upload progress (0-100%)
+            const percent = Math.round((progress.loaded / progress.total) * 100);
+            setUploadProgress(percent);
+          }
+        );
       }
 
-      setShowContentModal(false);
-      setContentShort(null);
-      setContentColumn(null);
+      // Upload is complete (100%)
+      setUploadProgress(100);
       
       // Determine which file types were uploaded for confetti
       let uploadedFileType: string | null = null;
@@ -276,19 +320,48 @@ export default function Dashboard() {
         uploadedFileType = 'final_video';
       }
       
-      setContentForm({ script_content: '', file: null, scriptFile: null, audioFile: null });
-      await loadData();
-      showToast('Content saved successfully', 'success');
-      
-      // Trigger confetti for specific file types
+      // Trigger confetti for specific file types (before closing modal so it's visible)
       if (uploadedFileType === 'script' || uploadedFileType === 'clips_zip' || uploadedFileType === 'final_video') {
         triggerConfetti();
       }
-    } catch (error) {
+      
+      // Show success toast
+      showToast('Content saved successfully', 'success');
+      
+      // Wait a moment to show 100% completion and confetti, then close modal
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
+      // Close modal and reset form
+      setShowContentModal(false);
+      setContentShort(null);
+      setContentColumn(null);
+      setContentForm({ script_content: '', file: null, scriptFile: null, audioFile: null });
+      
+      // Reload data in the background (don't wait for it)
+      loadData().catch(error => {
+        console.warn('Failed to reload data after upload:', error);
+        // Don't show error to user - file is already uploaded successfully
+      });
+    } catch (error: any) {
       console.error('Failed to save content:', error);
-      showAlert('Failed to save content. Please try again.', { type: 'error' });
+      
+      // If it's a timeout error but we reached 100%, the file likely uploaded successfully
+      // Check if the file exists by trying to reload the short
+      if (error?.code === 'ECONNABORTED' && uploadProgress === 100) {
+        showToast('Upload may have completed. Refreshing...', 'info');
+        // Try to reload data to verify
+        loadData().then(() => {
+          showToast('File uploaded successfully', 'success');
+        }).catch(() => {
+          showAlert('Upload may have completed, but could not verify. Please refresh the page.', { type: 'warning' });
+        });
+      } else {
+        const errorMessage = error?.response?.data?.error || error?.message || 'Failed to save content. Please try again.';
+        showAlert(errorMessage, { type: 'error' });
+      }
     } finally {
       setUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -328,14 +401,22 @@ export default function Dashboard() {
       await filesApi.delete(fileId);
       // Reload the short to get updated file list
       if (contentShort) {
-        const updatedShort = await shortsApi.getById(contentShort.id);
-        setContentShort(updatedShort);
+        try {
+          const updatedShort = await shortsApi.getById(contentShort.id);
+          setContentShort(updatedShort);
+        } catch (error) {
+          // If we can't reload the short, just reload data
+          console.warn('Failed to reload short after delete, reloading all data:', error);
+        }
       }
       await loadData();
       showToast('File deleted successfully', 'success');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to delete file:', error);
-      showAlert('Failed to delete file', { type: 'error' });
+      const errorMessage = error?.response?.status === 404 
+        ? 'File not found. It may have already been deleted.'
+        : error?.response?.data?.error || 'Failed to delete file';
+      showAlert(errorMessage, { type: 'error' });
     }
   };
 
@@ -452,6 +533,7 @@ export default function Dashboard() {
         contentColumn={contentColumn}
         contentForm={contentForm}
         uploading={uploading}
+        uploadProgress={uploadProgress}
         assignments={assignments}
         user={user || null}
         isAdmin={isAdmin}
@@ -459,6 +541,7 @@ export default function Dashboard() {
           setShowContentModal(false);
           setContentShort(null);
           setContentColumn(null);
+          setUploadProgress(null);
         }}
         onSubmit={handleContentSubmit}
         onFormChange={setContentForm}
