@@ -13,6 +13,11 @@ try {
   const configModule = require('./config/env');
   config = configModule.config;
   PORT = config.port;
+  // Debug: Log Google Client ID status (first 20 chars only for security)
+  logger.info('Configuration loaded', {
+    hasGoogleClientId: !!config.google?.clientId,
+    googleClientIdPreview: config.google?.clientId ? config.google.clientId.substring(0, 20) + '...' : 'MISSING'
+  });
 } catch (error: any) {
   console.error('Failed to load configuration:', error.message);
   console.error('Required environment variables: DATABASE_URL, JWT_SECRET, FRONTEND_URL');
