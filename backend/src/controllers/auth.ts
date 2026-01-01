@@ -56,7 +56,7 @@ export const authController = {
         res.status(409).json({ error: 'Email already exists' });
       } else {
         logger.error('Registration error', { error });
-        throw new AppError(500, 'Registration failed');
+        res.status(500).json({ error: 'Registration failed' });
       }
     }
   },
@@ -70,7 +70,8 @@ export const authController = {
       // Google OAuth login
       if (googleToken) {
         if (!googleClient || !config.google.clientId) {
-          throw new AppError(500, 'Google OAuth not configured on server');
+          res.status(500).json({ error: 'Google OAuth not configured on server' });
+          return;
         }
         try {
           const ticket = await googleClient.verifyIdToken({
@@ -114,7 +115,8 @@ export const authController = {
         } catch (error: unknown) {
           logger.error('Google OAuth error', { error });
           const errorMsg = error instanceof Error ? error.message : 'Invalid Google token';
-          throw new AppError(401, `Google authentication failed: ${errorMsg}`);
+          res.status(401).json({ error: `Google authentication failed: ${errorMsg}` });
+          return;
         }
       } 
       // Password login (fallback)
@@ -163,7 +165,11 @@ export const authController = {
       res.json(response);
     } catch (error) {
       logger.error('Login error', { error });
-      throw new AppError(500, 'Login failed');
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: 'Login failed' });
     }
   },
 
