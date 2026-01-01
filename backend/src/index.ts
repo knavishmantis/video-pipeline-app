@@ -21,6 +21,9 @@ try {
 
 const app = express();
 
+// Trust proxy - required for Cloud Run (behind Google's load balancer)
+app.set('trust proxy', true);
+
 // Middleware - normalize URLs (remove trailing slashes) for CORS comparison
 app.use(cors({
   origin: (origin, callback) => {
