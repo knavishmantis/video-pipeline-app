@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole } from '../../../shared/types';
+import { getSignedUrl } from '../services/gcpStorage';
 
 // Helper to get user roles
 async function getUserRoles(userId: number): Promise<UserRole[]> {
@@ -21,6 +22,31 @@ async function setUserRoles(userId: number, roles: UserRole[]): Promise<void> {
   // Insert new roles
   for (const role of roles) {
     await query('INSERT INTO user_roles (user_id, role) VALUES ($1, $2)', [userId, role]);
+  }
+}
+
+// Helper to convert bucket path to signed URL if needed
+async function processProfilePicture(profilePicture: string | null): Promise<string | null> {
+  if (!profilePicture) return null;
+  
+  // If it's already a URL (starts with http), return as-is
+  if (profilePicture.startsWith('http')) {
+    return profilePicture;
+  }
+  
+  // If it's an emoji (single character or short), return as-is
+  if (profilePicture.length <= 10 && !profilePicture.includes('/')) {
+    return profilePicture;
+  }
+  
+  // Otherwise, it's likely a bucket path - generate signed URL
+  try {
+    const signedUrl = await getSignedUrl(profilePicture, 3600); // 1 hour expiry
+    return signedUrl;
+  } catch (error) {
+    console.error('Failed to generate signed URL for profile picture:', error);
+    // Return the bucket path as-is if signed URL generation fails
+    return profilePicture;
   }
 }
 
@@ -47,11 +73,12 @@ export const usersController = {
       
       const result = await query(sqlQuery, params);
       
-      // Get roles for each user
+      // Get roles and process profile pictures for each user
       const usersWithRoles = await Promise.all(
         result.rows.map(async (user: any) => {
           const roles = await getUserRoles(user.id);
-          return { ...user, roles };
+          const profilePicture = await processProfilePicture(user.profile_picture);
+          return { ...user, roles, profile_picture: profilePicture };
         })
       );
       
