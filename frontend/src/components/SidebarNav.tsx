@@ -341,8 +341,8 @@ export function SidebarNav() {
         </div>
       )}
 
-      {ToastComponent}
-      {AlertComponent}
+      <ToastComponent />
+      <AlertComponent />
     </Sidebar>
   );
 }

@@ -21,10 +21,11 @@ export const authLimiter = rateLimit({
 
 // File upload rate limiter (more lenient)
 export const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // limit each IP to 20 uploads per hour
+  windowMs: 15 * 60 * 1000, // 15 minutes (reduced from 1 hour for better UX)
+  max: 30, // limit each IP to 30 uploads per 15 minutes (increased from 20/hour)
   message: 'Too many file uploads, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful uploads
 });
 
