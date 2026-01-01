@@ -1183,56 +1183,58 @@ export default function Dashboard() {
           gap: '16px',
           flexWrap: 'wrap',
         }}>
-          {/* Toggle Switch for Assigned/Show All */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
-              Show All
-            </span>
-            <label style={{
-              position: 'relative',
-              display: 'inline-block',
-              width: '48px',
-              height: '24px',
-            }}>
-              <input
-                type="checkbox"
-                checked={showAssignedOnly}
-                onChange={(e) => setShowAssignedOnly(e.target.checked)}
-                style={{
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                }}
-              />
-              <span style={{
-                position: 'absolute',
-                cursor: 'pointer',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: showAssignedOnly ? '#3B82F6' : '#E2E8F0',
-                transition: '0.3s',
-                borderRadius: '24px',
+          {/* Toggle Switch for Assigned/Show All - Only show for admins */}
+          {isAdmin && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
+                Show All
+              </span>
+              <label style={{
+                position: 'relative',
+                display: 'inline-block',
+                width: '48px',
+                height: '24px',
               }}>
+                <input
+                  type="checkbox"
+                  checked={showAssignedOnly}
+                  onChange={(e) => setShowAssignedOnly(e.target.checked)}
+                  style={{
+                    opacity: 0,
+                    width: 0,
+                    height: 0,
+                  }}
+                />
                 <span style={{
                   position: 'absolute',
-                  content: '""',
-                  height: '18px',
-                  width: '18px',
-                  left: '3px',
-                  bottom: '3px',
-                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: showAssignedOnly ? '#3B82F6' : '#E2E8F0',
                   transition: '0.3s',
-                  borderRadius: '50%',
-                  transform: showAssignedOnly ? 'translateX(24px)' : 'translateX(0)',
-                }} />
+                  borderRadius: '24px',
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    content: '""',
+                    height: '18px',
+                    width: '18px',
+                    left: '3px',
+                    bottom: '3px',
+                    backgroundColor: 'white',
+                    transition: '0.3s',
+                    borderRadius: '50%',
+                    transform: showAssignedOnly ? 'translateX(24px)' : 'translateX(0)',
+                  }} />
+                </span>
+              </label>
+              <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
+                Assigned to Me
               </span>
-            </label>
-            <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
-              Assigned to Me
-            </span>
-          </div>
+            </div>
+          )}
 
           {/* View Buttons */}
           <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
