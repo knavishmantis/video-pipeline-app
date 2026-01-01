@@ -195,7 +195,7 @@ export const authController = {
       res.json({ ...user, roles });
     } catch (error) {
       logger.error('Get me error', { error });
-      throw new AppError(500, 'Failed to get user');
+      res.status(500).json({ error: 'Failed to get user' });
     }
   },
 
@@ -229,7 +229,7 @@ export const authController = {
       });
     } catch (error) {
       logger.error('Check profile complete error', { error });
-      throw new AppError(500, 'Failed to check profile');
+      res.status(500).json({ error: 'Failed to check profile' });
     }
   }
 };
