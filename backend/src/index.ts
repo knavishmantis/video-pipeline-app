@@ -41,6 +41,18 @@ initDatabase().catch((error) => {
 // API Routes
 setupRoutes(app);
 
+// Root route - API info
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Video Pipeline API',
+    version: '1.0.0',
+    endpoints: {
+      health: '/health',
+      api: '/api'
+    }
+  });
+});
+
 // Health check with database status
 app.get('/health', async (req, res) => {
   try {
