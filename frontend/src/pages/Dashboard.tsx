@@ -821,8 +821,10 @@ export default function Dashboard() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Non-admin users always see all shorts (read-only), only admins can filter
+      const shouldShowAssignedOnly = isAdmin && showAssignedOnly;
       const [shortsData, assignmentsData, usersData] = await Promise.all([
-        showAssignedOnly ? shortsApi.getAssigned() : shortsApi.getAll(),
+        shouldShowAssignedOnly ? shortsApi.getAssigned() : shortsApi.getAll(),
         assignmentsApi.getAll(),
         usersApi.getAll(),
       ]);
