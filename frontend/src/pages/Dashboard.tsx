@@ -42,7 +42,7 @@ export default function Dashboard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnType>>(
-    new Set(['script', 'clips', 'clip_changes', 'editing', 'editing_changes', 'ready_to_upload', 'uploaded'])
+    new Set(['script', 'clips', 'clip_changes', 'editing', 'editing_changes'])
   );
   
   // Create/Edit Modal State
