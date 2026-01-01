@@ -46,9 +46,16 @@ export async function uploadFile(
 ): Promise<string> {
   const storage = getStorage();
   const bucketName = process.env.GCP_BUCKET_NAME;
+  const projectId = process.env.GCP_PROJECT_ID;
   
   if (!storage || !bucketName) {
-    throw new Error('GCP storage not configured. Please set GCP_BUCKET_NAME, GCP_PROJECT_ID, and GCP_KEY_FILE environment variables.');
+    const missing = [];
+    if (!projectId) missing.push('GCP_PROJECT_ID');
+    if (!bucketName) missing.push('GCP_BUCKET_NAME');
+    throw new Error(
+      `GCP storage not configured. Missing: ${missing.join(', ')}. ` +
+      `GCP_KEY_FILE is optional (use Application Default Credentials with service account attached to Cloud Run).`
+    );
   }
   
   console.log(`Uploading to bucket: ${bucketName}`);

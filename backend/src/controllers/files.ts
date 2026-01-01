@@ -128,7 +128,17 @@ export const filesController = {
         res.status(201).json(result.rows[0]);
       } catch (error) {
         console.error('Upload file error:', error);
-        res.status(500).json({ error: 'Failed to upload file' });
+        const errorMessage = error instanceof Error ? error.message : 'Failed to upload file';
+        console.error('Upload error details:', {
+          message: errorMessage,
+          gcpProjectId: process.env.GCP_PROJECT_ID ? 'SET' : 'MISSING',
+          gcpBucketName: process.env.GCP_BUCKET_NAME ? 'SET' : 'MISSING',
+          gcpKeyFile: process.env.GCP_KEY_FILE ? 'SET' : 'MISSING (using Application Default Credentials)',
+        });
+        res.status(500).json({ 
+          error: 'Failed to upload file',
+          details: errorMessage 
+        });
       }
     }
   ],

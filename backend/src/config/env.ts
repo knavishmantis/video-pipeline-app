@@ -40,9 +40,12 @@ if (config.nodeEnv === 'production') {
     );
   }
   
-  if (!config.gcp.projectId || !config.gcp.bucketName || !config.gcp.keyFile) {
+  // In production, we can use Application Default Credentials (service account attached to Cloud Run)
+  // So GCP_KEY_FILE is optional - only required for local development
+  if (!config.gcp.projectId || !config.gcp.bucketName) {
     console.warn(
-      'Warning: GCP configuration is incomplete. File uploads will not work in production.'
+      'Warning: GCP configuration is incomplete. File uploads will not work in production. ' +
+      'Required: GCP_PROJECT_ID, GCP_BUCKET_NAME. Optional: GCP_KEY_FILE (only for local dev)'
     );
   }
 }
