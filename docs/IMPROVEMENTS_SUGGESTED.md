@@ -146,3 +146,4 @@ function logSlowQuery(query: string, duration: number) {
 2. Fix `any` types in one file (30 min)
 3. Add request logging middleware (1 hour)
 
+

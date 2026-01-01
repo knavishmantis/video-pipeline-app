@@ -3,6 +3,7 @@ import { getPool } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { CreateAssignmentInput } from '../../../shared/types';
 import { processProfilePicture } from '../utils/profilePicture';
+import { logger } from '../utils/logger';
 
 export const assignmentsController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
@@ -38,7 +39,7 @@ export const assignmentsController = {
       
       res.json(assignmentsWithUsers);
     } catch (error) {
-      console.error('Get assignments error:', error);
+      logger.error('Get assignments error', { error });
       res.status(500).json({ error: 'Failed to fetch assignments' });
     }
   },
@@ -80,20 +81,19 @@ export const assignmentsController = {
       
       res.json(assignmentsWithUsers);
     } catch (error) {
-      console.error('Get my assignments error:', error);
+      logger.error('Get my assignments error', { userId: req.userId, error });
       res.status(500).json({ error: 'Failed to fetch assignments' });
     }
   },
 
   async getById(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
       const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can view assignment details' });
         return;
       }
-
-      const { id } = req.params;
       const db = getPool();
       
       const result = await db.query(
@@ -112,7 +112,7 @@ export const assignmentsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Get assignment error:', error);
+      logger.error('Get assignment error', { assignmentId: id, error });
       res.status(500).json({ error: 'Failed to fetch assignment' });
     }
   },
@@ -148,21 +148,20 @@ export const assignmentsController = {
       if (error.code === '23505') { // Unique violation
         res.status(409).json({ error: 'Assignment already exists for this short and role' });
       } else {
-        console.error('Create assignment error:', error);
+        logger.error('Create assignment error', { error });
         res.status(500).json({ error: 'Failed to create assignment' });
       }
     }
   },
 
   async update(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
       const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can update assignments' });
         return;
       }
-
-      const { id } = req.params;
       const { due_date, default_time_range, rate, rate_description } = req.body;
       const db = getPool();
       
@@ -207,20 +206,19 @@ export const assignmentsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Update assignment error:', error);
+      logger.error('Update assignment error', { assignmentId: id, error });
       res.status(500).json({ error: 'Failed to update assignment' });
     }
   },
 
   async markComplete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
       const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can mark assignments as complete' });
         return;
       }
-
-      const { id } = req.params;
       const db = getPool();
       
       // Get assignment with rate info
@@ -270,20 +268,19 @@ export const assignmentsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Mark complete error:', error);
+      logger.error('Mark complete error', { assignmentId: id, error });
       res.status(500).json({ error: 'Failed to mark assignment complete' });
     }
   },
 
   async delete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
       const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can delete assignments' });
         return;
       }
-
-      const { id } = req.params;
       const db = getPool();
       
       const result = await db.query('DELETE FROM assignments WHERE id = $1 RETURNING id', [id]);
@@ -295,7 +292,7 @@ export const assignmentsController = {
       
       res.json({ message: 'Assignment deleted successfully' });
     } catch (error) {
-      console.error('Delete assignment error:', error);
+      logger.error('Delete assignment error', { assignmentId: id, error });
       res.status(500).json({ error: 'Failed to delete assignment' });
     }
   }

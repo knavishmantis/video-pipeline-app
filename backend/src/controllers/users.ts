@@ -3,6 +3,7 @@ import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { UserRole } from '../../../shared/types';
 import { processProfilePicture } from '../utils/profilePicture';
+import { logger } from '../utils/logger';
 
 // Helper to get user roles
 async function getUserRoles(userId: number): Promise<UserRole[]> {
@@ -62,20 +63,19 @@ export const usersController = {
       
       res.json(usersWithRoles);
     } catch (error) {
-      console.error('Get users error:', error);
+      logger.error('Get users error', { error });
       res.status(500).json({ error: 'Failed to fetch users' });
     }
   },
 
   async getById(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
       const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can view user details' });
         return;
       }
-
-      const { id } = req.params;
       
       const result = await query(
         'SELECT id, email, name, discord_username, paypal_email, profile_picture, timezone, created_at, updated_at FROM users WHERE id = $1',
@@ -92,14 +92,14 @@ export const usersController = {
       const profilePicture = await processProfilePicture(user.profile_picture);
       res.json({ ...user, roles, profile_picture: profilePicture });
     } catch (error) {
-      console.error('Get user error:', error);
+      logger.error('Get user error', { userId: id, error });
       res.status(500).json({ error: 'Failed to fetch user' });
     }
   },
 
   async getProfile(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       
       const result = await query(
         'SELECT id, email, name, discord_username, paypal_email, profile_picture, timezone, created_at, updated_at FROM users WHERE id = $1',
@@ -115,7 +115,7 @@ export const usersController = {
       const roles = await getUserRoles(user.id);
       res.json({ ...user, roles });
     } catch (error) {
-      console.error('Get profile error:', error);
+      logger.error('Get profile error', { userId: id, error });
       res.status(500).json({ error: 'Failed to fetch profile' });
     }
   },
@@ -157,15 +157,15 @@ export const usersController = {
       if (error.code === '23505') {
         res.status(409).json({ error: 'Email already exists' });
       } else {
-        console.error('Create user error:', error);
+        logger.error('Create user error', { error });
         res.status(500).json({ error: 'Failed to create user' });
       }
     }
   },
 
   async update(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const { name, email, discord_username, paypal_email, profile_picture, timezone, roles } = req.body;
       
       // Users can only update their own profile (unless admin)
@@ -249,17 +249,17 @@ export const usersController = {
       const user = result.rows[0];
       const userRoles = await getUserRoles(user.id);
       
-      console.log('User profile updated:', { ...user, roles: userRoles });
+      logger.info('User profile updated', { userId: id, roles: userRoles });
       res.json({ ...user, roles: userRoles });
     } catch (error: any) {
-      console.error('Update user error:', error);
+      logger.error('Update user error', { userId: id, error });
       res.status(500).json({ error: error.message || 'Failed to update user' });
     }
   },
 
   async delete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
       
       if (!isAdmin) {
@@ -286,7 +286,7 @@ export const usersController = {
       
       res.json({ message: 'User deleted successfully' });
     } catch (error) {
-      console.error('Delete user error:', error);
+      logger.error('Delete user error', { userId: id, error });
       res.status(500).json({ error: 'Failed to delete user' });
     }
   }

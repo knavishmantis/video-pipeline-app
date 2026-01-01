@@ -121,7 +121,7 @@ export const authController = {
               const { getSignedUrl } = await import('../services/gcpStorage');
               user.profile_picture = await getSignedUrl(user.profile_picture, 3600);
             } catch (error) {
-              console.error('Failed to generate signed URL for profile picture:', error);
+              logger.error('Failed to generate signed URL for profile picture', { error });
             }
           }
         } catch (error: unknown) {

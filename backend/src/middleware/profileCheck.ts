@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { query } from '../db';
 import { AuthRequest } from './auth';
+import { logger } from '../utils/logger';
 
 export async function requireProfileComplete(
   req: AuthRequest,
@@ -40,7 +41,7 @@ export async function requireProfileComplete(
 
     next();
   } catch (error) {
-    console.error('Profile check error:', error);
+    logger.error('Profile check error', { error });
     res.status(500).json({ error: 'Failed to verify profile' });
   }
 }

@@ -24,6 +24,8 @@ import { CreateShortModal } from '../components/CreateShortModal';
 import { ContentModal } from '../components/ContentModal';
 import { useCardClick } from '../hooks/useCardClick';
 import { columns, statusToColumn, columnToStatus, getValidColumns, ColumnType, Column } from '../utils/dashboardUtils';
+import { getErrorMessage } from '../utils/errorHandler';
+import { File as FileType, ShortStatus } from '../../../shared/types';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -145,10 +147,9 @@ export default function Dashboard() {
       });
       await loadData();
       showToast('Assignment created successfully', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to assign:', error);
-      const errorMsg = error.response?.data?.error || error.message || 'Failed to assign user';
-      showAlert(errorMsg, { type: 'error' });
+      showAlert(getErrorMessage(error, 'Failed to assign user'), { type: 'error' });
     }
   };
 
@@ -187,13 +188,12 @@ export default function Dashboard() {
       
       // If moving to clip_changes or editing_changes, we need to create payments
       // This will be handled by the backend
-      await shortsApi.update(shortId, { status: newStatus as any });
+      await shortsApi.update(shortId, { status: newStatus as ShortStatus });
       await loadData();
       showToast('Short status updated successfully', 'success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update short status:', error);
-      const errorMessage = error.response?.data?.error || 'Failed to update short status';
-      showAlert(errorMessage, { type: 'warning' });
+      showAlert(getErrorMessage(error, 'Failed to update short status'), { type: 'warning' });
     }
   };
 
@@ -292,7 +292,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleDownloadFile = async (file: any) => {
+  const handleDownloadFile = async (file: FileType) => {
     if (!file.download_url) {
       showAlert('Download URL not available', { type: 'error' });
       return;
@@ -481,10 +481,9 @@ export default function Dashboard() {
                 : 'Editing marked as complete',
               'success'
             );
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error('Failed to mark complete:', error);
-            const errorMessage = error.response?.data?.error || 'Failed to mark complete';
-            showAlert(errorMessage, { type: 'error' });
+            showAlert(getErrorMessage(error, 'Failed to mark complete'), { type: 'error' });
           }
         }}
         showAlert={showAlert}

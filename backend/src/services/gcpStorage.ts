@@ -1,5 +1,6 @@
 import { Storage } from '@google-cloud/storage';
 import path from 'path';
+import { logger } from '../utils/logger';
 
 let storage: Storage | null = null;
 
@@ -9,7 +10,7 @@ function getStorage(): Storage {
     const keyFilename = process.env.GCP_KEY_FILE;
     
     if (!projectId) {
-      console.warn('GCP_PROJECT_ID not configured. File uploads will be disabled.');
+      logger.warn('GCP_PROJECT_ID not configured. File uploads will be disabled.');
       return null as any; // Return null to allow graceful degradation
     }
     
@@ -21,16 +22,16 @@ function getStorage(): Storage {
           projectId: projectId,
           keyFilename: path.resolve(keyFilename),
         });
-        console.log(`GCP Storage initialized with key file. Using bucket: ${process.env.GCP_BUCKET_NAME || 'NOT SET'}`);
+        logger.info('GCP Storage initialized with key file', { bucketName: process.env.GCP_BUCKET_NAME || 'NOT SET' });
       } else {
         // Use Application Default Credentials (works with Cloud Run service accounts)
         storage = new Storage({
           projectId: projectId,
         });
-        console.log(`GCP Storage initialized with Application Default Credentials. Using bucket: ${process.env.GCP_BUCKET_NAME || 'NOT SET'}`);
+        logger.info('GCP Storage initialized with Application Default Credentials', { bucketName: process.env.GCP_BUCKET_NAME || 'NOT SET' });
       }
     } catch (error) {
-      console.error('Failed to initialize GCP Storage:', error);
+      logger.error('Failed to initialize GCP Storage', { error });
       throw error;
     }
   }
@@ -58,7 +59,7 @@ export async function uploadFile(
     );
   }
   
-  console.log(`Uploading to bucket: ${bucketName}`);
+  logger.info('Uploading to bucket', { bucketName });
   const bucket = storage.bucket(bucketName);
   let fileName: string;
   

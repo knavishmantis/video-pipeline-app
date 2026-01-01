@@ -3,6 +3,7 @@ import multer from 'multer';
 import { getPool } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { uploadFile, getSignedUrl, deleteFile } from '../services/gcpStorage';
+import { logger } from '../utils/logger';
 
 // Configure multer for memory storage
 // Note: For clips (10GB), we'll use a separate upload handler
@@ -102,7 +103,7 @@ export const filesController = {
           try {
             await deleteFile(existingFile.gcp_bucket_path);
           } catch (error) {
-            console.error(`Failed to delete existing file from GCP: ${existingFile.gcp_bucket_path}`, error);
+            logger.error('Failed to delete existing file from GCP', { bucketPath: existingFile.gcp_bucket_path, error });
           }
           await db.query('DELETE FROM files WHERE id = $1', [existingFile.id]);
         }
@@ -144,8 +145,8 @@ export const filesController = {
   ],
 
   async getByShortId(req: AuthRequest, res: Response): Promise<void> {
+    const { shortId } = req.params;
     try {
-      const { shortId } = req.params;
       const db = getPool();
       
       // Check permissions: admin or assigned user
@@ -190,7 +191,7 @@ export const filesController = {
             const url = await getSignedUrl(file.gcp_bucket_path);
             return { ...file, download_url: url };
           } catch (error) {
-            console.error(`Failed to get signed URL for file ${file.id}:`, error);
+            logger.error('Failed to get signed URL for file', { fileId: file.id, error });
             return { ...file, download_url: null };
           }
         })
@@ -198,14 +199,14 @@ export const filesController = {
       
       res.json(filesWithUrls);
     } catch (error) {
-      console.error('Get files error:', error);
+      logger.error('Get files error', { shortId, error });
       res.status(500).json({ error: 'Failed to fetch files' });
     }
   },
 
   async download(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const db = getPool();
       
       const result = await db.query('SELECT * FROM files WHERE id = $1', [id]);
@@ -246,14 +247,14 @@ export const filesController = {
       
       res.json({ download_url: url });
     } catch (error) {
-      console.error('Download file error:', error);
+      logger.error('Download file error', { fileId: id, error });
       res.status(500).json({ error: 'Failed to generate download URL' });
     }
   },
 
   async delete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const db = getPool();
       
       const result = await db.query('SELECT * FROM files WHERE id = $1', [id]);
@@ -299,7 +300,7 @@ export const filesController = {
       
       res.json({ message: 'File deleted successfully' });
     } catch (error) {
-      console.error('Delete file error:', error);
+      logger.error('Delete file error', { fileId: id, error });
       res.status(500).json({ error: 'Failed to delete file' });
     }
   }

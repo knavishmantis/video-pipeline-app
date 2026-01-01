@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { getPool } from '../db';
 import { AuthRequest } from '../middleware/auth';
+import { logger } from '../utils/logger';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -87,7 +88,7 @@ export const paymentsController = {
       
       res.json(payments);
     } catch (error) {
-      console.error('Get payments error:', error);
+      logger.error('Get payments error', { error });
       res.status(500).json({ error: 'Failed to fetch payments' });
     }
   },
@@ -170,7 +171,7 @@ export const paymentsController = {
       
       res.json(payments);
     } catch (error) {
-      console.error('Get pending payments error:', error);
+      logger.error('Get pending payments error', { error });
       res.status(500).json({ error: 'Failed to fetch pending payments' });
     }
   },
@@ -233,14 +234,14 @@ export const paymentsController = {
       
       res.json(payments);
     } catch (error) {
-      console.error('Get my payments error:', error);
+      logger.error('Get my payments error', { userId: req.userId, error });
       res.status(500).json({ error: 'Failed to fetch payments' });
     }
   },
 
   async getById(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const db = getPool();
       
       const result = await db.query(
@@ -260,7 +261,7 @@ export const paymentsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Get payment error:', error);
+      logger.error('Get payment error', { paymentId: id, error });
       res.status(500).json({ error: 'Failed to fetch payment' });
     }
   },
@@ -288,14 +289,14 @@ export const paymentsController = {
       
       res.status(201).json(result.rows[0]);
     } catch (error) {
-      console.error('Create payment error:', error);
+      logger.error('Create payment error', { error });
       res.status(500).json({ error: 'Failed to create payment' });
     }
   },
 
   async update(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const { amount, admin_notes } = req.body;
       const db = getPool();
       
@@ -332,14 +333,14 @@ export const paymentsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Update payment error:', error);
+      logger.error('Update payment error', { paymentId: id, error });
       res.status(500).json({ error: 'Failed to update payment' });
     }
   },
 
   async markPaid(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       const { paypal_transaction_link } = req.body;
       const db = getPool();
       
@@ -362,7 +363,7 @@ export const paymentsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Mark paid error:', error);
+      logger.error('Mark paid error', { paymentId: id, error });
       res.status(500).json({ error: 'Failed to mark payment as paid' });
     }
   },
@@ -386,7 +387,7 @@ export const paymentsController = {
       
       res.status(201).json(result.rows[0]);
     } catch (error) {
-      console.error('Add incentive error:', error);
+      logger.error('Add incentive error', { error });
       res.status(500).json({ error: 'Failed to add incentive payment' });
     }
   },
@@ -498,7 +499,7 @@ export const paymentsController = {
         });
       }
     } catch (error) {
-      console.error('Get stats error:', error);
+      logger.error('Get stats error', { error });
       res.status(500).json({ error: 'Failed to fetch stats' });
     }
   }

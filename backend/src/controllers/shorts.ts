@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { Short, CreateShortInput, UpdateShortInput } from '../../../shared/types';
 import { getSignedUrl } from '../services/gcpStorage';
 import { processProfilePicture } from '../utils/profilePicture';
+import { logger } from '../utils/logger';
 
 export const shortsController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
@@ -76,7 +77,7 @@ export const shortsController = {
                 }
                 return { ...file, download_url: null };
               } catch (error) {
-                console.error(`Failed to get signed URL for file ${file.id}:`, error);
+                logger.error(`Failed to get signed URL for file ${file.id}`, { fileId: file.id, error });
                 return { ...file, download_url: null };
               }
             })
@@ -90,7 +91,7 @@ export const shortsController = {
       
       res.json(shortsWithWriters);
     } catch (error) {
-      console.error('Get shorts error:', error);
+      logger.error('Get shorts error', { error });
       res.status(500).json({ error: 'Failed to fetch shorts' });
     }
   },
@@ -153,7 +154,7 @@ export const shortsController = {
                 }
                 return { ...file, download_url: null };
               } catch (error) {
-                console.error(`Failed to get signed URL for file ${file.id}:`, error);
+                logger.error(`Failed to get signed URL for file ${file.id}`, { fileId: file.id, error });
                 return { ...file, download_url: null };
               }
             })
@@ -167,14 +168,14 @@ export const shortsController = {
       
       res.json(shortsWithWriters);
     } catch (error) {
-      console.error('Get assigned shorts error:', error);
+      logger.error('Get assigned shorts error', { error });
       res.status(500).json({ error: 'Failed to fetch assigned shorts' });
     }
   },
 
   async getById(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       
       // Get short
       const shortResult = await query(
@@ -215,12 +216,12 @@ export const shortsController = {
       const isAdmin = userRoles?.includes('admin');
       
       if (!isAdmin) {
-        console.log('Access denied - admin only');
+        logger.debug('Access denied - admin only', { shortId: id });
         res.status(403).json({ error: 'You do not have permission to view this short. Admin access required.' });
         return;
       }
       
-      console.log('Access granted - admin user, loading full short data');
+      logger.debug('Access granted - admin user, loading full short data', { shortId: id });
       
       // Get assignments to populate data
       const assignmentsResult = await query(
@@ -280,7 +281,7 @@ export const shortsController = {
             }
             return { ...file, download_url: null };
           } catch (error) {
-            console.error(`Failed to get signed URL for file ${file.id}:`, error);
+            logger.error('Failed to get signed URL for file', { fileId: file.id, error });
             return { ...file, download_url: null };
           }
         })
@@ -291,7 +292,7 @@ export const shortsController = {
       
       res.json(short);
     } catch (error) {
-      console.error('Get short error:', error);
+      logger.error('Get short error', { shortId: id, error });
       res.status(500).json({ error: 'Failed to fetch short' });
     }
   },
@@ -313,21 +314,20 @@ export const shortsController = {
       
       res.status(201).json(result.rows[0]);
     } catch (error) {
-      console.error('Create short error:', error);
+      logger.error('Create short error', { error });
       res.status(500).json({ error: 'Failed to create short' });
     }
   },
 
   async update(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    const input: UpdateShortInput = req.body;
     try {
       const isAdmin = req.userRoles?.includes('admin');
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can update shorts' });
         return;
       }
-
-      const { id } = req.params;
-      const input: UpdateShortInput = req.body;
       
       // If updating status, validate file requirements
       if (input.status !== undefined) {
@@ -448,14 +448,14 @@ export const shortsController = {
       
       res.json(result.rows[0]);
     } catch (error) {
-      console.error('Update short error:', error);
+      logger.error('Update short error', { shortId: id, error });
       res.status(500).json({ error: 'Failed to update short' });
     }
   },
 
   async markClipsComplete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       
       // Get short with files
       const shortResult = await query(
@@ -538,10 +538,10 @@ export const shortsController = {
           ]
         );
         paymentId = paymentResult.rows[0].id;
-        console.log('Payment created:', paymentId);
+        logger.info('Payment created', { paymentId, shortId: id, role: 'clipper' });
       } else {
         paymentId = existingPayment.rows[0].id;
-        console.log('Payment already exists:', paymentId);
+        logger.info('Payment already exists', { paymentId, shortId: id, role: 'clipper' });
       }
       
       // Verify payment was created/exists
@@ -558,14 +558,14 @@ export const shortsController = {
       
       res.json(updatedShort.rows[0]);
     } catch (error) {
-      console.error('Mark clips complete error:', error);
+      logger.error('Mark clips complete error', { shortId: id, error });
       res.status(500).json({ error: 'Failed to mark clips complete' });
     }
   },
 
   async markEditingComplete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
-      const { id } = req.params;
       
       // Get short with files
       const shortResult = await query(
@@ -648,10 +648,10 @@ export const shortsController = {
           ]
         );
         paymentId = paymentResult.rows[0].id;
-        console.log('Payment created:', paymentId);
+        logger.info('Payment created', { paymentId, shortId: id, role: 'clipper' });
       } else {
         paymentId = existingPayment.rows[0].id;
-        console.log('Payment already exists:', paymentId);
+        logger.info('Payment already exists', { paymentId, shortId: id, role: 'clipper' });
       }
       
       // Verify payment was created/exists
@@ -668,20 +668,19 @@ export const shortsController = {
       
       res.json(updatedShort.rows[0]);
     } catch (error) {
-      console.error('Mark editing complete error:', error);
+      logger.error('Mark editing complete error', { shortId: id, error });
       res.status(500).json({ error: 'Failed to mark editing complete' });
     }
   },
 
   async delete(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
     try {
       const isAdmin = req.userRoles?.includes('admin');
       if (!isAdmin) {
         res.status(403).json({ error: 'Only admins can delete shorts' });
         return;
       }
-
-      const { id } = req.params;
       
       const result = await query('DELETE FROM shorts WHERE id = $1 RETURNING id', [id]);
       
@@ -692,7 +691,7 @@ export const shortsController = {
       
       res.json({ message: 'Short deleted successfully' });
     } catch (error) {
-      console.error('Delete short error:', error);
+      logger.error('Delete short error', { shortId: id, error });
       res.status(500).json({ error: 'Failed to delete short' });
     }
   }
