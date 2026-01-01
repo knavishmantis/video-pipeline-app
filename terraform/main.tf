@@ -116,6 +116,14 @@ resource "google_storage_bucket_iam_member" "service_account_read" {
   member = "serviceAccount:${google_service_account.app_service_account.email}"
 }
 
+# IAM binding: Service account can sign blobs (required for generating signed URLs)
+# This allows the service account to sign blobs on its own behalf
+resource "google_service_account_iam_member" "service_account_token_creator" {
+  service_account_id = google_service_account.app_service_account.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = "serviceAccount:${google_service_account.app_service_account.email}"
+}
+
 # Service Account Key (for local development)
 resource "google_service_account_key" "app_key" {
   service_account_id = google_service_account.app_service_account.id
