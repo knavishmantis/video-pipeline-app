@@ -42,8 +42,9 @@ Open http://localhost:3000 and sign in with Google OAuth.
 - **[Setup Guide](docs/SETUP.md)** - Complete setup instructions
 - **[Dev Environment Setup](docs/DEV_ENV_SETUP.md)** - GCP dev environment configuration
 - **[GCP Dev/Prod Setup](docs/GCP_DEV_PROD_SETUP.md)** - Separate dev/prod buckets
+- **[GCP Setup](docs/GCP_SETUP.md)** - GCP Storage and infrastructure setup
 - **[Google OAuth](docs/GOOGLE_OAUTH_SETUP.md)** - OAuth configuration
-- **[Local Testing](docs/LOCAL_TESTING.md)** - Testing without GCP
+- **[Domain & OAuth Setup](docs/DOMAIN_AND_OAUTH_SETUP.md)** - Production domain and OAuth configuration
 - **[Deployment](docs/DEPLOYMENT.md)** - Production deployment guide
 - **[Architecture](docs/ARCHITECTURE.md)** - System design and patterns
 

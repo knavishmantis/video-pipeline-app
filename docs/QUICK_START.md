@@ -225,5 +225,5 @@ VITE_API_URL=http://localhost:3001/api
 **File upload fails**
 → Verify GCP credentials, bucket name, and service account permissions
 
-See [Local Testing Guide](LOCAL_TESTING.md) and [Deployment Guide](DEPLOYMENT.md) for more details!
+See [Deployment Guide](DEPLOYMENT.md) for more details!
 

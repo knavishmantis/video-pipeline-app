@@ -30,13 +30,6 @@ This configuration uses **remote state** stored in a GCS bucket. This allows:
 
 1. **Create the state bucket** (run once):
    ```bash
-   cd terraform
-   chmod +x bootstrap-state.sh
-   ./bootstrap-state.sh your-gcp-project-id your-project-terraform-state
-   ```
-   
-   Or manually:
-   ```bash
    gsutil mb -p your-gcp-project-id -c STANDARD -l us-central1 gs://your-project-terraform-state
    gsutil versioning set on gs://your-project-terraform-state
    ```
