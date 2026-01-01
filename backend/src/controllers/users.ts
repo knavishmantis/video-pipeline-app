@@ -26,29 +26,7 @@ async function setUserRoles(userId: number, roles: UserRole[]): Promise<void> {
 }
 
 // Helper to convert bucket path to signed URL if needed
-async function processProfilePicture(profilePicture: string | null): Promise<string | null> {
-  if (!profilePicture) return null;
-  
-  // If it's already a URL (starts with http), return as-is
-  if (profilePicture.startsWith('http')) {
-    return profilePicture;
-  }
-  
-  // If it's an emoji (single character or short), return as-is
-  if (profilePicture.length <= 10 && !profilePicture.includes('/')) {
-    return profilePicture;
-  }
-  
-  // Otherwise, it's likely a bucket path - generate signed URL
-  try {
-    const signedUrl = await getSignedUrl(profilePicture, 3600); // 1 hour expiry
-    return signedUrl;
-  } catch (error) {
-    console.error('Failed to generate signed URL for profile picture:', error);
-    // Return the bucket path as-is if signed URL generation fails
-    return profilePicture;
-  }
-}
+// processProfilePicture is now imported from utils/profilePicture
 
 export const usersController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {

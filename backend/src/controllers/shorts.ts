@@ -3,6 +3,7 @@ import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { Short, CreateShortInput, UpdateShortInput } from '../../../shared/types';
 import { getSignedUrl } from '../services/gcpStorage';
+import { processProfilePicture } from '../utils/profilePicture';
 
 export const shortsController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
@@ -38,11 +39,14 @@ export const shortsController = {
         result.rows.map(async (short: any) => {
           if (short.script_writer_id) {
             const writerResult = await query(
-              'SELECT id, email, name FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
               [short.script_writer_id]
             );
             if (writerResult.rows.length > 0) {
-              short.script_writer = writerResult.rows[0];
+              const scriptWriter = writerResult.rows[0];
+              // Process profile picture (convert bucket path to signed URL if needed)
+              scriptWriter.profile_picture = await processProfilePicture(scriptWriter.profile_picture);
+              short.script_writer = scriptWriter;
             }
           }
           
@@ -112,11 +116,14 @@ export const shortsController = {
         result.rows.map(async (short: any) => {
           if (short.script_writer_id) {
             const writerResult = await query(
-              'SELECT id, email, name FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
               [short.script_writer_id]
             );
             if (writerResult.rows.length > 0) {
-              short.script_writer = writerResult.rows[0];
+              const scriptWriter = writerResult.rows[0];
+              // Process profile picture (convert bucket path to signed URL if needed)
+              scriptWriter.profile_picture = await processProfilePicture(scriptWriter.profile_picture);
+              short.script_writer = scriptWriter;
             }
           }
           
@@ -243,7 +250,10 @@ export const shortsController = {
               [assignment.user_id]
             );
             if (userResult.rows.length > 0) {
-              assignment.user = userResult.rows[0];
+              const user = userResult.rows[0];
+              // Process profile picture (convert bucket path to signed URL if needed)
+              user.profile_picture = await processProfilePicture(user.profile_picture);
+              assignment.user = user;
             }
           }
           return assignment;

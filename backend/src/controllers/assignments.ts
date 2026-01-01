@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { getPool } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { CreateAssignmentInput } from '../../../shared/types';
+import { processProfilePicture } from '../utils/profilePicture';
 
 export const assignmentsController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
@@ -67,7 +68,10 @@ export const assignmentsController = {
               [assignment.user_id]
             );
             if (userResult.rows.length > 0) {
-              assignment.user = userResult.rows[0];
+              const user = userResult.rows[0];
+              // Process profile picture (convert bucket path to signed URL if needed)
+              user.profile_picture = await processProfilePicture(user.profile_picture);
+              assignment.user = user;
             }
           }
           return assignment;
