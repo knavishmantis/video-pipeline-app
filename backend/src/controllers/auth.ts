@@ -218,7 +218,20 @@ export const authController = {
 
       const user = result.rows[0];
       const roles = await getUserRoles(user.id);
-      res.json({ ...user, roles });
+      
+      // Process profile picture (convert bucket path to signed URL if needed)
+      let profilePicture = user.profile_picture;
+      if (profilePicture && !profilePicture.startsWith('http') && profilePicture.includes('/')) {
+        try {
+          const { getSignedUrl } = await import('../services/gcpStorage');
+          profilePicture = await getSignedUrl(profilePicture, 3600); // 1 hour expiry
+        } catch (error) {
+          logger.error('Failed to generate signed URL for profile picture', { error, bucketPath: profilePicture });
+          // Keep the bucket path if signed URL generation fails
+        }
+      }
+      
+      res.json({ ...user, roles, profile_picture: profilePicture });
     } catch (error) {
       logger.error('Get me error', { error });
       res.status(500).json({ error: 'Failed to get user' });
