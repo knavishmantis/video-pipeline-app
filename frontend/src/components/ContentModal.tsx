@@ -280,99 +280,15 @@ export function ContentModal({
                   ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
                   ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
                 
-                if (!canEdit) {
-                  return (
-                    <div style={{ 
-                      padding: '12px', 
-                      background: '#FEF3C7', 
-                      borderRadius: '8px',
-                      border: '1px solid #FCD34D',
-                      color: '#92400E',
-                      fontSize: '14px'
-                    }}>
-                      You don't have permission to edit this file. Only the assigned {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'clipper' : 'editor'} or admin can manage files.
-                    </div>
-                  );
-                }
+                // Check if user can download (more permissive - assigned clipper/editor or admin)
+                const canDownload = isAdmin ||
+                  ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
+                  ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
                 
                 return (
                   <div style={{ marginBottom: '16px' }}>
-                    {/* Current File Section (if exists) */}
-                    {currentFile && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '12px',
-                        background: '#F0F9FF',
-                        borderRadius: '8px',
-                        border: '1px solid #BAE6FD'
-                      }}>
-                        <div style={{ fontSize: '14px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
-                          {(contentColumn === 'clips' || contentColumn === 'clip_changes') ? 'Your Clips ZIP' : 'Your Final Video'}
-                        </div>
-                        <div style={{ fontSize: '13px', color: '#0C4A6E', marginBottom: '12px' }}>
-                          {currentFile.file_name}
-                          {currentFile.file_size && (
-                            <span style={{ color: '#64748B', marginLeft: '8px' }}>
-                              ({(currentFile.file_size / (1024 * 1024)).toFixed(2)} MB)
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {currentFile.download_url && (
-                            <button
-                              type="button"
-                              onClick={() => onDownloadFile(currentFile)}
-                              style={{
-                                padding: '6px 12px',
-                                background: '#3B82F6',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                fontWeight: '500',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                              }}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                              </svg>
-                              Download
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => onDeleteFile(currentFile.id)}
-                            style={{
-                              padding: '6px 12px',
-                              background: '#DC2626',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '500',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Download Dependencies Section for Clippers */}
-                    {((contentColumn === 'clips' || contentColumn === 'clip_changes') && (scriptPdf?.download_url || audioFile?.download_url)) && (
+                    {/* Download Dependencies Section for Clippers - Always show if assigned */}
+                    {((contentColumn === 'clips' || contentColumn === 'clip_changes') && canDownload && (scriptPdf?.download_url || audioFile?.download_url)) && (
                       <div style={{
                         marginBottom: '16px',
                         padding: '12px',
@@ -456,8 +372,8 @@ export function ContentModal({
                       </div>
                     )}
                     
-                    {/* Download Dependencies Section for Editors */}
-                    {((contentColumn === 'editing' || contentColumn === 'editing_changes') && (scriptPdf?.download_url || audioFile?.download_url || clipsZip?.download_url)) && (
+                    {/* Download Dependencies Section for Editors - Always show if assigned */}
+                    {((contentColumn === 'editing' || contentColumn === 'editing_changes') && canDownload && (scriptPdf?.download_url || audioFile?.download_url || clipsZip?.download_url)) && (
                       <div style={{
                         marginBottom: '16px',
                         padding: '12px',
@@ -569,34 +485,124 @@ export function ContentModal({
                       </div>
                     )}
                     
-                    {/* Upload/Replace Section */}
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{
-                        display: 'block',
-                        marginBottom: '6px',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#374151',
+                    {/* File Management Section - Only show if canEdit */}
+                    {canEdit ? (
+                      <>
+                        {/* Current File Section (if exists) */}
+                        {currentFile && (
+                          <div style={{
+                            marginBottom: '16px',
+                            padding: '12px',
+                            background: '#F0F9FF',
+                            borderRadius: '8px',
+                            border: '1px solid #BAE6FD'
+                          }}>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
+                              {(contentColumn === 'clips' || contentColumn === 'clip_changes') ? 'Your Clips ZIP' : 'Your Final Video'}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#0C4A6E', marginBottom: '12px' }}>
+                              {currentFile.file_name}
+                              {currentFile.file_size && (
+                                <span style={{ color: '#64748B', marginLeft: '8px' }}>
+                                  ({(currentFile.file_size / (1024 * 1024)).toFixed(2)} MB)
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              {currentFile.download_url && (
+                                <button
+                                  type="button"
+                                  onClick={() => onDownloadFile(currentFile)}
+                                  style={{
+                                    padding: '6px 12px',
+                                    background: '#3B82F6',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                  }}
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                  </svg>
+                                  Download
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => onDeleteFile(currentFile.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  background: '#DC2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: '500',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="3 6 5 6 21 6"></polyline>
+                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Upload/Replace Section */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '6px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#374151',
+                          }}>
+                            {currentFile ? 'Replace File' : 'Upload File'} *
+                          </label>
+                          <input
+                            type="file"
+                            accept={(contentColumn === 'clips' || contentColumn === 'clip_changes') ? '.zip,application/zip' : 'video/*'}
+                            onChange={(e) => onFormChange({ ...contentForm, file: e.target.files?.[0] || null })}
+                            disabled={uploading}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid #D1D5DB',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              boxSizing: 'border-box',
+                              opacity: uploading ? 0.6 : 1,
+                              cursor: uploading ? 'not-allowed' : 'pointer',
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ 
+                        padding: '12px', 
+                        background: '#FEF3C7', 
+                        borderRadius: '8px',
+                        border: '1px solid #FCD34D',
+                        color: '#92400E',
+                        fontSize: '14px'
                       }}>
-                        {currentFile ? 'Replace File' : 'Upload File'} *
-                      </label>
-                      <input
-                        type="file"
-                        accept={(contentColumn === 'clips' || contentColumn === 'clip_changes') ? '.zip,application/zip' : 'video/*'}
-                        onChange={(e) => onFormChange({ ...contentForm, file: e.target.files?.[0] || null })}
-                        disabled={uploading}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          border: '1px solid #D1D5DB',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          boxSizing: 'border-box',
-                          opacity: uploading ? 0.6 : 1,
-                          cursor: uploading ? 'not-allowed' : 'pointer',
-                        }}
-                      />
-                    </div>
+                        You don't have permission to edit this file. Only the assigned {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'clipper' : 'editor'} or admin can manage files.
+                      </div>
+                    )}
                   </div>
                 );
               })()}
