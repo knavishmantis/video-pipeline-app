@@ -74,10 +74,12 @@ export const authController = {
           return;
         }
         try {
+          logger.info('Verifying Google token', { clientId: config.google.clientId?.substring(0, 20) + '...' });
           const ticket = await googleClient.verifyIdToken({
             idToken: googleToken,
             audience: config.google.clientId,
           });
+          logger.info('Google token verified successfully');
           const payload = ticket.getPayload();
           
           if (!payload || !payload.email) {
