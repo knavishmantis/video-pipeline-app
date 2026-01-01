@@ -110,8 +110,26 @@ export async function getSignedUrl(bucketPath: string, expiresIn: number = 3600)
     // Check if file exists before generating signed URL
     const [exists] = await file.exists();
     if (!exists) {
-      logger.warn('File does not exist in bucket', { bucketPath, bucketName });
+      logger.warn('File does not exist in bucket', { 
+        bucketPath, 
+        bucketName,
+        filePath: bucketPath,
+        fullPath: `gs://${bucketName}/${bucketPath}`
+      });
       throw new Error(`File not found in bucket: ${bucketPath}`);
+    }
+    
+    // Get file metadata for additional debugging
+    try {
+      const [metadata] = await file.getMetadata();
+      logger.debug('File metadata retrieved', { 
+        bucketPath, 
+        size: metadata.size,
+        contentType: metadata.contentType,
+        updated: metadata.updated
+      });
+    } catch (metaError) {
+      logger.warn('Could not retrieve file metadata', { bucketPath, error: metaError });
     }
     
     const [url] = await file.getSignedUrl({
@@ -121,12 +139,23 @@ export async function getSignedUrl(bucketPath: string, expiresIn: number = 3600)
     
     return url;
   } catch (error) {
-    logger.error('Error generating signed URL', { 
+    const errorDetails = {
       bucketPath, 
-      bucketName, 
+      bucketName,
+      filePath: bucketPath,
+      fullPath: `gs://${bucketName}/${bucketPath}`,
       error: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : undefined,
       stack: error instanceof Error ? error.stack : undefined
-    });
+    };
+    
+    // Check if it's a specific GCS error
+    if (error && typeof error === 'object' && 'code' in error) {
+      (errorDetails as any).gcsErrorCode = (error as any).code;
+      (errorDetails as any).gcsErrors = (error as any).errors;
+    }
+    
+    logger.error('Error generating signed URL', errorDetails);
     throw error;
   }
 }

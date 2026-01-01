@@ -578,7 +578,20 @@ export default function Dashboard() {
     </div>
     <AlertComponent />
     <ToastComponent />
-    <ConfirmComponent />
+      <ConfirmComponent />
+      
+      {/* Version number in bottom right */}
+      <div style={{
+        position: 'fixed',
+        bottom: '16px',
+        right: '16px',
+        fontSize: '12px',
+        color: '#9CA3AF',
+        zIndex: 10,
+        fontFamily: 'monospace',
+      }}>
+        v1.1
+      </div>
     </React.Fragment>
   );
 }
