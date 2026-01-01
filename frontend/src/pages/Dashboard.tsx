@@ -347,16 +347,25 @@ export default function Dashboard() {
     } catch (error: any) {
       console.error('Failed to save content:', error);
       
-      // If it's a timeout error but we reached 100%, the file likely uploaded successfully
-      // Check if the file exists by trying to reload the short
-      if (error?.code === 'ECONNABORTED' && uploadProgress === 100) {
-        showToast('Upload may have completed. Refreshing...', 'info');
-        // Try to reload data to verify
-        loadData().then(() => {
-          showToast('File uploaded successfully', 'success');
-        }).catch(() => {
-          showAlert('Upload may have completed, but could not verify. Please refresh the page.', { type: 'warning' });
-        });
+      // Handle network errors
+      if (error?.code === 'ERR_NETWORK' || error?.message === 'Network Error') {
+        showAlert(
+          'Network error: Unable to connect to the server. Please check your internet connection and try again.',
+          { type: 'error' }
+        );
+      } else if (error?.code === 'ECONNABORTED') {
+        // Timeout error
+        if (uploadProgress === 100) {
+          // Upload may have completed but response timed out
+          showToast('Upload may have completed. Refreshing...', 'info');
+          loadData().then(() => {
+            showToast('File uploaded successfully', 'success');
+          }).catch(() => {
+            showAlert('Upload may have completed, but could not verify. Please refresh the page.', { type: 'warning' });
+          });
+        } else {
+          showAlert('Upload timed out. The file may be too large. Please try again or contact support.', { type: 'error' });
+        }
       } else {
         const errorMessage = error?.response?.data?.error || error?.message || 'Failed to save content. Please try again.';
         showAlert(errorMessage, { type: 'error' });

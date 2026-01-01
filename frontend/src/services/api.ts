@@ -11,8 +11,14 @@ const api = axios.create({
   timeout: 30000, // 30 second timeout (increased for OAuth verification)
 });
 
-// Add token to requests
+// Request interceptor: Add token and handle FormData Content-Type
 api.interceptors.request.use((config) => {
+  // If data is FormData, remove Content-Type header to let browser set it with boundary
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
+  }
+  
+  // Add token to requests
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -134,7 +140,6 @@ export const filesApi = {
     const timeoutMs = timeoutMinutes * 60 * 1000;
     
     const response = await api.post('/files/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
       timeout: timeoutMs,
       onUploadProgress: onUploadProgress ? (progressEvent) => {
         if (progressEvent.total) {
@@ -148,9 +153,8 @@ export const filesApi = {
     return response.data;
   },
   uploadProfilePicture: async (formData: FormData): Promise<{ url: string; gcp_bucket_path: string }> => {
-    const response = await api.post('/files/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    // Content-Type will be automatically removed by the interceptor for FormData
+    const response = await api.post('/files/upload', formData);
     return response.data;
   },
   delete: async (id: number): Promise<void> => {
