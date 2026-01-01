@@ -2,6 +2,22 @@ import { Storage } from '@google-cloud/storage';
 import path from 'path';
 import { logger } from '../utils/logger';
 
+// Helper to generate bucket path
+export function generateBucketPath(
+  shortId: number | undefined,
+  fileType: string,
+  fileName: string,
+  profileUserId?: number
+): string {
+  if (fileType === 'profile_picture' && profileUserId) {
+    return `users/${profileUserId}/profile_picture/${Date.now()}-${fileName}`;
+  } else if (shortId) {
+    return `shorts/${shortId}/${fileType}/${Date.now()}-${fileName}`;
+  } else {
+    throw new Error('Either shortId or profileUserId must be provided');
+  }
+}
+
 let storage: Storage | null = null;
 
 function getStorage(): Storage {
@@ -175,6 +191,51 @@ export async function getSignedUrl(bucketPath: string, expiresIn: number = 3600)
     }
     
     logger.error('Error generating signed URL', errorDetails);
+    throw error;
+  }
+}
+
+export async function getSignedUploadUrl(
+  bucketPath: string,
+  contentType: string,
+  expiresIn: number = 3600
+): Promise<string> {
+  const storage = getStorage();
+  const bucketName = process.env.GCP_BUCKET_NAME;
+  
+  if (!bucketName) {
+    throw new Error('GCP_BUCKET_NAME environment variable is required');
+  }
+  
+  if (!storage) {
+    throw new Error('GCS Storage is not initialized. Check GCP_PROJECT_ID configuration.');
+  }
+  
+  if (!bucketPath) {
+    throw new Error('bucketPath is required');
+  }
+  
+  try {
+    const file = storage.bucket(bucketName).file(bucketPath);
+    
+    // Generate signed URL for PUT (upload) using v4 signing
+    const [url] = await file.getSignedUrl({
+      action: 'write',
+      expires: Date.now() + expiresIn * 1000,
+      contentType: contentType,
+      version: 'v4',
+    });
+    
+    logger.info('Generated signed upload URL', { bucketPath, contentType, expiresIn });
+    return url;
+  } catch (error) {
+    logger.error('Error generating signed upload URL', {
+      bucketPath,
+      bucketName,
+      contentType,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     throw error;
   }
 }

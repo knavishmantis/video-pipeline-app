@@ -2,7 +2,7 @@ import { Response } from 'express';
 import multer from 'multer';
 import { getPool } from '../db';
 import { AuthRequest } from '../middleware/auth';
-import { uploadFile, getSignedUrl, deleteFile } from '../services/gcpStorage';
+import { uploadFile, getSignedUrl, getSignedUploadUrl, deleteFile, generateBucketPath } from '../services/gcpStorage';
 import { logger } from '../utils/logger';
 
 // Configure multer for memory storage
@@ -312,6 +312,178 @@ export const filesController = {
     } catch (error) {
       logger.error('Delete file error', { fileId: id, error });
       res.status(500).json({ error: 'Failed to delete file' });
+    }
+  },
+
+  // Generate signed URL for direct upload to GCS
+  async getUploadUrl(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { short_id, file_type, file_name, file_size, content_type, user_id } = req.body;
+      
+      if (!file_type || !file_name || !file_size || !content_type) {
+        res.status(400).json({ error: 'file_type, file_name, file_size, and content_type are required' });
+        return;
+      }
+
+      const db = getPool();
+      
+      // For profile pictures, user_id is required instead of short_id
+      if (file_type === 'profile_picture') {
+        if (!user_id || parseInt(user_id) !== req.userId) {
+          res.status(403).json({ error: 'You can only upload your own profile picture' });
+          return;
+        }
+      } else {
+        if (!short_id) {
+          res.status(400).json({ error: 'short_id required for non-profile files' });
+          return;
+        }
+        
+        // Check permissions: admin or assigned user
+        const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+        
+        if (!isAdmin && req.userId) {
+          const assignmentResult = await db.query(
+            `SELECT * FROM assignments 
+             WHERE short_id = $1 AND user_id = $2 AND role IN ('clipper', 'editor', 'script_writer')`,
+            [short_id, req.userId]
+          );
+          
+          const shortResult = await db.query(
+            'SELECT script_writer_id FROM shorts WHERE id = $1',
+            [short_id]
+          );
+          
+          const isScriptWriter = shortResult.rows.length > 0 && 
+                                 shortResult.rows[0].script_writer_id === req.userId;
+          
+          if (assignmentResult.rows.length === 0 && !isScriptWriter) {
+            res.status(403).json({ error: 'You do not have permission to upload files for this short' });
+            return;
+          }
+        }
+      }
+
+      // Generate bucket path
+      const bucketPath = generateBucketPath(
+        file_type === 'profile_picture' ? undefined : parseInt(short_id),
+        file_type,
+        file_name,
+        file_type === 'profile_picture' ? parseInt(user_id) : undefined
+      );
+
+      // Generate signed upload URL (valid for 1 hour)
+      const uploadUrl = await getSignedUploadUrl(bucketPath, content_type, 3600);
+
+      res.json({
+        upload_url: uploadUrl,
+        bucket_path: bucketPath,
+        expires_in: 3600
+      });
+    } catch (error) {
+      logger.error('Get upload URL error', { error });
+      res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+  },
+
+  // Confirm upload completion and save metadata
+  async confirmUpload(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
+
+      const { short_id, file_type, bucket_path, file_name, file_size, mime_type, user_id } = req.body;
+      
+      if (!file_type || !bucket_path || !file_name || !file_size) {
+        res.status(400).json({ error: 'file_type, bucket_path, file_name, and file_size are required' });
+        return;
+      }
+
+      const db = getPool();
+      
+      // For profile pictures, return the URL directly (don't store in files table)
+      if (file_type === 'profile_picture') {
+        if (!user_id || parseInt(user_id) !== req.userId) {
+          res.status(403).json({ error: 'You can only upload your own profile picture' });
+          return;
+        }
+        const { getSignedUrl } = await import('../services/gcpStorage');
+        const url = await getSignedUrl(bucket_path, 31536000); // 1 year expiry
+        res.status(201).json({ gcp_bucket_path: bucket_path, url });
+        return;
+      }
+
+      if (!short_id) {
+        res.status(400).json({ error: 'short_id required for non-profile files' });
+        return;
+      }
+
+      // Check permissions
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      
+      if (!isAdmin && req.userId) {
+        const assignmentResult = await db.query(
+          `SELECT * FROM assignments 
+           WHERE short_id = $1 AND user_id = $2 AND role IN ('clipper', 'editor', 'script_writer')`,
+          [short_id, req.userId]
+        );
+        
+        const shortResult = await db.query(
+          'SELECT script_writer_id FROM shorts WHERE id = $1',
+          [short_id]
+        );
+        
+        const isScriptWriter = shortResult.rows.length > 0 && 
+                               shortResult.rows[0].script_writer_id === req.userId;
+        
+        if (assignmentResult.rows.length === 0 && !isScriptWriter) {
+          res.status(403).json({ error: 'You do not have permission to upload files for this short' });
+          return;
+        }
+      }
+
+      // Delete existing files of the same type first (replace operation)
+      const existingFiles = await db.query(
+        'SELECT id, gcp_bucket_path FROM files WHERE short_id = $1 AND file_type = $2',
+        [short_id, file_type]
+      );
+      
+      for (const existingFile of existingFiles.rows) {
+        try {
+          await deleteFile(existingFile.gcp_bucket_path);
+        } catch (error) {
+          logger.error('Failed to delete existing file from GCS', { bucketPath: existingFile.gcp_bucket_path, error });
+        }
+        await db.query('DELETE FROM files WHERE id = $1', [existingFile.id]);
+      }
+
+      // Insert file record
+      const result = await db.query(
+        `INSERT INTO files (short_id, file_type, gcp_bucket_path, file_name, file_size, mime_type, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [
+          short_id,
+          file_type,
+          bucket_path,
+          file_name,
+          parseInt(file_size),
+          mime_type || 'application/octet-stream',
+          req.userId
+        ]
+      );
+      
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      logger.error('Confirm upload error', { error });
+      res.status(500).json({ error: 'Failed to confirm upload' });
     }
   }
 };

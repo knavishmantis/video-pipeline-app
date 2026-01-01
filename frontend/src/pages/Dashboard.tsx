@@ -263,10 +263,16 @@ export default function Dashboard() {
         const totalSize = scriptFileSize + audioFileSize;
         let uploadedBytes = 0;
         
-        // Upload script file with progress (0-50% of total)
-        await filesApi.upload(
-          contentShort.id, 
-          'script', 
+        // Upload script file directly to GCS (0-50% of total)
+        const scriptUploadUrl = await filesApi.getUploadUrl(
+          contentShort.id,
+          'script',
+          contentForm.scriptFile.name,
+          contentForm.scriptFile.size,
+          contentForm.scriptFile.type
+        );
+        await filesApi.uploadDirectToGCS(
+          scriptUploadUrl.upload_url,
           contentForm.scriptFile,
           (progress) => {
             uploadedBytes = progress.loaded;
@@ -274,10 +280,25 @@ export default function Dashboard() {
             setUploadProgress(Math.min(percent, 50));
           }
         );
-        // Upload audio file with progress (50-100% of total)
-        await filesApi.upload(
-          contentShort.id, 
-          'audio', 
+        await filesApi.confirmUpload(
+          contentShort.id,
+          'script',
+          scriptUploadUrl.bucket_path,
+          contentForm.scriptFile.name,
+          contentForm.scriptFile.size,
+          contentForm.scriptFile.type
+        );
+        
+        // Upload audio file directly to GCS (50-100% of total)
+        const audioUploadUrl = await filesApi.getUploadUrl(
+          contentShort.id,
+          'audio',
+          contentForm.audioFile.name,
+          contentForm.audioFile.size,
+          contentForm.audioFile.type
+        );
+        await filesApi.uploadDirectToGCS(
+          audioUploadUrl.upload_url,
           contentForm.audioFile,
           (progress) => {
             uploadedBytes = scriptFileSize + progress.loaded;
@@ -285,10 +306,27 @@ export default function Dashboard() {
             setUploadProgress(Math.min(percent, 100));
           }
         );
+        await filesApi.confirmUpload(
+          contentShort.id,
+          'audio',
+          audioUploadUrl.bucket_path,
+          contentForm.audioFile.name,
+          contentForm.audioFile.size,
+          contentForm.audioFile.type
+        );
       } else if ((contentColumn === 'clips' || contentColumn === 'clip_changes') && contentForm.file) {
-        await filesApi.upload(
-          contentShort.id, 
-          'clips_zip', 
+        // Get signed upload URL
+        const uploadUrlData = await filesApi.getUploadUrl(
+          contentShort.id,
+          'clips_zip',
+          contentForm.file.name,
+          contentForm.file.size,
+          contentForm.file.type
+        );
+        
+        // Upload directly to GCS
+        await filesApi.uploadDirectToGCS(
+          uploadUrlData.upload_url,
           contentForm.file,
           (progress) => {
             // Use actual upload progress (0-100%)
@@ -296,16 +334,45 @@ export default function Dashboard() {
             setUploadProgress(percent);
           }
         );
+        
+        // Confirm upload completion
+        await filesApi.confirmUpload(
+          contentShort.id,
+          'clips_zip',
+          uploadUrlData.bucket_path,
+          contentForm.file.name,
+          contentForm.file.size,
+          contentForm.file.type
+        );
       } else if ((contentColumn === 'editing' || contentColumn === 'editing_changes') && contentForm.file) {
-        await filesApi.upload(
-          contentShort.id, 
-          'final_video', 
+        // Get signed upload URL
+        const uploadUrlData = await filesApi.getUploadUrl(
+          contentShort.id,
+          'final_video',
+          contentForm.file.name,
+          contentForm.file.size,
+          contentForm.file.type
+        );
+        
+        // Upload directly to GCS
+        await filesApi.uploadDirectToGCS(
+          uploadUrlData.upload_url,
           contentForm.file,
           (progress) => {
             // Use actual upload progress (0-100%)
             const percent = Math.round((progress.loaded / progress.total) * 100);
             setUploadProgress(percent);
           }
+        );
+        
+        // Confirm upload completion
+        await filesApi.confirmUpload(
+          contentShort.id,
+          'final_video',
+          uploadUrlData.bucket_path,
+          contentForm.file.name,
+          contentForm.file.size,
+          contentForm.file.type
         );
       }
 

@@ -123,6 +123,66 @@ export const filesApi = {
     const response = await api.get(`/files/short/${shortId}`);
     return response.data;
   },
+  // Get signed URL for direct upload to GCS
+  getUploadUrl: async (
+    shortId: number,
+    fileType: string,
+    fileName: string,
+    fileSize: number,
+    contentType: string
+  ): Promise<{ upload_url: string; bucket_path: string; expires_in: number }> => {
+    const response = await api.post('/files/upload-url', {
+      short_id: shortId,
+      file_type: fileType,
+      file_name: fileName,
+      file_size: fileSize,
+      content_type: contentType,
+    });
+    return response.data;
+  },
+  // Upload directly to GCS using signed URL
+  uploadDirectToGCS: async (
+    uploadUrl: string,
+    file: globalThis.File,
+    onUploadProgress?: (progressEvent: { loaded: number; total: number }) => void
+  ): Promise<void> => {
+    // Upload directly to GCS (no timeout - GCS handles it)
+    await axios.put(uploadUrl, file, {
+      headers: {
+        'Content-Type': file.type,
+      },
+      onUploadProgress: onUploadProgress ? (progressEvent) => {
+        if (progressEvent.total) {
+          onUploadProgress({
+            loaded: progressEvent.loaded,
+            total: progressEvent.total,
+          });
+        }
+      } : undefined,
+      // No timeout - let GCS handle large file uploads
+      timeout: 0,
+    });
+  },
+  // Confirm upload completion and save metadata
+  confirmUpload: async (
+    shortId: number,
+    fileType: string,
+    bucketPath: string,
+    fileName: string,
+    fileSize: number,
+    mimeType: string
+  ): Promise<FileType> => {
+    const response = await api.post('/files/confirm-upload', {
+      short_id: shortId,
+      file_type: fileType,
+      bucket_path: bucketPath,
+      file_name: fileName,
+      file_size: fileSize,
+      mime_type: mimeType,
+    });
+    return response.data;
+  },
+  // Legacy upload method (for small files or fallback)
   upload: async (
     shortId: number, 
     fileType: string, 
