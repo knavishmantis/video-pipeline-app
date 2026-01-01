@@ -17,795 +17,51 @@ import {
   useSensors,
   DragStartEvent,
   DragEndEvent,
-  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
-type ColumnType = 'idea' | 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'ready_to_upload' | 'uploaded';
-
-interface Column {
-  id: ColumnType;
-  title: string;
-  color: string;
-  canAdd?: boolean;
-  order: number; // For validation
-}
-
-const columns: Column[] = [
-  { id: 'idea', title: 'Idea', color: '#8B5CF6', canAdd: true, order: 0 },
-  { id: 'script', title: 'Script', color: '#3B82F6', canAdd: true, order: 1 },
-  { id: 'clips', title: 'Clips', color: '#F59E0B', order: 2 },
-  { id: 'clip_changes', title: 'Clip Changes', color: '#EF4444', order: 3 },
-  { id: 'editing', title: 'Editing', color: '#10B981', order: 4 },
-  { id: 'editing_changes', title: 'Editing Changes', color: '#06B6D4', order: 5 },
-  { id: 'ready_to_upload', title: 'Ready to Upload', color: '#6366F1', order: 6 },
-  { id: 'uploaded', title: 'Uploaded/Scheduled', color: '#84CC16', order: 7 },
-];
-
-// Map database status to column
-const statusToColumn = (status: string): ColumnType => {
-  const map: Record<string, ColumnType> = {
-    'idea': 'idea',
-    'script': 'script',
-    'clipping': 'clips',
-    'clips': 'clips',
-    'clip_changes': 'clip_changes',
-    'editing': 'editing',
-    'editing_changes': 'editing_changes',
-    'completed': 'editing_changes',
-    'ready_to_upload': 'ready_to_upload',
-    'uploaded': 'uploaded',
-  };
-  return map[status] || 'idea';
-};
-
-// Map column to database status
-const columnToStatus = (column: ColumnType): string => {
-  const map: Record<ColumnType, string> = {
-    'idea': 'idea',
-    'script': 'script',
-    'clips': 'clips',
-    'clip_changes': 'clip_changes',
-    'editing': 'editing',
-    'editing_changes': 'editing_changes',
-    'ready_to_upload': 'ready_to_upload',
-    'uploaded': 'uploaded',
-  };
-  return map[column];
-};
-
-// Get valid columns for a given column (can move forward or backward one step, or admin can move to clip_changes/editing_changes)
-// Also allows clips->editing and editing->ready_to_upload if marked complete
-const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = false, short?: Short): ColumnType[] => {
-  const current = columns.find(c => c.id === currentColumn);
-  if (!current) return [];
-  
-  const valid: ColumnType[] = [];
-  // Can move to previous column
-  const prev = columns.find(c => c.order === current.order - 1);
-  if (prev) valid.push(prev.id);
-  // Can move to next column
-  const next = columns.find(c => c.order === current.order + 1);
-  if (next) valid.push(next.id);
-  
-  // Admin can also move to clip_changes or editing_changes from clips/editing
-  if (isAdmin) {
-    if (currentColumn === 'clips') {
-      valid.push('clip_changes');
-    } else if (currentColumn === 'editing') {
-      valid.push('editing_changes');
-    }
-  }
-  
-  // Allow clips->editing if clips are marked complete
-  if (currentColumn === 'clips' || currentColumn === 'clip_changes') {
-    if (short?.clips_completed_at) {
-      const editingColumn = columns.find(c => c.id === 'editing');
-      if (editingColumn) valid.push('editing');
-    }
-  }
-  
-  // Allow editing->ready_to_upload if editing is marked complete
-  if (currentColumn === 'editing' || currentColumn === 'editing_changes') {
-    if (short?.editing_completed_at) {
-      const readyColumn = columns.find(c => c.id === 'ready_to_upload');
-      if (readyColumn) valid.push('ready_to_upload');
-    }
-  }
-  
-  return valid;
-};
-
-// Droppable Column Component
-function DroppableColumn({ 
-  column, 
-  children, 
-  shorts 
-}: { 
-  column: Column; 
-  children: React.ReactNode;
-  shorts: Short[];
-}) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `column-${column.id}`,
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        minWidth: '280px',
-        background: isOver ? '#F8FAFC' : '#FFFFFF',
-        borderRadius: '12px',
-        padding: '16px',
-        paddingBottom: '24px', // Extra bottom padding to account for scrollbar
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-        border: isOver ? `2px dashed ${column.color}` : '1px solid #E2E8F0',
-        display: 'flex',
-        flexDirection: 'column',
-        height: 'calc(100vh - 180px)', // Column height
-        transition: 'all 0.2s',
-        boxSizing: 'border-box',
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-// Sortable Card Component
-function SortableCard({ 
-  short, 
-  column, 
-  onClick,
-  assignments,
-  users,
-  isAdmin,
-  currentUserId,
-  onAssign,
-  navigate,
-}: { 
-  short: Short; 
-  column: Column; 
-  onClick?: () => void;
-  assignments: Assignment[];
-  users: User[];
-  isAdmin: boolean;
-  currentUserId?: number;
-  onAssign: (shortId: number, role: 'clipper' | 'editor', userId: number) => void;
-  navigate: (path: string) => void;
-}) {
-  const [showAssignMenu, setShowAssignMenu] = useState(false);
-  const [showAllAssignments, setShowAllAssignments] = useState(false);
-  
-  const shortAssignments = assignments.filter(a => a.short_id === short.id);
-  const scripter = short.script_writer;
-  const clipper = shortAssignments.find(a => a.role === 'clipper')?.user;
-  const editor = shortAssignments.find(a => a.role === 'editor')?.user;
-  
-  // Determine which role to show by default based on column
-  const getDefaultRole = () => {
-    if (column.id === 'script' && scripter) return { type: 'scripter', user: scripter };
-    if ((column.id === 'clips' || column.id === 'clip_changes') && clipper) return { type: 'clipper', user: clipper };
-    if ((column.id === 'editing' || column.id === 'editing_changes') && editor) return { type: 'editor', user: editor };
-    return null;
-  };
-  
-  const defaultRole = getDefaultRole();
-  
-  const getProfilePicture = (user: User) => {
-    if (user.profile_picture) {
-      if (user.profile_picture.startsWith('http')) {
-        return user.profile_picture;
-      }
-      return user.profile_picture; // emoji
-    }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=6366f1&color=fff&size=32&bold=true`;
-  };
-  
-  const canEdit = isAdmin || (
-    (column.id === 'clips' || column.id === 'clip_changes') && clipper?.id === currentUserId
-  ) || (
-    (column.id === 'editing' || column.id === 'editing_changes') && editor?.id === currentUserId
-  );
-  
-  const isDisabled = !canEdit && (column.id === 'clips' || column.id === 'editing' || column.id === 'clip_changes' || column.id === 'editing_changes');
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ 
-    id: `short-${short.id}`,
-    disabled: !isAdmin, // Only admins can drag cards
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={{
-        ...style,
-        background: isDisabled ? '#F8FAFC' : '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: '8px',
-        padding: '12px',
-        cursor: isDisabled ? 'not-allowed' : (onClick ? 'pointer' : 'default'),
-        transition: isDragging ? 'none' : 'all 0.2s',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-        position: 'relative',
-        opacity: isDisabled ? 0.6 : 1,
-      }}
-      onMouseEnter={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.borderColor = column.color;
-          e.currentTarget.style.boxShadow = `0 4px 12px ${column.color}20`;
-          e.currentTarget.style.transform = 'translateY(-2px)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isDragging) {
-          e.currentTarget.style.borderColor = '#E2E8F0';
-          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-          e.currentTarget.style.transform = 'translateY(0)';
-        }
-      }}
-      onClick={(e) => {
-        // Don't trigger click if clicking on drag handle or assign menu
-        if (!(e.target as HTMLElement).closest('.drag-handle') && 
-            !(e.target as HTMLElement).closest('.assign-menu')) {
-          onClick?.();
-        }
-      }}
-    >
-      {/* Admin Settings Gear Icon and Delete Button */}
-      {isAdmin && !isDragging && (
-        <>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/shorts/${short.id}`);
-            }}
-            style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              width: '24px',
-              height: '24px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: 'none',
-              borderRadius: '4px',
-              transition: 'all 0.2s',
-              zIndex: 2,
-              opacity: 0.6,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#F1F5F9';
-              e.currentTarget.style.opacity = '1';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.opacity = '0.6';
-            }}
-            title="Edit settings"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-              <circle cx="12" cy="12" r="3"/>
-            </svg>
-          </button>
-        </>
-      )}
-      
-      {/* Drag handle area - only visible and functional for admins */}
-      {isAdmin && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="drag-handle"
-          style={{
-            position: 'absolute',
-            top: '8px',
-            right: !isDragging ? '36px' : '8px',
-            width: '24px',
-            height: '24px',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: isDragging ? 1 : 0.3,
-            borderRadius: '4px',
-            transition: isDragging ? 'none' : 'opacity 0.2s',
-            background: isDragging ? '#E2E8F0' : 'transparent',
-          }}
-          onMouseEnter={(e) => {
-            if (!isDragging) {
-              e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.background = '#F1F5F9';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isDragging) {
-              e.currentTarget.style.opacity = '0.3';
-              e.currentTarget.style.background = 'transparent';
-            }
-          }}
-          onClick={(e) => {
-            e.stopPropagation(); // Prevent card click when clicking drag handle
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="4" cy="4" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="12" cy="4" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="4" cy="8" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="12" cy="8" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="4" cy="12" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="12" cy="12" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-          </svg>
-        </div>
-      )}
-      <h4 style={{
-        margin: 0,
-        marginBottom: '6px',
-        fontSize: '14px',
-        fontWeight: '600',
-        color: '#1E293B',
-        lineHeight: '1.4',
-        paddingRight: isAdmin ? '60px' : '32px', // Space for gear icon and drag handle
-      paddingLeft: '32px', // Space for upload status icon
-      }}>
-        {short.title}
-      </h4>
-      {short.description && column.id !== 'idea' && (
-        <p style={{
-          margin: 0,
-          fontSize: '12px',
-          color: '#64748B',
-          lineHeight: '1.4',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          {short.description}
-        </p>
-      )}
-      {short.idea && column.id === 'idea' && (
-        <p style={{
-          margin: '6px 0 0 0',
-          fontSize: '11px',
-          color: '#94A3B8',
-          fontStyle: 'italic',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          💡 {short.idea}
-        </p>
-      )}
-      {/* Upload Status Icons - Show checkmark when uploaded, clock when in progress */}
-      {(() => {
-        const hasScript = short.files?.some(f => f.file_type === 'script');
-        const hasAudio = short.files?.some(f => f.file_type === 'audio');
-        const hasClipsZip = short.files?.some(f => f.file_type === 'clips_zip');
-        const hasFinalVideo = short.files?.some(f => f.file_type === 'final_video');
-        
-        // Check if assigned (in progress)
-        const scriptInProgress = column.id === 'script' && scripter && (!hasScript || !hasAudio);
-        const clipsInProgress = (column.id === 'clips' || column.id === 'clip_changes') && clipper && !hasClipsZip;
-        const editingInProgress = (column.id === 'editing' || column.id === 'editing_changes') && editor && !hasFinalVideo;
-        
-        // Check if uploaded
-        // For clip_changes and editing_changes, only show checkmark if file was uploaded AFTER entering that status
-        const scriptUploaded = column.id === 'script' && hasScript && hasAudio;
-        
-        let clipsUploaded = false;
-        if (column.id === 'clips') {
-          clipsUploaded = hasClipsZip ?? false;
-        } else if (column.id === 'clip_changes') {
-          // Only show checkmark if clips_zip was uploaded after entering clip_changes
-          if (hasClipsZip && short.entered_clip_changes_at) {
-            const clipsFile = short.files?.find(f => f.file_type === 'clips_zip');
-            if (clipsFile && clipsFile.uploaded_at) {
-              const fileUploadTime = new Date(clipsFile.uploaded_at).getTime();
-              const enteredTime = new Date(short.entered_clip_changes_at).getTime();
-              clipsUploaded = fileUploadTime >= enteredTime;
-            }
-          }
-        }
-        
-        let editingUploaded = false;
-        if (column.id === 'editing') {
-          editingUploaded = hasFinalVideo ?? false;
-        } else if (column.id === 'editing_changes') {
-          // Only show checkmark if final_video was uploaded after entering editing_changes
-          if (hasFinalVideo && short.entered_editing_changes_at) {
-            const finalVideoFile = short.files?.find(f => f.file_type === 'final_video');
-            if (finalVideoFile && finalVideoFile.uploaded_at) {
-              const fileUploadTime = new Date(finalVideoFile.uploaded_at).getTime();
-              const enteredTime = new Date(short.entered_editing_changes_at).getTime();
-              editingUploaded = fileUploadTime >= enteredTime;
-            }
-          }
-        }
-        
-        if (scriptUploaded) {
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: '#10B981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid white',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} title="Script & Audio uploaded">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          );
-        } else if (scriptInProgress) {
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: '#F59E0B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid white',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} title="In progress">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </div>
-          );
-        }
-        
-        if (clipsUploaded) {
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: '#10B981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid white',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} title="Clips ZIP uploaded">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          );
-        } else if (clipsInProgress) {
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: '#F59E0B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid white',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} title="In progress">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </div>
-          );
-        }
-        
-        if (editingUploaded) {
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: '#10B981',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid white',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} title="Final video uploaded">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-          );
-        } else if (editingInProgress) {
-          return (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: '8px',
-              width: '20px',
-              height: '20px',
-              borderRadius: '50%',
-              background: '#F59E0B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '2px solid white',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-            }} title="In progress">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </div>
-          );
-        }
-        
-        return null;
-      })()}
-      {short.files?.some(f => f.file_type === 'script') && column.id === 'script' && (
-        <p style={{
-          margin: '6px 0 0 0',
-          fontSize: '11px',
-          color: '#94A3B8',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          📄 Script PDF uploaded
-        </p>
-      )}
-      {/* Assignments Section */}
-      <div 
-        style={{
-          marginTop: '8px',
-          fontSize: '11px',
-          color: '#94A3B8',
-        }}
-        onMouseEnter={() => setShowAllAssignments(true)}
-        onMouseLeave={() => setShowAllAssignments(false)}
-      >
-        {showAllAssignments ? (
-          // Show all assignments on hover
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {scripter && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {scripter.profile_picture && !scripter.profile_picture.startsWith('http') ? (
-                  <span style={{ fontSize: '14px' }}>{scripter.profile_picture}</span>
-                ) : (
-                  <img 
-                    src={getProfilePicture(scripter)} 
-                    alt={scripter.name}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <span>Scripter: {scripter.discord_username || scripter.name}</span>
-              </div>
-            )}
-            {clipper && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {clipper.profile_picture && !clipper.profile_picture.startsWith('http') ? (
-                  <span style={{ fontSize: '14px' }}>{clipper.profile_picture}</span>
-                ) : (
-                  <img 
-                    src={getProfilePicture(clipper)} 
-                    alt={clipper.name}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <span>Clipper: {clipper.discord_username || clipper.name}</span>
-              </div>
-            )}
-            {editor && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {editor.profile_picture && !editor.profile_picture.startsWith('http') ? (
-                  <span style={{ fontSize: '14px' }}>{editor.profile_picture}</span>
-                ) : (
-                  <img 
-                    src={getProfilePicture(editor)} 
-                    alt={editor.name}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <span>Editor: {editor.discord_username || editor.name}</span>
-              </div>
-            )}
-            {!scripter && !clipper && !editor && (
-              <span style={{ fontStyle: 'italic' }}>No assignments</span>
-            )}
-          </div>
-        ) : defaultRole ? (
-          // Show only relevant role by default
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
-              <span style={{ fontSize: '14px' }}>{defaultRole.user.profile_picture}</span>
-            ) : (
-              <img 
-                src={getProfilePicture(defaultRole.user)} 
-                alt={defaultRole.user.name}
-                style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-            )}
-            <span>
-              {defaultRole.type === 'scripter' ? 'Scripter' : defaultRole.type === 'clipper' ? 'Clipper' : 'Editor'}: 
-              {' '}{defaultRole.user.discord_username || defaultRole.user.name}
-            </span>
-          </div>
-        ) : null}
-      </div>
-      
-      {/* Assign Button (Admin only or when not assigned) */}
-      {isAdmin && (column.id === 'clips' || column.id === 'editing') && (
-        <div style={{ position: 'relative', marginTop: '8px' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowAssignMenu(!showAssignMenu);
-            }}
-            style={{
-              padding: '4px 8px',
-              background: '#F1F5F9',
-              color: '#475569',
-              border: '1px solid #E2E8F0',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '10px',
-              fontWeight: '500',
-            }}
-          >
-            {clipper && column.id === 'clips' ? 'Reassign' : editor && column.id === 'editing' ? 'Reassign' : 'Assign'}
-          </button>
-          {showAssignMenu && (
-            <div 
-              className="assign-menu"
-              style={{
-                position: 'absolute',
-                bottom: '100%',
-                left: 0,
-                marginBottom: '4px',
-                background: 'white',
-                border: '1px solid #E2E8F0',
-                borderRadius: '6px',
-                padding: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                zIndex: 10,
-                minWidth: '200px',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: '#1E293B' }}>
-                Assign {column.id === 'clips' ? 'Clipper' : 'Editor'}
-              </div>
-              {users
-                .filter(u => {
-                  const hasRole = column.id === 'clips' 
-                    ? u.roles?.includes('clipper') || u.role === 'clipper'
-                    : u.roles?.includes('editor') || u.role === 'editor';
-                  return hasRole;
-                })
-                .map(u => (
-                  <div
-                    key={u.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAssign(short.id, column.id === 'clips' ? 'clipper' : 'editor', u.id);
-                      setShowAssignMenu(false);
-                    }}
-                    style={{
-                      padding: '6px',
-                      cursor: 'pointer',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#F1F5F9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    {u.profile_picture && !u.profile_picture.startsWith('http') ? (
-                      <span style={{ fontSize: '14px' }}>{u.profile_picture}</span>
-                    ) : (
-                      <img 
-                        src={getProfilePicture(u)} 
-                        alt={u.name}
-                        style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    )}
-                    <span>{u.discord_username || u.name}</span>
-                  </div>
-                ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+import { DroppableColumn } from '../components/DroppableColumn';
+import { SortableCard } from '../components/SortableCard';
+import { columns, statusToColumn, columnToStatus, getValidColumns, ColumnType, Column } from '../utils/dashboardUtils';
 
 export default function Dashboard() {
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
   const { showAlert, AlertComponent } = useAlert();
   const { showToast, ToastComponent } = useToast();
   const { confirm, ConfirmComponent } = useConfirm();
+  
   const [shorts, setShorts] = useState<Short[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  // Non-admin users should always see all shorts (read-only), only admins can filter to "assigned only"
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [showAssignedOnly, setShowAssignedOnly] = useState(false);
-  // Initialize visible columns - exclude 'uploaded' and 'ready_to_upload' by default
   const [visibleColumns, setVisibleColumns] = useState<Set<ColumnType>>(
-    new Set(columns.filter(c => c.id !== 'uploaded' && c.id !== 'ready_to_upload').map(c => c.id))
+    new Set(['script', 'clips', 'clip_changes', 'editing', 'editing_changes', 'ready_to_upload', 'uploaded'])
   );
+  
+  // Create/Edit Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createColumn, setCreateColumn] = useState<ColumnType | null>(null);
-  const [createForm, setCreateForm] = useState<CreateShortInput>({
-    title: '',
-    description: '',
-    idea: '',
-  });
+  const [createForm, setCreateForm] = useState({ title: '', description: '', idea: '' });
   const [creating, setCreating] = useState(false);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  
+  // Content Modal State
   const [showContentModal, setShowContentModal] = useState(false);
   const [contentShort, setContentShort] = useState<Short | null>(null);
   const [contentColumn, setContentColumn] = useState<ColumnType | null>(null);
-  const [contentForm, setContentForm] = useState({
-    script_content: '',
-    file: null as globalThis.File | null,
-    scriptFile: null as globalThis.File | null,
-    audioFile: null as globalThis.File | null,
-  });
+  const [contentForm, setContentForm] = useState<{
+    script_content: string;
+    file: File | null;
+    scriptFile: File | null;
+    audioFile: File | null;
+  }>({ script_content: '', file: null, scriptFile: null, audioFile: null });
   const [uploading, setUploading] = useState(false);
-
-  const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -814,73 +70,31 @@ export default function Dashboard() {
     })
   );
 
-  // Auto-refresh interval (30 seconds)
-  const REFRESH_INTERVAL = 30000; // 30 seconds
+  const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
   useEffect(() => {
-    loadData();
-  }, [showAssignedOnly]);
-
-  // Auto-refresh data periodically
-  useEffect(() => {
-    // Don't auto-refresh if modals are open or if loading
-    if (showCreateModal || showContentModal || loading) {
-      return;
-    }
+    loadData(); // Initial load
 
     const interval = setInterval(() => {
-      // Silently refresh data in the background (don't show loading spinner)
-      const shouldShowAssignedOnly = showAssignedOnly;
-      
-      const refreshData = async () => {
-        try {
-          // Load shorts first (required for all users)
-          const shortsData = shouldShowAssignedOnly ? await shortsApi.getAssigned() : await shortsApi.getAll();
-          setShorts(shortsData);
-          
-          // Load assignments and users (only if admin, or use my assignments for non-admin)
-          if (isAdmin) {
-            const [assignmentsData, usersData] = await Promise.all([
-              assignmentsApi.getAll(),
-              usersApi.getAll(),
-            ]);
-            setAssignments(assignmentsData || []);
-            setUsers(usersData || []);
-          } else {
-            // Non-admin users only need their own assignments to check edit permissions
-            try {
-              const assignmentsData = await assignmentsApi.getMyAssignments();
-              setAssignments(assignmentsData || []);
-            } catch (error) {
-              console.error('Failed to load my assignments:', error);
-              // Don't update assignments on error
-            }
-            // Non-admins don't need all users - set empty array
-            setUsers([]);
-          }
-        } catch (error) {
-          console.error('Auto-refresh failed:', error);
-          // Silently fail - don't show error to user for background refresh
-        }
-      };
-
-      refreshData();
+      // Only auto-refresh if no modals are open and not currently loading
+      if (!showCreateModal && !showContentModal && !loading) {
+        loadData(true); // Silent refresh
+      }
     }, REFRESH_INTERVAL);
 
-    // Cleanup interval on unmount or when dependencies change
-    return () => clearInterval(interval);
-  }, [showAssignedOnly, isAdmin, showCreateModal, showContentModal, loading]);
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [showAssignedOnly, showCreateModal, showContentModal, isAdmin]); // Added isAdmin to dependencies
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Load shorts based on toggle (all users can toggle)
       const shouldShowAssignedOnly = showAssignedOnly;
-      
+
       // Load shorts first (required for all users)
       const shortsData = shouldShowAssignedOnly ? await shortsApi.getAssigned() : await shortsApi.getAll();
       setShorts(shortsData);
-      
+
       // Load assignments and users (only if admin, or use my assignments for non-admin)
       if (isAdmin) {
         const [assignmentsData, usersData] = await Promise.all([
@@ -891,15 +105,13 @@ export default function Dashboard() {
         setUsers(usersData || []);
       } else {
         // Non-admin users only need their own assignments to check edit permissions
-        try {
-          const assignmentsData = await assignmentsApi.getMyAssignments();
-          setAssignments(assignmentsData || []);
-        } catch (error) {
-          console.error('Failed to load my assignments:', error);
-          setAssignments([]);
-        }
-        // Non-admins don't need all users - set empty array
-        setUsers([]);
+        // And they don't need to load all users
+        const assignmentsData = await assignmentsApi.getMyAssignments().catch(error => {
+          console.error('Failed to load user assignments:', error);
+          return []; // Fallback to empty array
+        });
+        setAssignments(assignmentsData || []);
+        setUsers([]); // Non-admin users don't need all users
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -1228,7 +440,7 @@ export default function Dashboard() {
   });
 
   return (
-    <>
+    <React.Fragment>
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -2461,10 +1673,9 @@ export default function Dashboard() {
           </div>
         </div>
       )}
-    </div>
-    <AlertComponent />
-    <ToastComponent />
-    <ConfirmComponent />
-    </>
+      <AlertComponent />
+      <ToastComponent />
+      <ConfirmComponent />
+    </React.Fragment>
   );
 }

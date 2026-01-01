@@ -62,7 +62,6 @@ resource "google_artifact_registry_repository" "docker_repo" {
   format        = "DOCKER"
 }
 
-
 # Grant GitHub Actions permission to create repositories (for gcr.io auto-creation)
 # This is needed because gcr.io format auto-creates repositories
 resource "google_project_iam_member" "github_actions_artifact_registry_admin" {
