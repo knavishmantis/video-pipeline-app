@@ -7,7 +7,7 @@ export const createUserSchema = z.object({
   discord_username: z.string().max(100).optional(),
   roles: z.array(z.enum(['admin', 'script_writer', 'clipper', 'editor'])).min(1, 'At least one role is required'),
   paypal_email: z.string().email().max(255).optional(),
-  profile_picture: z.string().max(500).optional(),
+  profile_picture: z.string().max(2000).optional(), // Increased for GCP signed URLs or bucket paths
   timezone: z.string().max(100).optional(),
 });
 
@@ -16,7 +16,7 @@ export const updateUserSchema = z.object({
   discord_username: z.string().max(100).optional(),
   roles: z.array(z.enum(['admin', 'script_writer', 'clipper', 'editor'])).optional(),
   paypal_email: z.string().email().max(255).optional(),
-  profile_picture: z.string().max(500).optional(),
+  profile_picture: z.string().max(2000).optional(), // Increased for GCP signed URLs or bucket paths
   timezone: z.string().max(100).optional(),
 });
 

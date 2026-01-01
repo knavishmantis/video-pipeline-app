@@ -131,7 +131,9 @@ export default function ProfileCompletion() {
           formDataUpload.append('user_id', user!.id.toString());
           
           const uploadResult = await filesApi.uploadProfilePicture(formDataUpload);
-          profilePictureValue = uploadResult.url || uploadResult.gcp_bucket_path || '';
+          // Store the bucket path instead of signed URL (signed URLs are too long and expire)
+          // We'll generate signed URLs on-demand when displaying
+          profilePictureValue = uploadResult.gcp_bucket_path || uploadResult.url || '';
         } catch (uploadError: any) {
           console.error('Image upload error:', uploadError);
           const errorMsg = uploadError.response?.data?.error || uploadError.message || 'Image upload failed';
