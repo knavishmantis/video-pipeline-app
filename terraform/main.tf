@@ -62,48 +62,6 @@ resource "google_artifact_registry_repository" "docker_repo" {
   format        = "DOCKER"
 }
 
-# Storage bucket for video pipeline files
-resource "google_storage_bucket" "video_pipeline" {
-  name          = "${var.project_id}-video-pipeline"
-  location      = var.region
-  force_destroy = false
-
-  uniform_bucket_level_access {
-    enabled = true
-  }
-}
-
-# Service account for Cloud Run to access Storage
-resource "google_service_account" "storage" {
-  account_id   = "video-pipeline-storage"
-  display_name = "Video Pipeline Storage Service Account"
-  description  = "Service account for Cloud Run to access GCS bucket"
-}
-
-# Grant Storage Object Admin role to service account
-resource "google_project_iam_member" "storage_admin" {
-  project = var.project_id
-  role    = "roles/storage.objectAdmin"
-  member  = "serviceAccount:${google_service_account.storage.email}"
-}
-
-# Grant bucket-specific permissions
-resource "google_storage_bucket_iam_member" "storage_admin" {
-  bucket = google_storage_bucket.video_pipeline.name
-  role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.storage.email}"
-}
-
-# Outputs
-output "bucket_name" {
-  description = "Name of the GCS bucket"
-  value       = google_storage_bucket.video_pipeline.name
-}
-
-output "service_account_email" {
-  description = "Email of the service account"
-  value       = google_service_account.storage.email
-}
 
 # Grant GitHub Actions permission to create repositories (for gcr.io auto-creation)
 # This is needed because gcr.io format auto-creates repositories
