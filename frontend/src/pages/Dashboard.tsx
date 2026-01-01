@@ -814,9 +814,62 @@ export default function Dashboard() {
     })
   );
 
+  // Auto-refresh interval (30 seconds)
+  const REFRESH_INTERVAL = 30000; // 30 seconds
+
   useEffect(() => {
     loadData();
   }, [showAssignedOnly]);
+
+  // Auto-refresh data periodically
+  useEffect(() => {
+    // Don't auto-refresh if modals are open or if loading
+    if (showCreateModal || showContentModal || loading) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      // Silently refresh data in the background (don't show loading spinner)
+      const shouldShowAssignedOnly = showAssignedOnly;
+      
+      const refreshData = async () => {
+        try {
+          // Load shorts first (required for all users)
+          const shortsData = shouldShowAssignedOnly ? await shortsApi.getAssigned() : await shortsApi.getAll();
+          setShorts(shortsData);
+          
+          // Load assignments and users (only if admin, or use my assignments for non-admin)
+          if (isAdmin) {
+            const [assignmentsData, usersData] = await Promise.all([
+              assignmentsApi.getAll(),
+              usersApi.getAll(),
+            ]);
+            setAssignments(assignmentsData || []);
+            setUsers(usersData || []);
+          } else {
+            // Non-admin users only need their own assignments to check edit permissions
+            try {
+              const assignmentsData = await assignmentsApi.getMyAssignments();
+              setAssignments(assignmentsData || []);
+            } catch (error) {
+              console.error('Failed to load my assignments:', error);
+              // Don't update assignments on error
+            }
+            // Non-admins don't need all users - set empty array
+            setUsers([]);
+          }
+        } catch (error) {
+          console.error('Auto-refresh failed:', error);
+          // Silently fail - don't show error to user for background refresh
+        }
+      };
+
+      refreshData();
+    }, REFRESH_INTERVAL);
+
+    // Cleanup interval on unmount or when dependencies change
+    return () => clearInterval(interval);
+  }, [showAssignedOnly, isAdmin, showCreateModal, showContentModal, loading]);
 
   const loadData = async () => {
     setLoading(true);
@@ -1209,7 +1262,9 @@ export default function Dashboard() {
           alignItems: 'center',
           gap: '16px',
           flexWrap: 'wrap',
+          justifyContent: 'space-between',
         }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
           {/* Toggle Switch for Assigned/Show All */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
@@ -1261,8 +1316,8 @@ export default function Dashboard() {
             </span>
           </div>
 
-          {/* View Buttons */}
-          <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+            {/* View Buttons */}
+            <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
             {isAdmin && (
               <button
                 onClick={() => toggleColumnView('idea')}
@@ -1361,6 +1416,42 @@ export default function Dashboard() {
             >
               Uploaded/Scheduled
             </button>
+          </div>
+          </div>
+          
+          {/* Auto-refresh indicator */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            fontSize: '12px',
+            color: '#64748B',
+          }}>
+            <svg 
+              className="animate-spin" 
+              style={{ 
+                width: '14px', 
+                height: '14px',
+                animation: 'spin 2s linear infinite',
+              }} 
+              fill="none" 
+              viewBox="0 0 24 24"
+            >
+              <circle 
+                className="opacity-25" 
+                cx="12" 
+                cy="12" 
+                r="10" 
+                stroke="currentColor" 
+                strokeWidth="4"
+              />
+              <path 
+                className="opacity-75" 
+                fill="currentColor" 
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              />
+            </svg>
+            <span>Auto-refreshing every 30s</span>
           </div>
         </div>
 
