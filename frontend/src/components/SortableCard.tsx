@@ -123,7 +123,7 @@ export function SortableCard({
       }
     }
     
-    const StatusIcon = ({ color, title, isCheckmark }: { color: string; title: string; isCheckmark: boolean }) => (
+    const StatusIcon = ({ color, title, isCheckmark, isUnassigned }: { color: string; title: string; isCheckmark: boolean; isUnassigned?: boolean }) => (
       <div style={{
         position: 'absolute',
         top: '8px',
@@ -142,6 +142,11 @@ export function SortableCard({
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
+        ) : isUnassigned ? (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="16"></line>
+          </svg>
         ) : (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
@@ -151,12 +156,20 @@ export function SortableCard({
       </div>
     );
     
+    // Check for incomplete and unassigned
+    const scriptUnassigned = column.id === 'script' && !scripter && (!hasScript || !hasAudio);
+    const clipsUnassigned = (column.id === 'clips' || column.id === 'clip_changes') && !clipper && !hasClipsZip;
+    const editingUnassigned = (column.id === 'editing' || column.id === 'editing_changes') && !editor && !hasFinalVideo;
+    
     if (scriptUploaded) return <StatusIcon color="#10B981" title="Script & Audio uploaded" isCheckmark />;
     if (scriptInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
+    if (scriptUnassigned) return <StatusIcon color="#9CA3AF" title="Not assigned" isCheckmark={false} isUnassigned />;
     if (clipsUploaded) return <StatusIcon color="#10B981" title="Clips ZIP uploaded" isCheckmark />;
     if (clipsInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
+    if (clipsUnassigned) return <StatusIcon color="#9CA3AF" title="Not assigned" isCheckmark={false} isUnassigned />;
     if (editingUploaded) return <StatusIcon color="#10B981" title="Final video uploaded" isCheckmark />;
     if (editingInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
+    if (editingUnassigned) return <StatusIcon color="#9CA3AF" title="Not assigned" isCheckmark={false} isUnassigned />;
     
     return null;
   };
