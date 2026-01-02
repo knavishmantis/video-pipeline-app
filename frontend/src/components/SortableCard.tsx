@@ -202,6 +202,8 @@ export function SortableCard({
           e.currentTarget.style.borderColor = '#E2E8F0';
           e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
           e.currentTarget.style.transform = 'translateY(0)';
+          // Reset showAllAssignments when mouse leaves card
+          setShowAllAssignments(false);
         }
       }}
       onClick={(e) => {
