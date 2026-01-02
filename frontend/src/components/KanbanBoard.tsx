@@ -136,20 +136,13 @@ export function KanbanBoard({
                     paddingBottom: '4px',
                   }}>
                     {columnShorts.map((short) => {
-                      const canEdit = isAdmin || (
-                        (column.id === 'clips' || column.id === 'clip_changes') && 
-                        assignments.some(a => a.short_id === short.id && a.role === 'clipper' && a.user_id === currentUserId)
-                      ) || (
-                        (column.id === 'editing' || column.id === 'editing_changes') && 
-                        assignments.some(a => a.short_id === short.id && a.role === 'editor' && a.user_id === currentUserId)
-                      );
-                      
+                      // Cards are always clickable - users can view even if not assigned
                       return (
                         <SortableCard
                           key={short.id}
                           short={short}
                           column={column}
-                          onClick={canEdit ? () => onCardClick(short, column) : undefined}
+                          onClick={() => onCardClick(short, column)}
                           assignments={assignments}
                           users={users}
                           isAdmin={isAdmin}

@@ -61,7 +61,8 @@ export function SortableCard({
     (column.id === 'editing' || column.id === 'editing_changes') && editor?.id === currentUserId
   );
   
-  const isDisabled = !canEdit && (column.id === 'clips' || column.id === 'editing' || column.id === 'clip_changes' || column.id === 'editing_changes');
+  // Cards are no longer grayed out - users can always view them
+  const isDisabled = false;
   const {
     attributes,
     listeners,

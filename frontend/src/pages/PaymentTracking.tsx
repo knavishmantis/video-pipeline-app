@@ -331,11 +331,9 @@ export default function PaymentTracking() {
                 <h3 className="font-semibold text-amber-900">
                   {isAdmin ? 'Total Pending Payments' : 'Total Owed to You'}
                 </h3>
-                {isAdmin && (
-                  <p className="text-xs text-amber-600 mt-0.5">
-                    This number does not include view or subscriber based incentives if applicable
-                  </p>
-                )}
+                <p className="text-xs text-amber-600 mt-0.5">
+                  This number does not include view or subscriber based incentives if applicable
+                </p>
                 <p className="text-2xl font-bold text-amber-700 mt-1">${Number(totalOwed).toFixed(2)}</p>
               </div>
             </div>

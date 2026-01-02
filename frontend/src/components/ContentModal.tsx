@@ -281,7 +281,7 @@ export function ContentModal({
                 const audioFile = contentShort.files?.find(f => f.file_type === 'audio');
                 const clipsZip = contentShort.files?.find(f => f.file_type === 'clips_zip');
                 
-                // Check permissions - only assigned clipper/editor or admin
+                // Check permissions - only assigned clipper/editor or admin can edit
                 const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
                 const clipperAssignment = shortAssignments.find(a => a.role === 'clipper');
                 const editorAssignment = shortAssignments.find(a => a.role === 'editor');
@@ -289,15 +289,19 @@ export function ContentModal({
                   ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
                   ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
                 
-                // Check if user can download (more permissive - assigned clipper/editor or admin)
-                const canDownload = isAdmin ||
-                  ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
-                  ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
+                // Download permissions based on stage, not assignment:
+                // - If in clips stage, anyone can download script/audio/clips
+                // - If in editing stage, anyone can download script/audio/clips/final video
+                const canDownloadScript = (contentColumn === 'clips' || contentColumn === 'clip_changes') || 
+                  (contentColumn === 'editing' || contentColumn === 'editing_changes');
+                const canDownloadClips = (contentColumn === 'clips' || contentColumn === 'clip_changes') || 
+                  (contentColumn === 'editing' || contentColumn === 'editing_changes');
+                const canDownloadFinalVideo = (contentColumn === 'editing' || contentColumn === 'editing_changes');
                 
                 return (
                   <div style={{ marginBottom: '16px' }}>
-                    {/* Download Dependencies Section for Clippers - Always show if assigned */}
-                    {((contentColumn === 'clips' || contentColumn === 'clip_changes') && canDownload && (scriptPdf || audioFile)) && (
+                    {/* Download Dependencies Section for Clippers - Show if in clips stage and files exist */}
+                    {((contentColumn === 'clips' || contentColumn === 'clip_changes') && canDownloadScript && (scriptPdf || audioFile)) && (
                       <div style={{
                         marginBottom: '16px',
                         padding: '12px',
@@ -425,8 +429,8 @@ export function ContentModal({
                       </div>
                     )}
                     
-                    {/* Download Dependencies Section for Editors - Always show if assigned */}
-                    {((contentColumn === 'editing' || contentColumn === 'editing_changes') && canDownload && (scriptPdf || audioFile || clipsZip)) && (
+                    {/* Download Dependencies Section for Editors - Show if in editing stage and files exist */}
+                    {((contentColumn === 'editing' || contentColumn === 'editing_changes') && canDownloadScript && (scriptPdf || audioFile || clipsZip)) && (
                       <div style={{
                         marginBottom: '16px',
                         padding: '12px',
@@ -604,6 +608,43 @@ export function ContentModal({
                       </div>
                     )}
                     
+                    {/* Assignments Section - Always show */}
+                    {shortAssignments.length > 0 && (
+                      <div style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        background: '#F9FAFB',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB'
+                      }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                          Assignments:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {clipperAssignment && clipperAssignment.user && (
+                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                              Clipper: {clipperAssignment.user.discord_username || clipperAssignment.user.name || clipperAssignment.user.email}
+                            </div>
+                          )}
+                          {editorAssignment && editorAssignment.user && (
+                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                              Editor: {editorAssignment.user.discord_username || editorAssignment.user.name || editorAssignment.user.email}
+                            </div>
+                          )}
+                          {contentShort.script_writer && (
+                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                              Script Writer: {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}
+                            </div>
+                          )}
+                          {!clipperAssignment && !editorAssignment && !contentShort.script_writer && (
+                            <div style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic' }}>
+                              No assignments
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
                     {/* File Management Section - Only show if canEdit */}
                     {canEdit ? (
                       <>
@@ -711,16 +752,66 @@ export function ContentModal({
                         </div>
                       </>
                     ) : (
-                      <div style={{ 
-                        padding: '12px', 
-                        background: '#FEF3C7', 
-                        borderRadius: '8px',
-                        border: '1px solid #FCD34D',
-                        color: '#92400E',
-                        fontSize: '14px'
-                      }}>
-                        You don't have permission to edit this file. Only the assigned {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'clipper' : 'editor'} or admin can manage files.
-                      </div>
+                      <>
+                        {/* View-only section for non-editors */}
+                        {currentFile && (
+                          <div style={{
+                            marginBottom: '16px',
+                            padding: '12px',
+                            background: '#F0F9FF',
+                            borderRadius: '8px',
+                            border: '1px solid #BAE6FD'
+                          }}>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
+                              {(contentColumn === 'clips' || contentColumn === 'clip_changes') ? 'Clips ZIP' : 'Final Video'}
+                            </div>
+                            <div style={{ fontSize: '13px', color: '#0C4A6E', marginBottom: '12px' }}>
+                              {currentFile.file_name}
+                              {currentFile.file_size && (
+                                <span style={{ color: '#64748B', marginLeft: '8px' }}>
+                                  ({(currentFile.file_size / (1024 * 1024)).toFixed(2)} MB)
+                                </span>
+                              )}
+                            </div>
+                            {currentFile.download_url && ((contentColumn === 'clips' || contentColumn === 'clip_changes') ? canDownloadClips : canDownloadFinalVideo) && (
+                              <button
+                                type="button"
+                                onClick={() => onDownloadFile(currentFile)}
+                                style={{
+                                  padding: '6px 12px',
+                                  background: '#3B82F6',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  fontWeight: '500',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                  <polyline points="7 10 12 15 17 10"></polyline>
+                                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
+                                Download
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <div style={{ 
+                          padding: '12px', 
+                          background: '#FEF3C7', 
+                          borderRadius: '8px',
+                          border: '1px solid #FCD34D',
+                          color: '#92400E',
+                          fontSize: '14px'
+                        }}>
+                          You don't have permission to edit this file. Only the assigned {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'clipper' : 'editor'} or admin can manage files.
+                        </div>
+                      </>
                     )}
                   </div>
                 );
