@@ -12,7 +12,7 @@ interface SortableCardProps {
   users: User[];
   isAdmin: boolean;
   currentUserId?: number;
-  onAssign: (shortId: number, role: 'clipper' | 'editor', userId: number) => void;
+  onAssign: (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => void;
   navigate: (path: string) => void;
 }
 
@@ -403,7 +403,7 @@ export function SortableCard({
       </div>
       
       {/* Assign Button (Admin only) */}
-      {isAdmin && (column.id === 'clips' || column.id === 'editing') && (
+      {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && (
         <div style={{ position: 'relative', marginTop: '8px' }}>
           <button
             onClick={(e) => {
@@ -421,7 +421,15 @@ export function SortableCard({
               fontWeight: '500',
             }}
           >
-            {clipper && column.id === 'clips' ? 'Reassign' : editor && column.id === 'editing' ? 'Reassign' : 'Assign'}
+            {(() => {
+              if (column.id === 'script') {
+                return scripter ? 'Reassign' : 'Assign';
+              } else if (column.id === 'clips') {
+                return clipper ? 'Reassign' : 'Assign';
+              } else {
+                return editor ? 'Reassign' : 'Assign';
+              }
+            })()}
           </button>
           {showAssignMenu && (
             <div 
@@ -442,21 +450,25 @@ export function SortableCard({
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: '#1E293B' }}>
-                Assign {column.id === 'clips' ? 'Clipper' : 'Editor'}
+                Assign {column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}
               </div>
               {users
                 .filter(u => {
-                  const hasRole = column.id === 'clips' 
-                    ? u.roles?.includes('clipper') || u.role === 'clipper'
-                    : u.roles?.includes('editor') || u.role === 'editor';
-                  return hasRole;
+                  if (column.id === 'script') {
+                    return u.roles?.includes('script_writer') || u.role === 'script_writer';
+                  } else if (column.id === 'clips') {
+                    return u.roles?.includes('clipper') || u.role === 'clipper';
+                  } else {
+                    return u.roles?.includes('editor') || u.role === 'editor';
+                  }
                 })
                 .map(u => (
                   <div
                     key={u.id}
                     onClick={(e) => {
                       e.stopPropagation();
-                      onAssign(short.id, column.id === 'clips' ? 'clipper' : 'editor', u.id);
+                      const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
+                      onAssign(short.id, role, u.id);
                       setShowAssignMenu(false);
                     }}
                     style={{

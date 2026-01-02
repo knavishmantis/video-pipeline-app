@@ -129,23 +129,29 @@ export default function Dashboard() {
     }
   };
   
-  const handleAssign = async (shortId: number, role: 'clipper' | 'editor', userId: number) => {
+  const handleAssign = async (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => {
     try {
-      // Check if assignment already exists and delete it first
-      const existingAssignment = assignments.find(
-        a => a.short_id === shortId && a.role === role
-      );
-      
-      if (existingAssignment) {
-        await assignmentsApi.delete(existingAssignment.id);
+      if (role === 'script_writer') {
+        // For script writers, update the short's script_writer_id
+        await shortsApi.update(shortId, { script_writer_id: userId });
+      } else {
+        // For clippers and editors, use assignments table
+        // Check if assignment already exists and delete it first
+        const existingAssignment = assignments.find(
+          a => a.short_id === shortId && a.role === role
+        );
+        
+        if (existingAssignment) {
+          await assignmentsApi.delete(existingAssignment.id);
+        }
+        
+        await assignmentsApi.create({
+          short_id: shortId,
+          user_id: userId,
+          role,
+          default_time_range: role === 'clipper' ? 4 : 2,
+        });
       }
-      
-      await assignmentsApi.create({
-        short_id: shortId,
-        user_id: userId,
-        role,
-        default_time_range: role === 'clipper' ? 4 : 2,
-      });
       await loadData();
       showToast('Assignment created successfully', 'success');
     } catch (error: unknown) {

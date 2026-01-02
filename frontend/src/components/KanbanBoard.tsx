@@ -29,7 +29,7 @@ interface KanbanBoardProps {
   onDragStart: (event: DragStartEvent) => void;
   onDragEnd: (event: DragEndEvent) => Promise<void>;
   onCardClick: (short: Short, column: Column) => Promise<void>;
-  onAssign: (shortId: number, role: 'clipper' | 'editor', userId: number) => Promise<void>;
+  onAssign: (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => Promise<void>;
   onCreateClick: (columnId: ColumnType) => void;
   navigate: (path: string) => void;
   getShortsForColumn: (columnId: ColumnType) => Short[];
