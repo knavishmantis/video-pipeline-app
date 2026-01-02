@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Short, Assignment, User } from '../../../shared/types';
@@ -44,6 +44,11 @@ export function SortableCard({
   };
   
   const defaultRole = getDefaultRole();
+  
+  // Reset showAllAssignments when column or short changes
+  useEffect(() => {
+    setShowAllAssignments(false);
+  }, [column.id, short.id]);
   
   const getProfilePicture = (user: User) => {
     if (user.profile_picture) {
