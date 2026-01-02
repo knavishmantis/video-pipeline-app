@@ -28,6 +28,7 @@ export function SortableCard({
   navigate,
 }: SortableCardProps) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
+  const [showAllAssignments, setShowAllAssignments] = useState(false);
   
   const shortAssignments = assignments.filter(a => a.short_id === short.id);
   const scripter = short.script_writer;
@@ -358,61 +359,81 @@ export function SortableCard({
         </p>
       )}
       
-      {/* Assignments Section - Always show all assignments */}
+      {/* Assignments Section - Show default role by column, all on hover */}
       <div 
         style={{
           marginTop: '8px',
           fontSize: '11px',
           color: '#94A3B8',
         }}
+        onMouseEnter={() => setShowAllAssignments(true)}
+        onMouseLeave={() => setShowAllAssignments(false)}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          {scripter && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {scripter.profile_picture && !scripter.profile_picture.startsWith('http') ? (
-                <span style={{ fontSize: '14px' }}>{scripter.profile_picture}</span>
-              ) : (
-                <img 
-                  src={getProfilePicture(scripter)} 
-                  alt={scripter.name}
-                  style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              )}
-              <span>Scripter: {scripter.discord_username || scripter.name}</span>
-            </div>
-          )}
-          {clipper && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {clipper.profile_picture && !clipper.profile_picture.startsWith('http') ? (
-                <span style={{ fontSize: '14px' }}>{clipper.profile_picture}</span>
-              ) : (
-                <img 
-                  src={getProfilePicture(clipper)} 
-                  alt={clipper.name}
-                  style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              )}
-              <span>Clipper: {clipper.discord_username || clipper.name}</span>
-            </div>
-          )}
-          {editor && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {editor.profile_picture && !editor.profile_picture.startsWith('http') ? (
-                <span style={{ fontSize: '14px' }}>{editor.profile_picture}</span>
-              ) : (
-                <img 
-                  src={getProfilePicture(editor)} 
-                  alt={editor.name}
-                  style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              )}
-              <span>Editor: {editor.discord_username || editor.name}</span>
-            </div>
-          )}
-          {!scripter && !clipper && !editor && (
-            <span style={{ fontStyle: 'italic' }}>No assignments</span>
-          )}
-        </div>
+        {showAllAssignments ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {scripter && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {scripter.profile_picture && !scripter.profile_picture.startsWith('http') ? (
+                  <span style={{ fontSize: '14px' }}>{scripter.profile_picture}</span>
+                ) : (
+                  <img 
+                    src={getProfilePicture(scripter)} 
+                    alt={scripter.name}
+                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                )}
+                <span>Scripter: {scripter.discord_username || scripter.name}</span>
+              </div>
+            )}
+            {clipper && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {clipper.profile_picture && !clipper.profile_picture.startsWith('http') ? (
+                  <span style={{ fontSize: '14px' }}>{clipper.profile_picture}</span>
+                ) : (
+                  <img 
+                    src={getProfilePicture(clipper)} 
+                    alt={clipper.name}
+                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                )}
+                <span>Clipper: {clipper.discord_username || clipper.name}</span>
+              </div>
+            )}
+            {editor && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {editor.profile_picture && !editor.profile_picture.startsWith('http') ? (
+                  <span style={{ fontSize: '14px' }}>{editor.profile_picture}</span>
+                ) : (
+                  <img 
+                    src={getProfilePicture(editor)} 
+                    alt={editor.name}
+                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
+                  />
+                )}
+                <span>Editor: {editor.discord_username || editor.name}</span>
+              </div>
+            )}
+            {!scripter && !clipper && !editor && (
+              <span style={{ fontStyle: 'italic' }}>No assignments</span>
+            )}
+          </div>
+        ) : defaultRole ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
+              <span style={{ fontSize: '14px' }}>{defaultRole.user.profile_picture}</span>
+            ) : (
+              <img 
+                src={getProfilePicture(defaultRole.user)} 
+                alt={defaultRole.user.name}
+                style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            )}
+            <span>
+              {defaultRole.type === 'scripter' ? 'Scripter' : defaultRole.type === 'clipper' ? 'Clipper' : 'Editor'}: 
+              {' '}{defaultRole.user.discord_username || defaultRole.user.name}
+            </span>
+          </div>
+        ) : null}
       </div>
       
       {/* Assign Button (Admin only) */}
