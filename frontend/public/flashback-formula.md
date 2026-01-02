@@ -47,6 +47,8 @@ For developing brand continuity, when recording ingame clips (not using flashbac
 
 In flashback, when exporting clips, set the nametag to KnavishMantis and the skin to the same as the one above using this menu: <img width="1225" height="1378" alt="image" src="/flashback-images/e0b4e57d-ba56-4ba2-af41-a37789c73e6f.png" />
 
+### Set View Bobbing to Off
+
 ## Using Flashback
 
 ### Rule of Thirds Guide
@@ -83,6 +85,10 @@ Certain clips may call for using world edit commands or command blocks within th
 
 ChatGPT is usually a good reference for how to do things using world edit / command blocks
 
+### Summoning Mobs
+
+Using /summon minecraft:cow ~ ~ ~ {NoAI:1b} will spawn in a cow with no ai which doesn't move which can be helpful for a shot like "Show 3 minecraft cows standing next to each other"
+
 ### Timelapse
 
 Timelapses are often used, they require building something such as blocks spelling a word or a number like "Subscribe" or a build like a wall around a village. In this case, you just build them like normal while flashback recording and set the exported timelapse to generally fit the time that the dialogue would take up in the final video, always leaning on the longer side because a long video can be sped up but a short video usually can't be stretched.
@@ -117,4 +123,6 @@ Finally, push done, turn generate structures to off, and create the world. You'l
 
 ### Using OBS for ingame recording
 
-For certain clips like recording the ingame inventory, recording the character in third person (f5 mode), or trading with a villager for example, you can use OBS or a similar recording software. Ensure that you are exporting in 4K if possible. If the framerate of the clip goes below 60 due to lag, make sure you rerecord that section until its a smooth framerate. You can often use an FPS indicator in the top left of the minecraft client since the shorts screen will usually only take the middle third.
+For certain clips like recording the ingame inventory, recording the character in third person (f5 mode), or trading with a villager for example, you can use OBS or a similar recording software. Ensure that you are exporting in 4K if possible. If the framerate of the clip goes below 60 due to lag, make sure you rerecord that section until its a smooth framerate. You can often use an FPS indicator in the top left of the minecraft client since the shorts screen will usually only take the middle third. 
+
+And ensure that you are recording the minecraft game's audio when using OBS.
