@@ -11,6 +11,7 @@ assignmentsRouter.use(authenticateToken);
 assignmentsRouter.use(requireProfileComplete);
 
 assignmentsRouter.get('/', assignmentsController.getAll);
+assignmentsRouter.get('/public', assignmentsController.getAllPublic);
 assignmentsRouter.get('/my-assignments', assignmentsController.getMyAssignments);
 assignmentsRouter.get('/:id', assignmentsController.getById);
 assignmentsRouter.post('/', validate(createAssignmentSchema), assignmentsController.create);

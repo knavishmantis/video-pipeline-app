@@ -97,6 +97,10 @@ export const assignmentsApi = {
     const response = await api.get('/assignments');
     return response.data;
   },
+  getAllPublic: async (): Promise<Assignment[]> => {
+    const response = await api.get('/assignments/public');
+    return response.data;
+  },
   getMyAssignments: async (): Promise<Assignment[]> => {
     const response = await api.get('/assignments/my-assignments');
     return response.data;

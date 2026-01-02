@@ -96,7 +96,7 @@ export default function Dashboard() {
       const shortsData = shouldShowAssignedOnly ? await shortsApi.getAssigned() : await shortsApi.getAll();
       setShorts(shortsData);
 
-      // Load assignments and users (only if admin, or use my assignments for non-admin)
+      // Load assignments and users
       if (isAdmin) {
         const [assignmentsData, usersData] = await Promise.all([
           assignmentsApi.getAll(),
@@ -105,10 +105,10 @@ export default function Dashboard() {
         setAssignments(assignmentsData || []);
         setUsers(usersData || []);
       } else {
-        // Non-admin users only need their own assignments to check edit permissions
-        // And they don't need to load all users
-        const assignmentsData = await assignmentsApi.getMyAssignments().catch(error => {
-          console.error('Failed to load user assignments:', error);
+        // Non-admin users load all public assignments (to see who's assigned to cards)
+        // but don't need to load all users
+        const assignmentsData = await assignmentsApi.getAllPublic().catch(error => {
+          console.error('Failed to load public assignments:', error);
           return []; // Fallback to empty array
         });
         setAssignments(assignmentsData || []);

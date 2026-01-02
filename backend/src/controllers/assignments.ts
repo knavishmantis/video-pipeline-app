@@ -47,6 +47,43 @@ export const assignmentsController = {
     }
   },
 
+  async getAllPublic(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      // This endpoint returns all assignments but only with public user info (no email)
+      // Available to all authenticated users so they can see assignments on cards
+      const db = getPool();
+      const result = await db.query(
+        `SELECT a.*
+         FROM assignments a
+         ORDER BY a.due_date ASC NULLS LAST`
+      );
+      
+      // Populate user data for each assignment (public info only - no email)
+      const assignmentsWithUsers = await Promise.all(
+        result.rows.map(async (assignment: any) => {
+          if (assignment.user_id) {
+            const userResult = await db.query(
+              'SELECT id, name, discord_username, profile_picture FROM users WHERE id = $1',
+              [assignment.user_id]
+            );
+            if (userResult.rows.length > 0) {
+              const user = userResult.rows[0];
+              // Process profile picture (convert bucket path to signed URL if needed)
+              user.profile_picture = await processProfilePicture(user.profile_picture);
+              assignment.user = user;
+            }
+          }
+          return assignment;
+        })
+      );
+      
+      res.json(assignmentsWithUsers);
+    } catch (error) {
+      logger.error('Get all public assignments error', { error });
+      res.status(500).json({ error: 'Failed to fetch assignments' });
+    }
+  },
+
   async getMyAssignments(req: AuthRequest, res: Response): Promise<void> {
     try {
       if (!req.userId) {
