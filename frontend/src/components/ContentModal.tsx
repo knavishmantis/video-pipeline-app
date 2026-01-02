@@ -163,82 +163,284 @@ export function ContentModal({
         <form onSubmit={onSubmit}>
           {contentColumn === 'script' ? (
             <>
-              {/* Show existing files */}
-              {contentShort.files && (
-                <div style={{ 
-                  marginBottom: '16px', 
-                  padding: '12px', 
-                  background: '#F0F9FF', 
-                  borderRadius: '8px',
-                  border: '1px solid #BAE6FD'
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
-                    File Status:
-                  </div>
-                  <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'script') ? '#0C4A6E' : '#64748B', marginBottom: '4px' }}>
-                    {contentShort.files.some(f => f.file_type === 'script') ? '✓ Script PDF uploaded' : '✗ Script PDF not uploaded'}
-                  </div>
-                  <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'audio') ? '#0C4A6E' : '#64748B' }}>
-                    {contentShort.files.some(f => f.file_type === 'audio') ? '✓ Audio MP3 uploaded' : '✗ Audio MP3 not uploaded'}
-                  </div>
-                </div>
-              )}
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                }}>
-                  Script PDF File *
-                </label>
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => onFormChange({ ...contentForm, scriptFile: e.target.files?.[0] || null })}
-                  required
-                  disabled={uploading}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                    opacity: uploading ? 0.6 : 1,
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                  }}
-                />
-              </div>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  marginBottom: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#374151',
-                }}>
-                  Audio MP3 File *
-                </label>
-                <input
-                  type="file"
-                  accept="audio/mpeg,.mp3,audio/*"
-                  onChange={(e) => onFormChange({ ...contentForm, audioFile: e.target.files?.[0] || null })}
-                  required
-                  disabled={uploading}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #D1D5DB',
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    boxSizing: 'border-box',
-                    opacity: uploading ? 0.6 : 1,
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                  }}
-                />
-              </div>
+              {(() => {
+                // Check permissions for script stage - only script writer or admin can edit
+                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
+                const canEditScript = isAdmin || 
+                  (contentShort.script_writer?.id === user?.id) ||
+                  (user?.roles?.includes('script_writer') && !contentShort.script_writer);
+                
+                const scriptPdf = contentShort.files?.find(f => f.file_type === 'script');
+                const audioFile = contentShort.files?.find(f => f.file_type === 'audio');
+                
+                return (
+                  <>
+                    {/* Assignments Section - Always show */}
+                    {(shortAssignments.length > 0 || contentShort.script_writer) && (
+                      <div style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        background: '#F9FAFB',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB'
+                      }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                          Assignments:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {contentShort.script_writer && (
+                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                              Script Writer: {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}
+                            </div>
+                          )}
+                          {shortAssignments.map(assignment => {
+                            if (assignment.role === 'clipper' && assignment.user) {
+                              return (
+                                <div key={assignment.id} style={{ fontSize: '12px', color: '#6B7280' }}>
+                                  Clipper: {assignment.user.discord_username || assignment.user.name || assignment.user.email}
+                                </div>
+                              );
+                            }
+                            if (assignment.role === 'editor' && assignment.user) {
+                              return (
+                                <div key={assignment.id} style={{ fontSize: '12px', color: '#6B7280' }}>
+                                  Editor: {assignment.user.discord_username || assignment.user.name || assignment.user.email}
+                                </div>
+                              );
+                            }
+                            return null;
+                          })}
+                          {!contentShort.script_writer && shortAssignments.length === 0 && (
+                            <div style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic' }}>
+                              No assignments
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Download Section for non-editors */}
+                    {!canEditScript && (scriptPdf || audioFile) && (
+                      <div style={{
+                        marginBottom: '16px',
+                        padding: '12px',
+                        background: '#F0FDF4',
+                        borderRadius: '8px',
+                        border: '1px solid #86EFAC'
+                      }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
+                          Available Files:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {scriptPdf && (
+                            <div>
+                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
+                                Script PDF:
+                              </div>
+                              {scriptPdf.download_url ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onDownloadFile(scriptPdf)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    background: 'white',
+                                    color: '#166534',
+                                    border: '1px solid #86EFAC',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    textAlign: 'left',
+                                  }}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                  </svg>
+                                  {scriptPdf.file_name}
+                                </button>
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  background: '#FEF3C7',
+                                  color: '#92400E',
+                                  border: '1px solid #FCD34D',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                }}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                  </svg>
+                                  {scriptPdf.file_name} (Download unavailable)
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {audioFile && (
+                            <div>
+                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
+                                Audio MP3:
+                              </div>
+                              {audioFile.download_url ? (
+                                <button
+                                  type="button"
+                                  onClick={() => onDownloadFile(audioFile)}
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    background: 'white',
+                                    color: '#166534',
+                                    border: '1px solid #86EFAC',
+                                    borderRadius: '6px',
+                                    fontSize: '12px',
+                                    fontWeight: '500',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    textAlign: 'left',
+                                  }}
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                  </svg>
+                                  {audioFile.file_name}
+                                </button>
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  padding: '8px 12px',
+                                  background: '#FEF3C7',
+                                  color: '#92400E',
+                                  border: '1px solid #FCD34D',
+                                  borderRadius: '6px',
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                }}>
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                  </svg>
+                                  {audioFile.file_name} (Download unavailable)
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Edit Section - Only for script writers/admins */}
+                    {canEditScript ? (
+                      <>
+                        {/* Show existing files */}
+                        {contentShort.files && (
+                          <div style={{ 
+                            marginBottom: '16px', 
+                            padding: '12px', 
+                            background: '#F0F9FF', 
+                            borderRadius: '8px',
+                            border: '1px solid #BAE6FD'
+                          }}>
+                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
+                              File Status:
+                            </div>
+                            <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'script') ? '#0C4A6E' : '#64748B', marginBottom: '4px' }}>
+                              {contentShort.files.some(f => f.file_type === 'script') ? '✓ Script PDF uploaded' : '✗ Script PDF not uploaded'}
+                            </div>
+                            <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'audio') ? '#0C4A6E' : '#64748B' }}>
+                              {contentShort.files.some(f => f.file_type === 'audio') ? '✓ Audio MP3 uploaded' : '✗ Audio MP3 not uploaded'}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '6px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#374151',
+                          }}>
+                            Script PDF File *
+                          </label>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) => onFormChange({ ...contentForm, scriptFile: e.target.files?.[0] || null })}
+                            required
+                            disabled={uploading}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid #D1D5DB',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              boxSizing: 'border-box',
+                              opacity: uploading ? 0.6 : 1,
+                              cursor: uploading ? 'not-allowed' : 'pointer',
+                            }}
+                          />
+                        </div>
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{
+                            display: 'block',
+                            marginBottom: '6px',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#374151',
+                          }}>
+                            Audio MP3 File *
+                          </label>
+                          <input
+                            type="file"
+                            accept="audio/mpeg,.mp3,audio/*"
+                            onChange={(e) => onFormChange({ ...contentForm, audioFile: e.target.files?.[0] || null })}
+                            required
+                            disabled={uploading}
+                            style={{
+                              width: '100%',
+                              padding: '10px 12px',
+                              border: '1px solid #D1D5DB',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              boxSizing: 'border-box',
+                              opacity: uploading ? 0.6 : 1,
+                              cursor: uploading ? 'not-allowed' : 'pointer',
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ 
+                        padding: '12px', 
+                        background: '#FEF3C7', 
+                        borderRadius: '8px',
+                        border: '1px solid #FCD34D',
+                        color: '#92400E',
+                        fontSize: '14px'
+                      }}>
+                        You don't have permission to edit this file. Only the assigned script writer or admin can manage files.
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </>
           ) : (
             <>
@@ -609,7 +811,7 @@ export function ContentModal({
                     )}
                     
                     {/* Assignments Section - Always show */}
-                    {shortAssignments.length > 0 && (
+                    {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{
                         marginBottom: '16px',
                         padding: '12px',
@@ -956,48 +1158,67 @@ export function ContentModal({
             >
               Cancel
             </button>
-            {(contentColumn === 'script' || contentForm.file) && (
-            <button
-              type="submit"
-              disabled={uploading || (contentColumn === 'script' ? (!contentForm.scriptFile || !contentForm.audioFile) : !contentForm.file)}
-              style={{
-                padding: '10px 20px',
-                background: uploading ? '#9CA3AF' : columns.find(c => c.id === contentColumn)?.color || '#3B82F6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              {uploading && (
-                <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              )}
-              {uploading 
-                ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : 'Uploading...')
-                : (() => {
-                    if (contentColumn === 'script') {
-                      const hasScript = contentShort.files?.some(f => f.file_type === 'script');
-                      const hasAudio = contentShort.files?.some(f => f.file_type === 'audio');
-                      return (hasScript || hasAudio) ? 'Replace' : 'Upload';
-                    } else if (contentColumn === 'clips' || contentColumn === 'clip_changes') {
-                      const hasClipsZip = contentShort.files?.some(f => f.file_type === 'clips_zip');
-                      return hasClipsZip ? 'Replace' : 'Upload';
-                    } else if (contentColumn === 'editing' || contentColumn === 'editing_changes') {
-                      const hasFinalVideo = contentShort.files?.some(f => f.file_type === 'final_video');
-                      return hasFinalVideo ? 'Replace' : 'Upload';
-                    }
-                    return 'Upload';
-                  })()}
-            </button>
-            )}
+            {(() => {
+              // Only show submit button if user can edit
+              if (contentColumn === 'script') {
+                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
+                const canEditScript = isAdmin || 
+                  (contentShort.script_writer?.id === user?.id) ||
+                  (user?.roles?.includes('script_writer') && !contentShort.script_writer);
+                if (!canEditScript) return null;
+              } else {
+                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
+                const clipperAssignment = shortAssignments.find(a => a.role === 'clipper');
+                const editorAssignment = shortAssignments.find(a => a.role === 'editor');
+                const canEdit = isAdmin || 
+                  ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
+                  ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
+                if (!canEdit) return null;
+              }
+              
+              return (contentColumn === 'script' || contentForm.file) && (
+                <button
+                  type="submit"
+                  disabled={uploading || (contentColumn === 'script' ? (!contentForm.scriptFile || !contentForm.audioFile) : !contentForm.file)}
+                  style={{
+                    padding: '10px 20px',
+                    background: uploading ? '#9CA3AF' : columns.find(c => c.id === contentColumn)?.color || '#3B82F6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  {uploading && (
+                    <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  )}
+                  {uploading 
+                    ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : 'Uploading...')
+                    : (() => {
+                        if (contentColumn === 'script') {
+                          const hasScript = contentShort.files?.some(f => f.file_type === 'script');
+                          const hasAudio = contentShort.files?.some(f => f.file_type === 'audio');
+                          return (hasScript || hasAudio) ? 'Replace' : 'Upload';
+                        } else if (contentColumn === 'clips' || contentColumn === 'clip_changes') {
+                          const hasClipsZip = contentShort.files?.some(f => f.file_type === 'clips_zip');
+                          return hasClipsZip ? 'Replace' : 'Upload';
+                        } else if (contentColumn === 'editing' || contentColumn === 'editing_changes') {
+                          const hasFinalVideo = contentShort.files?.some(f => f.file_type === 'final_video');
+                          return hasFinalVideo ? 'Replace' : 'Upload';
+                        }
+                        return 'Upload';
+                      })()}
+                </button>
+              );
+            })()}
           </div>
         </form>
       </div>

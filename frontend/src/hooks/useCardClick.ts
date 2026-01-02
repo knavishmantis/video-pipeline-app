@@ -31,19 +31,7 @@ export function useCardClick({
   const handleCardClick = async (short: Short, column: Column) => {
     if (!short) return;
     
-    // Check permissions
-    const canEdit = isAdmin || (
-      (column.id === 'clips' || column.id === 'clip_changes') && 
-      assignments.some(a => a.short_id === short.id && a.role === 'clipper' && a.user_id === user?.id)
-    ) || (
-      (column.id === 'editing' || column.id === 'editing_changes') && 
-      assignments.some(a => a.short_id === short.id && a.role === 'editor' && a.user_id === user?.id)
-    );
-    
-    if (!canEdit && (column.id === 'clips' || column.id === 'editing' || column.id === 'clip_changes' || column.id === 'editing_changes')) {
-      return; // Don't allow editing if not assigned
-    }
-    
+    // All cards are now clickable - users can view even if not assigned
     // Open content modal based on column
     if (column.id === 'script' && !short.script_content) {
       // Load full short data with files
