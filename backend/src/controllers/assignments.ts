@@ -26,7 +26,7 @@ export const assignmentsController = {
         result.rows.map(async (assignment: any) => {
           if (assignment.user_id) {
             const userResult = await db.query(
-              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
               [assignment.user_id]
             );
             if (userResult.rows.length > 0) {
@@ -63,7 +63,7 @@ export const assignmentsController = {
         result.rows.map(async (assignment: any) => {
           if (assignment.user_id) {
             const userResult = await db.query(
-              'SELECT id, name, discord_username, profile_picture FROM users WHERE id = $1',
+              'SELECT id, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
               [assignment.user_id]
             );
             if (userResult.rows.length > 0) {
@@ -105,7 +105,7 @@ export const assignmentsController = {
         result.rows.map(async (assignment: any) => {
           if (assignment.user_id) {
             const userResult = await db.query(
-              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
               [assignment.user_id]
             );
             if (userResult.rows.length > 0) {

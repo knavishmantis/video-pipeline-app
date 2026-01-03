@@ -2,6 +2,7 @@ import React from 'react';
 import { Short, Assignment, User, File as FileInterface } from '../../../shared/types';
 import { ColumnType, columns } from '../utils/dashboardUtils';
 import { filesApi, shortsApi } from '../services/api';
+import { TimezoneDisplay } from './TimezoneDisplay';
 
 interface ContentModalProps {
   isOpen: boolean;
@@ -15,6 +16,8 @@ interface ContentModalProps {
   };
   uploading: boolean;
   uploadProgress: number | null;
+  downloading: number | null; // fileId of file being downloaded
+  downloadProgress: number | null;
   assignments: Assignment[];
   user: User | null;
   isAdmin: boolean;
@@ -41,6 +44,8 @@ export function ContentModal({
   contentForm,
   uploading,
   uploadProgress,
+  downloading,
+  downloadProgress,
   assignments,
   user,
   isAdmin,
@@ -55,6 +60,48 @@ export function ContentModal({
   setContentShort,
 }: ContentModalProps) {
   if (!isOpen || !contentShort || !contentColumn) return null;
+
+  // Helper function to render download button with progress
+  const renderDownloadButton = (file: FileInterface, label?: string) => {
+    const isDownloading = downloading === file.id;
+    return (
+      <button
+        type="button"
+        onClick={() => onDownloadFile(file)}
+        disabled={isDownloading}
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          background: 'white',
+          color: '#166534',
+          border: '1px solid #86EFAC',
+          borderRadius: '6px',
+          fontSize: '12px',
+          fontWeight: '500',
+          cursor: isDownloading ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          textAlign: 'left',
+          opacity: isDownloading ? 0.6 : 1,
+        }}
+      >
+        {isDownloading ? (
+          <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+        )}
+        {label || file.file_name} {isDownloading && downloadProgress !== null ? `(${downloadProgress}%)` : ''}
+      </button>
+    );
+  };
 
   const handleMarkComplete = async () => {
     if (!contentShort) return;
@@ -107,6 +154,10 @@ export function ContentModal({
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
       `}</style>
       <div
@@ -238,32 +289,7 @@ export function ContentModal({
                                 Script PDF:
                               </div>
                               {scriptPdf.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(scriptPdf)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {scriptPdf.file_name}
-                                </button>
+                                renderDownloadButton(scriptPdf)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -293,32 +319,7 @@ export function ContentModal({
                                 Audio MP3:
                               </div>
                               {audioFile.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(audioFile)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {audioFile.file_name}
-                                </button>
+                                renderDownloadButton(audioFile)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -523,32 +524,7 @@ export function ContentModal({
                                 Editing Script of Short:
                               </div>
                               {scriptPdf.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(scriptPdf)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {scriptPdf.file_name}
-                                </button>
+                                renderDownloadButton(scriptPdf)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -578,32 +554,7 @@ export function ContentModal({
                                 Audio of Short:
                               </div>
                               {audioFile.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(audioFile)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {audioFile.file_name}
-                                </button>
+                                renderDownloadButton(audioFile)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -647,32 +598,7 @@ export function ContentModal({
                                 Editing Script of Short:
                               </div>
                               {scriptPdf.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(scriptPdf)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {scriptPdf.file_name}
-                                </button>
+                                renderDownloadButton(scriptPdf)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -702,32 +628,7 @@ export function ContentModal({
                                 Audio of Short:
                               </div>
                               {audioFile.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(audioFile)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {audioFile.file_name}
-                                </button>
+                                renderDownloadButton(audioFile)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -757,32 +658,7 @@ export function ContentModal({
                                 Flashback Clips of Short:
                               </div>
                               {clipsZip.download_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(clipsZip)}
-                                  style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    background: 'white',
-                                    color: '#166534',
-                                    border: '1px solid #86EFAC',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    textAlign: 'left',
-                                  }}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  {clipsZip.file_name}
-                                </button>
+                                renderDownloadButton(clipsZip)
                               ) : (
                                 <div style={{
                                   width: '100%',
@@ -824,18 +700,21 @@ export function ContentModal({
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                           {clipperAssignment && clipperAssignment.user && (
-                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                              Clipper: {clipperAssignment.user.discord_username || clipperAssignment.user.name || clipperAssignment.user.email}
+                            <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>Clipper: {clipperAssignment.user.discord_username || clipperAssignment.user.name || clipperAssignment.user.email}</span>
+                              <TimezoneDisplay timezone={clipperAssignment.user.timezone} size="small" />
                             </div>
                           )}
                           {editorAssignment && editorAssignment.user && (
-                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                              Editor: {editorAssignment.user.discord_username || editorAssignment.user.name || editorAssignment.user.email}
+                            <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>Editor: {editorAssignment.user.discord_username || editorAssignment.user.name || editorAssignment.user.email}</span>
+                              <TimezoneDisplay timezone={editorAssignment.user.timezone} size="small" />
                             </div>
                           )}
                           {contentShort.script_writer && (
-                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                              Script Writer: {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}
+                            <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span>Script Writer: {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}</span>
+                              <TimezoneDisplay timezone={contentShort.script_writer.timezone} size="small" />
                             </div>
                           )}
                           {!clipperAssignment && !editorAssignment && !contentShort.script_writer && (
@@ -875,26 +754,35 @@ export function ContentModal({
                                 <button
                                   type="button"
                                   onClick={() => onDownloadFile(currentFile)}
+                                  disabled={downloading === currentFile.id}
                                   style={{
                                     padding: '6px 12px',
-                                    background: '#3B82F6',
+                                    background: downloading === currentFile.id ? '#9CA3AF' : '#3B82F6',
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '6px',
                                     fontSize: '12px',
                                     fontWeight: '500',
-                                    cursor: 'pointer',
+                                    cursor: downloading === currentFile.id ? 'not-allowed' : 'pointer',
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '6px',
+                                    opacity: downloading === currentFile.id ? 0.6 : 1,
                                   }}
                                 >
-                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                    <polyline points="7 10 12 15 17 10"></polyline>
-                                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                                  </svg>
-                                  Download
+                                  {downloading === currentFile.id ? (
+                                    <svg style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                  ) : (
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                      <polyline points="7 10 12 15 17 10"></polyline>
+                                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                  )}
+                                  {downloading === currentFile.id && downloadProgress !== null ? `Downloading ${downloadProgress}%` : 'Download'}
                                 </button>
                               )}
                               <button
@@ -1126,6 +1014,55 @@ export function ContentModal({
                   background: '#3B82F6',
                   borderRadius: '4px',
                   transition: 'width 0.3s ease',
+                }} />
+              </div>
+            </div>
+          )}
+          
+          {/* Download Progress Indicator */}
+          {downloading !== null && (
+            <div style={{
+              marginTop: '20px',
+              padding: '16px',
+              background: '#F0FDF4',
+              borderRadius: '8px',
+              border: '1px solid #86EFAC',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '8px',
+              }}>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#15803D',
+                }}>
+                  Downloading...
+                </span>
+                <span style={{
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#15803D',
+                }}>
+                  {downloadProgress !== null ? `${downloadProgress}%` : '...'}
+                </span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: '8px',
+                background: '#D1FAE5',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  width: downloadProgress !== null ? `${downloadProgress}%` : '100%',
+                  height: '100%',
+                  background: downloadProgress !== null ? '#22C55E' : '#86EFAC',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
+                  animation: downloadProgress === null ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
                 }} />
               </div>
             </div>

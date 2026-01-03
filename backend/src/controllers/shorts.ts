@@ -40,7 +40,7 @@ export const shortsController = {
         result.rows.map(async (short: any) => {
           if (short.script_writer_id) {
             const writerResult = await query(
-              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
               [short.script_writer_id]
             );
             if (writerResult.rows.length > 0) {
@@ -124,7 +124,7 @@ export const shortsController = {
         result.rows.map(async (short: any) => {
           if (short.script_writer_id) {
             const writerResult = await query(
-              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
               [short.script_writer_id]
             );
             if (writerResult.rows.length > 0) {
@@ -273,7 +273,7 @@ export const shortsController = {
         assignmentsResult.rows.map(async (assignment: any) => {
           if (assignment.user_id) {
             const userResult = await query(
-              'SELECT id, email, name, discord_username, profile_picture FROM users WHERE id = $1',
+              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
               [assignment.user_id]
             );
             if (userResult.rows.length > 0) {

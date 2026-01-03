@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { usersApi, filesApi } from "../services/api";
@@ -170,6 +170,13 @@ export function SidebarNav() {
       href: "/guide",
       icon: (
         <IconHelp className="h-5 w-5 shrink-0 text-neutral-700" />
+      ),
+    },
+    {
+      label: "YouTube Stats",
+      href: "/youtube-stats",
+      icon: (
+        <IconBrandYoutube className="h-5 w-5 shrink-0 text-neutral-700" />
       ),
     },
     ...((isClipper || isAdmin) ? [

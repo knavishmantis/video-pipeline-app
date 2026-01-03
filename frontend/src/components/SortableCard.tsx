@@ -3,6 +3,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Short, Assignment, User } from '../../../shared/types';
 import { Column } from '../utils/dashboardUtils';
+import { getProfilePicture } from '../utils/profilePicture';
+import { TimezoneDisplay } from './TimezoneDisplay';
 
 interface SortableCardProps {
   short: Short;
@@ -390,6 +392,7 @@ export function SortableCard({
                   />
                 )}
                 <span>Scripter: {scripter.discord_username || scripter.name}</span>
+                <TimezoneDisplay timezone={scripter.timezone} size="small" showTime={false} />
               </div>
             )}
             {clipper && (
@@ -404,6 +407,7 @@ export function SortableCard({
                   />
                 )}
                 <span>Clipper: {clipper.discord_username || clipper.name}</span>
+                <TimezoneDisplay timezone={clipper.timezone} size="small" showTime={false} />
               </div>
             )}
             {editor && (
@@ -418,6 +422,7 @@ export function SortableCard({
                   />
                 )}
                 <span>Editor: {editor.discord_username || editor.name}</span>
+                <TimezoneDisplay timezone={editor.timezone} size="small" showTime={false} />
               </div>
             )}
             {!scripter && !clipper && !editor && (
@@ -439,6 +444,7 @@ export function SortableCard({
               {defaultRole.type === 'scripter' ? 'Scripter' : defaultRole.type === 'clipper' ? 'Clipper' : 'Editor'}: 
               {' '}{defaultRole.user.discord_username || defaultRole.user.name}
             </span>
+            <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
           </div>
         ) : null}
       </div>
@@ -537,7 +543,8 @@ export function SortableCard({
                         style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
                       />
                     )}
-                    <span>{u.discord_username || u.name}</span>
+                    <span style={{ flex: 1 }}>{u.discord_username || u.name}</span>
+                    <TimezoneDisplay timezone={u.timezone} size="small" showTime={false} />
                   </div>
                 ))}
             </div>

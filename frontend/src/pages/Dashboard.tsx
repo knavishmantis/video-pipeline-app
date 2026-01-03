@@ -63,6 +63,8 @@ export default function Dashboard() {
   }>({ script_content: '', file: null, scriptFile: null, audioFile: null });
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [downloading, setDownloading] = useState<number | null>(null); // fileId of file being downloaded
+  const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -487,9 +489,54 @@ export default function Dashboard() {
       return;
     }
     try {
-      // Fetch the file as a blob to download it properly
+      setDownloading(file.id);
+      setDownloadProgress(0);
+      
+      // Fetch the file with progress tracking
       const response = await fetch(file.download_url);
-      const blob = await response.blob();
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const contentLength = response.headers.get('content-length');
+      const total = contentLength ? parseInt(contentLength, 10) : 0;
+      
+      if (!response.body) {
+        throw new Error('ReadableStream not supported');
+      }
+      
+      const reader = response.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let receivedLength = 0;
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) break;
+        
+        chunks.push(value);
+        receivedLength += value.length;
+        
+        // Update progress if we know the total size
+        if (total > 0) {
+          const progress = Math.round((receivedLength / total) * 100);
+          setDownloadProgress(progress);
+        } else {
+          // If we don't know the total, show indeterminate progress
+          setDownloadProgress(null);
+        }
+      }
+      
+      // Combine all chunks into a single blob
+      const allChunks = new Uint8Array(receivedLength);
+      let position = 0;
+      for (const chunk of chunks) {
+        allChunks.set(chunk, position);
+        position += chunk.length;
+      }
+      
+      const blob = new Blob([allChunks]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -498,9 +545,15 @@ export default function Dashboard() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
+      
+      setDownloadProgress(100);
+      showToast('File downloaded successfully', 'success');
     } catch (error) {
       console.error('Failed to download file:', error);
       showAlert('Failed to download file', { type: 'error' });
+    } finally {
+      setDownloading(null);
+      setDownloadProgress(null);
     }
   };
 
@@ -650,6 +703,8 @@ export default function Dashboard() {
         contentForm={contentForm}
         uploading={uploading}
         uploadProgress={uploadProgress}
+        downloading={downloading}
+        downloadProgress={downloadProgress}
         assignments={assignments}
         user={user || null}
         isAdmin={isAdmin}
@@ -658,6 +713,8 @@ export default function Dashboard() {
           setContentShort(null);
           setContentColumn(null);
           setUploadProgress(null);
+          setDownloading(null);
+          setDownloadProgress(null);
         }}
         onSubmit={handleContentSubmit}
         onFormChange={setContentForm}
