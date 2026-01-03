@@ -3,7 +3,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Short, Assignment, User } from '../../../shared/types';
 import { Column } from '../utils/dashboardUtils';
-import { getProfilePicture } from '../utils/profilePicture';
 import { TimezoneDisplay } from './TimezoneDisplay';
 
 interface SortableCardProps {
