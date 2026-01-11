@@ -121,6 +121,15 @@ export interface CreateAssignmentInput {
   rate_description?: string;
 }
 
+export interface UserRate {
+  user_id: number;
+  role: 'clipper' | 'editor';
+  rate: number;
+  rate_description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface AuthResponse {
   user: User;
   token: string;

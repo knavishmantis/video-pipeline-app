@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAlert } from '../hooks/useAlert';
 import { useToast } from '../hooks/useToast';
-import { paymentsApi, usersApi, assignmentsApi } from '../services/api';
-import { Payment, User, Assignment } from '../../../shared/types';
+import { paymentsApi, usersApi } from '../services/api';
+import { Payment, User, UserRate } from '../../../shared/types';
 import { getErrorMessage } from '../utils/errorHandler';
 
 export default function PaymentTracking() {
@@ -12,11 +12,10 @@ export default function PaymentTracking() {
   const { showToast, ToastComponent } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [userRates, setUserRates] = useState<UserRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterUserId, setFilterUserId] = useState<number | null>(null);
   const [showPendingOnly, setShowPendingOnly] = useState(false);
-  const [editingRate, setEditingRate] = useState<{ assignmentId: number; rate: number; description: string } | null>(null);
   const [showMarkPaidModal, setShowMarkPaidModal] = useState<Payment | null>(null);
   const [paypalLink, setPaypalLink] = useState('');
   const [showIncentiveModal, setShowIncentiveModal] = useState(false);
@@ -45,27 +44,31 @@ export default function PaymentTracking() {
         if (statsMonth) params.month = statsMonth;
         if (statsYear) params.year = statsYear;
         
-        const [paymentsData, usersData, assignmentsData] = await Promise.all([
+        const [paymentsData, usersData] = await Promise.all([
           showPendingOnly 
             ? paymentsApi.getPending(Object.keys(params).length > 0 ? params : undefined)
             : paymentsApi.getAll(Object.keys(params).length > 0 ? params : undefined),
           usersApi.getAll(),
-          assignmentsApi.getAll(),
         ]);
         setPayments(paymentsData);
         setUsers(usersData);
-        setAssignments(assignmentsData);
       } else {
         const params: Record<string, string | number> = {};
         if (statsMonth) params.month = statsMonth;
         if (statsYear) params.year = statsYear;
         
-        const [paymentsData, assignmentsData] = await Promise.all([
-          paymentsApi.getMyPayments(Object.keys(params).length > 0 ? params : undefined),
-          assignmentsApi.getMyAssignments(),
-        ]);
+        const paymentsData = await paymentsApi.getMyPayments(Object.keys(params).length > 0 ? params : undefined);
         setPayments(paymentsData);
-        setAssignments(assignmentsData);
+        
+        // Load user rates for non-admin users
+        if (user) {
+          try {
+            const rates = await usersApi.getUserRates(user.id);
+            setUserRates(rates);
+          } catch (error) {
+            console.error('Failed to load user rates:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to load data:', error);
@@ -130,22 +133,6 @@ export default function PaymentTracking() {
     }
   };
 
-  const handleUpdateRate = async () => {
-    if (!editingRate || !isAdmin) return;
-    try {
-      await assignmentsApi.update(editingRate.assignmentId, {
-        rate: editingRate.rate,
-        rate_description: editingRate.description,
-      });
-      setEditingRate(null);
-      await loadData();
-      showToast('Rate updated successfully', 'success');
-    } catch (error) {
-      console.error('Failed to update rate:', error);
-      showAlert('Failed to update rate', { type: 'error' });
-    }
-  };
-
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -166,49 +153,7 @@ export default function PaymentTracking() {
       .reduce((sum, p) => sum + Number(p.amount), 0);
   };
 
-  // Get user's current rates from assignments
-  const getUserRates = () => {
-    if (!user) return [];
-    const userRoles = user.roles || (user.role ? [user.role] : []);
-    const userAssignments = assignments.filter(a => a.user_id === user.id);
-    
-    const rates: { role: string; rate: number; description: string; assignmentId: number }[] = [];
-    
-    if (userRoles.includes('clipper')) {
-      const clipperAssignments = userAssignments.filter(a => a.role === 'clipper' && a.rate);
-      if (clipperAssignments.length > 0) {
-        // Get the most recent rate
-        const latest = clipperAssignments.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
-        rates.push({
-          role: 'Clipper',
-          rate: latest.rate!,
-          description: latest.rate_description || '',
-          assignmentId: latest.id,
-        });
-      }
-    }
-    
-    if (userRoles.includes('editor')) {
-      const editorAssignments = userAssignments.filter(a => a.role === 'editor' && a.rate);
-      if (editorAssignments.length > 0) {
-        const latest = editorAssignments.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
-        rates.push({
-          role: 'Editor',
-          rate: latest.rate!,
-          description: latest.rate_description || '',
-          assignmentId: latest.id,
-        });
-      }
-    }
-    
-    return rates;
-  };
 
-  const userRates = getUserRates();
   const totalOwed = getTotalOwed();
 
   if (loading) {
@@ -309,11 +254,11 @@ export default function PaymentTracking() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-neutral-900">{rate.role} Rate:</span>
+                        <span className="font-medium text-neutral-900 capitalize">{rate.role} Rate:</span>
                         <span className="text-lg font-bold text-green-600">${Number(rate.rate).toFixed(2)}</span>
                       </div>
-                      {rate.description && (
-                        <p className="text-sm text-neutral-600 mt-1">{rate.description}</p>
+                      {rate.rate_description && (
+                        <p className="text-sm text-neutral-600 mt-1">{rate.rate_description}</p>
                       )}
                     </div>
                   </div>
@@ -529,124 +474,6 @@ export default function PaymentTracking() {
             )}
           </div>
         </section>
-
-        {/* Admin: Set Rates Section */}
-        {isAdmin && assignments.length > 0 && (
-          <section className="mt-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-neutral-200">
-              <h2 className="text-xl font-semibold text-neutral-900">Set Rates for Assignments</h2>
-            </div>
-            <div className="px-6 py-4">
-              <div className="space-y-3">
-                {assignments
-                  .filter(a => a.user_id && (a.role === 'clipper' || a.role === 'editor'))
-                  .map((assignment) => {
-                    const assignmentUser = users.find(u => u.id === assignment.user_id);
-                    return (
-                      <div key={assignment.id} className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium text-neutral-900">
-                                {assignmentUser?.discord_username || assignmentUser?.name || 'Unknown'}
-                              </span>
-                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                assignment.role === 'clipper' ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
-                              }`}>
-                                {assignment.role}
-                              </span>
-                            </div>
-                            {assignment.short && (
-                              <p className="text-sm text-neutral-600 mb-2">
-                                {assignment.short.title}
-                              </p>
-                            )}
-                            <div className="flex items-center gap-4">
-                              <div>
-                                <span className="text-sm text-neutral-600">Current Rate: </span>
-                                <span className="font-medium text-neutral-900">
-                                  {assignment.rate ? `$${Number(assignment.rate).toFixed(2)}` : 'Not set'}
-                                </span>
-                              </div>
-                              {assignment.rate_description && (
-                                <span className="text-sm text-neutral-500 italic">
-                                  {assignment.rate_description}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <button
-                            onClick={() => setEditingRate({
-                              assignmentId: assignment.id,
-                              rate: assignment.rate || 0,
-                              description: assignment.rate_description || '',
-                            })}
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium ml-4"
-                          >
-                            Set Rate
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Edit Rate Modal */}
-        {editingRate && isAdmin && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-              <h2 className="text-xl font-bold text-neutral-900 mb-4">Set Rate</h2>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Rate ($)
-                  </label>
-                  <input
-                    type="text"
-                    value={editingRate.rate}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^0-9]/g, '');
-                      setEditingRate({ ...editingRate, rate: parseInt(value) || 0 });
-                    }}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Description (e.g., "$25 base + $10 if 200k views")
-                  </label>
-                  <textarea
-                    value={editingRate.description}
-                    onChange={(e) => setEditingRate({ ...editingRate, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={3}
-                    placeholder="$25 base + $10 if 200k views"
-                  />
-                </div>
-              </div>
-              
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleUpdateRate}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditingRate(null)}
-                  className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Mark Paid Modal */}
         {showMarkPaidModal && isAdmin && (

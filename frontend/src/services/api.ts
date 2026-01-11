@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -252,6 +252,14 @@ export const usersApi = {
   },
   delete: async (id: number): Promise<void> => {
     await api.delete(`/users/${id}`);
+  },
+  getUserRates: async (id: number): Promise<UserRate[]> => {
+    const response = await api.get(`/users/${id}/rates`);
+    return response.data;
+  },
+  setUserRate: async (id: number, rate: { role: 'clipper' | 'editor'; rate: number; rate_description?: string }): Promise<UserRate> => {
+    const response = await api.put(`/users/${id}/rate`, rate);
+    return response.data;
   },
 };
 

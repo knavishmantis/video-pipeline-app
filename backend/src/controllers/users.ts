@@ -289,6 +289,112 @@ export const usersController = {
       logger.error('Delete user error', { userId: id, error });
       res.status(500).json({ error: 'Failed to delete user' });
     }
+  },
+
+  async getUserRates(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (parseInt(id) !== req.userId && !isAdmin) {
+        res.status(403).json({ error: 'You can only view your own rates' });
+        return;
+      }
+
+      const result = await query(
+        'SELECT * FROM user_rates WHERE user_id = $1 ORDER BY role',
+        [id]
+      );
+
+      res.json(result.rows);
+    } catch (error) {
+      logger.error('Get user rates error', { userId: id, error });
+      res.status(500).json({ error: 'Failed to fetch user rates' });
+    }
+  },
+
+  async setUserRate(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can set user rates' });
+        return;
+      }
+
+      const { role, rate, rate_description } = req.body;
+
+      if (!role || !['clipper', 'editor'].includes(role)) {
+        res.status(400).json({ error: 'Valid role (clipper or editor) is required' });
+        return;
+      }
+
+      if (rate === undefined || rate === null || rate < 0) {
+        res.status(400).json({ error: 'Valid rate (>= 0) is required' });
+        return;
+      }
+
+      // Check if user exists
+      const userResult = await query('SELECT id FROM users WHERE id = $1', [id]);
+      if (userResult.rows.length === 0) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      // Upsert user rate
+      const usingSqlite = process.env.DATABASE_URL?.startsWith('sqlite://');
+      let result;
+      
+      if (usingSqlite) {
+        // SQLite doesn't support ON CONFLICT UPDATE in the same way, use a transaction
+        await query('BEGIN TRANSACTION');
+        try {
+          const existing = await query(
+            'SELECT * FROM user_rates WHERE user_id = ? AND role = ?',
+            [id, role]
+          );
+          
+          if (existing.rows.length > 0) {
+            await query(
+              'UPDATE user_rates SET rate = ?, rate_description = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND role = ?',
+              [rate, rate_description || null, id, role]
+            );
+          } else {
+            await query(
+              'INSERT INTO user_rates (user_id, role, rate, rate_description) VALUES (?, ?, ?, ?)',
+              [id, role, rate, rate_description || null]
+            );
+          }
+          await query('COMMIT');
+          
+          result = await query(
+            'SELECT * FROM user_rates WHERE user_id = ? AND role = ?',
+            [id, role]
+          );
+        } catch (error) {
+          await query('ROLLBACK');
+          throw error;
+        }
+      } else {
+        // PostgreSQL: Use ON CONFLICT
+        result = await query(
+          `INSERT INTO user_rates (user_id, role, rate, rate_description, updated_at)
+           VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+           ON CONFLICT (user_id, role) 
+           DO UPDATE SET rate = $3, rate_description = $4, updated_at = CURRENT_TIMESTAMP
+           RETURNING *`,
+          [id, role, rate, rate_description || null]
+        );
+      }
+
+      // Note: Payments are locked in at the rate when created, so we don't update existing payments
+      // Only new payments (when jobs are marked complete) will use the new rate
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error('Set user rate error', { userId: id, error });
+      res.status(500).json({ error: 'Failed to set user rate' });
+    }
   }
 };
+
 

@@ -135,17 +135,14 @@ export function ContentModal({
       return;
     }
     
-    if (!relevantAssignment.rate || relevantAssignment.rate <= 0) {
-      showAlert(
-        contentColumn === 'clips' || contentColumn === 'clip_changes'
-          ? 'Cannot mark complete. Rate must be set for the clipper assignment before marking complete.'
-          : 'Cannot mark complete. Rate must be set for the editor assignment before marking complete.',
-        { type: 'error' }
-      );
-      return;
+    // Rate validation is now handled by the backend (checks user rates)
+    try {
+      await onMarkComplete(contentShort.id, contentColumn);
+    } catch (error: unknown) {
+      // Error handling is done in Dashboard.tsx, but we catch here to prevent unhandled promise rejection
+      // The error will be displayed via showAlert in Dashboard
+      throw error; // Re-throw so Dashboard can handle it
     }
-    
-    await onMarkComplete(contentShort.id, contentColumn);
   };
 
   return (

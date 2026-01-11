@@ -17,8 +17,10 @@ usersRouter.use(requireProfileComplete);
 
 usersRouter.get('/', usersController.getAll);
 usersRouter.get('/:id', usersController.getById);
+usersRouter.get('/:id/rates', usersController.getUserRates);
 
 // Admin only
 usersRouter.post('/', requireRole('admin'), validate(createUserSchema), usersController.create);
+usersRouter.put('/:id/rate', requireRole('admin'), usersController.setUserRate);
 usersRouter.delete('/:id', requireRole('admin'), usersController.delete);
 

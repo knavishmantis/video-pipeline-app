@@ -529,17 +529,26 @@ export const shortsController = {
         [id]
       );
       
-      // Require assignment with rate before marking complete
+      // Require assignment before marking complete
       if (clipperAssignment.rows.length === 0) {
         res.status(400).json({ error: 'Cannot mark clips complete. No clipper assignment found for this short.' });
         return;
       }
       
       const assignment = clipperAssignment.rows[0];
-      if (!assignment.rate || assignment.rate <= 0) {
-        res.status(400).json({ error: 'Cannot mark clips complete. Rate must be set for the clipper assignment before marking complete.' });
+      
+      // Get user rate for clipper role
+      const userRateResult = await query(
+        `SELECT rate, rate_description FROM user_rates WHERE user_id = $1 AND role = 'clipper'`,
+        [assignment.user_id]
+      );
+      
+      if (userRateResult.rows.length === 0 || !userRateResult.rows[0].rate || userRateResult.rows[0].rate <= 0) {
+        res.status(400).json({ error: 'Cannot mark clips complete. Rate must be set for the clipper before marking complete.' });
         return;
       }
+      
+      const userRate = userRateResult.rows[0];
       
       // Update short to mark clips as complete (only after validation passes)
       await query(
@@ -556,7 +565,7 @@ export const shortsController = {
       let paymentId: number | null = null;
       
       if (existingPayment.rows.length === 0) {
-        // Create payment for clipper
+        // Create payment for clipper using user rate
         const paymentResult = await query(
           `INSERT INTO payments (user_id, short_id, assignment_id, amount, role, rate_description, completed_at, status)
            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, 'pending')
@@ -565,9 +574,9 @@ export const shortsController = {
             assignment.user_id,
             assignment.short_id,
             assignment.id,
-            assignment.rate,
+            userRate.rate,
             'clipper',
-            assignment.rate_description || null
+            userRate.rate_description || null
           ]
         );
         paymentId = paymentResult.rows[0].id;
@@ -639,17 +648,26 @@ export const shortsController = {
         [id]
       );
       
-      // Require assignment with rate before marking complete
+      // Require assignment before marking complete
       if (editorAssignment.rows.length === 0) {
         res.status(400).json({ error: 'Cannot mark editing complete. No editor assignment found for this short.' });
         return;
       }
       
       const assignment = editorAssignment.rows[0];
-      if (!assignment.rate || assignment.rate <= 0) {
-        res.status(400).json({ error: 'Cannot mark editing complete. Rate must be set for the editor assignment before marking complete.' });
+      
+      // Get user rate for editor role
+      const userRateResult = await query(
+        `SELECT rate, rate_description FROM user_rates WHERE user_id = $1 AND role = 'editor'`,
+        [assignment.user_id]
+      );
+      
+      if (userRateResult.rows.length === 0 || !userRateResult.rows[0].rate || userRateResult.rows[0].rate <= 0) {
+        res.status(400).json({ error: 'Cannot mark editing complete. Rate must be set for the editor before marking complete.' });
         return;
       }
+      
+      const userRate = userRateResult.rows[0];
       
       // Update short to mark editing as complete (only after validation passes)
       await query(
@@ -666,7 +684,7 @@ export const shortsController = {
       let paymentId: number | null = null;
       
       if (existingPayment.rows.length === 0) {
-        // Create payment for editor
+        // Create payment for editor using user rate
         const paymentResult = await query(
           `INSERT INTO payments (user_id, short_id, assignment_id, amount, role, rate_description, completed_at, status)
            VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP, 'pending')
@@ -675,9 +693,9 @@ export const shortsController = {
             assignment.user_id,
             assignment.short_id,
             assignment.id,
-            assignment.rate,
+            userRate.rate,
             'editor',
-            assignment.rate_description || null
+            userRate.rate_description || null
           ]
         );
         paymentId = paymentResult.rows[0].id;

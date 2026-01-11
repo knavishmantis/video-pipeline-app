@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
 import { usersApi } from '../services/api';
-import { User, UserRole } from '../../../shared/types';
+import { User, UserRole, UserRate } from '../../../shared/types';
 import { getErrorMessage } from '../utils/errorHandler';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -43,6 +43,11 @@ export default function UserManagement() {
     roles: [] as UserRole[],
   });
   const [error, setError] = useState('');
+  const [showRatesModal, setShowRatesModal] = useState(false);
+  const [ratesUser, setRatesUser] = useState<User | null>(null);
+  const [userRates, setUserRates] = useState<UserRate[]>([]);
+  const [editingRate, setEditingRate] = useState<{ role: 'clipper' | 'editor'; rate: number; description: string } | null>(null);
+  const [savingRate, setSavingRate] = useState(false);
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
@@ -174,6 +179,44 @@ export default function UserManagement() {
     }));
   };
 
+  const handleShowRates = async (user: User) => {
+    setRatesUser(user);
+    setShowRatesModal(true);
+    setEditingRate(null);
+    try {
+      const rates = await usersApi.getUserRates(user.id);
+      setUserRates(rates);
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to load rates'), 'error');
+    }
+  };
+
+  const handleEditRate = (role: 'clipper' | 'editor') => {
+    const existingRate = userRates.find(r => r.role === role);
+    setEditingRate({
+      role,
+      rate: existingRate?.rate || 0,
+      description: existingRate?.rate_description || '',
+    });
+  };
+
+  const handleSaveRate = async () => {
+    if (!editingRate || !ratesUser) return;
+    
+    setSavingRate(true);
+    try {
+      await usersApi.setUserRate(ratesUser.id, editingRate);
+      const rates = await usersApi.getUserRates(ratesUser.id);
+      setUserRates(rates);
+      setEditingRate(null);
+      showToast('Rate saved successfully', 'success');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to save rate'), 'error');
+    } finally {
+      setSavingRate(false);
+    }
+  };
+
   const getProfilePicture = (user: User) => {
     if (user.profile_picture) {
       if (user.profile_picture.startsWith('http')) {
@@ -282,6 +325,17 @@ export default function UserManagement() {
                     </div>
                     {isAdmin && (
                       <div className="flex gap-1 flex-shrink-0">
+                        {(u.roles || (u.role ? [u.role] : [])).some(r => r === 'clipper' || r === 'editor') && (
+                          <button
+                            onClick={() => handleShowRates(u)}
+                            className="p-1.5 text-neutral-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors dark:text-neutral-400 dark:hover:text-green-400 dark:hover:bg-green-900/20"
+                            title="Manage rates"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEditUser(u)}
                           className="p-1.5 text-neutral-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors dark:text-neutral-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
@@ -507,6 +561,117 @@ export default function UserManagement() {
           </div>
         </div>
       )}
+
+      {/* Rates Modal */}
+      {showRatesModal && ratesUser && isAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-black rounded-2xl p-6 md:p-8 max-w-md w-full shadow-xl">
+            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+              Manage Rates for {ratesUser.name}
+            </h2>
+            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-6">
+              Set payment rates for this user. Rates apply to all unpaid jobs.
+            </p>
+
+            {!editingRate ? (
+              <div className="space-y-4">
+                {(['clipper', 'editor'] as const).map((role) => {
+                  const rate = userRates.find(r => r.role === role);
+                  const hasRole = (ratesUser.roles || (ratesUser.role ? [ratesUser.role] : [])).includes(role);
+                  
+                  if (!hasRole) return null;
+                  
+                  return (
+                    <div key={role} className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium text-neutral-900 dark:text-white capitalize">
+                              {role}
+                            </span>
+                          </div>
+                          <div className="text-2xl font-bold text-neutral-900 dark:text-white">
+                            ${rate ? Number(rate.rate).toFixed(2) : 'Not set'}
+                          </div>
+                          {rate?.rate_description && (
+                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                              {rate.rate_description}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => handleEditRate(role)}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          {rate ? 'Edit' : 'Set Rate'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="rate-amount">Rate ($)</Label>
+                  <Input
+                    id="rate-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editingRate.rate}
+                    onChange={(e) => setEditingRate({ ...editingRate, rate: parseFloat(e.target.value) || 0 })}
+                    placeholder="30.00"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="rate-description">Description (optional)</Label>
+                  <Input
+                    id="rate-description"
+                    type="text"
+                    value={editingRate.description}
+                    onChange={(e) => setEditingRate({ ...editingRate, description: e.target.value })}
+                    placeholder="e.g., $25 base + $10 if 200k views"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3 mt-6">
+              {editingRate ? (
+                <>
+                  <button
+                    onClick={handleSaveRate}
+                    disabled={savingRate || editingRate.rate <= 0}
+                    className="flex-1 group/btn relative flex h-10 items-center justify-center space-x-2 rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+                  >
+                    {savingRate ? 'Saving...' : 'Save Rate →'}
+                    <BottomGradient />
+                  </button>
+                  <button
+                    onClick={() => setEditingRate(null)}
+                    className="px-4 h-10 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setShowRatesModal(false);
+                    setRatesUser(null);
+                    setUserRates([]);
+                  }}
+                  className="flex-1 px-4 h-10 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                >
+                  Close
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConfirmComponent />
       <ToastComponent />
     </div>
