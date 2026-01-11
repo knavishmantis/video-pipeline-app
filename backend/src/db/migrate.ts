@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS shorts (
   idea TEXT,
   script_content TEXT,
   script_writer_id INTEGER REFERENCES users(id),
-  status VARCHAR(50) NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'ready_to_upload')),
+  status VARCHAR(50) NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'uploaded')),
   entered_clip_changes_at TIMESTAMP,
   entered_editing_changes_at TIMESTAMP,
   clips_completed_at TIMESTAMP,

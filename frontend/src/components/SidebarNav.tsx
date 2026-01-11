@@ -46,6 +46,7 @@ export function SidebarNav() {
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
   const isClipper = user?.roles?.includes('clipper') || user?.role === 'clipper';
+  const isEditor = user?.roles?.includes('editor') || user?.role === 'editor';
 
   // Get profile picture - emoji, image URL, or fallback
   const getProfilePicture = () => {
@@ -185,6 +186,15 @@ export function SidebarNav() {
         href: "/flashback-reference",
         icon: (
           <IconCamera className="h-5 w-5 shrink-0 text-neutral-700" />
+        ),
+      },
+    ] : []),
+    ...((isEditor || isAdmin) ? [
+      {
+        label: "Editing Reference",
+        href: "/editing-reference",
+        icon: (
+          <IconEdit className="h-5 w-5 shrink-0 text-neutral-700" />
         ),
       },
     ] : []),

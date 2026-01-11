@@ -591,7 +591,7 @@ export default function Dashboard() {
 
   const activeShort = activeId ? shorts.find(s => `short-${s.id}` === activeId) : null;
 
-  const toggleColumnView = (viewType: 'clipper' | 'script' | 'idea' | 'editing' | 'ready_to_upload' | 'uploaded') => {
+  const toggleColumnView = (viewType: 'clipper' | 'script' | 'idea' | 'editing' | 'uploaded') => {
     setVisibleColumns(prev => {
       const newSet = new Set(prev);
       let columnsToToggle: ColumnType[] = [];
@@ -604,8 +604,6 @@ export default function Dashboard() {
         columnsToToggle = ['idea'];
       } else if (viewType === 'editing') {
         columnsToToggle = ['editing', 'editing_changes'];
-      } else if (viewType === 'ready_to_upload') {
-        columnsToToggle = ['ready_to_upload'];
       } else if (viewType === 'uploaded') {
         columnsToToggle = ['uploaded'];
       }

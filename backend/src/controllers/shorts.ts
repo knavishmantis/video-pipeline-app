@@ -414,21 +414,6 @@ export const shortsController = {
             });
             return;
           }
-        } else if (input.status === 'ready_to_upload') {
-          // Check if editing is completed before allowing move to ready_to_upload
-          if (!short.editing_completed_at) {
-            res.status(400).json({ 
-              error: 'Cannot move to ready to upload. Editing must be marked as complete first.' 
-            });
-            return;
-          }
-          const hasFinalVideo = files.some((f: any) => f.file_type === 'final_video');
-          if (!hasFinalVideo) {
-            res.status(400).json({ 
-              error: 'Cannot move to ready to upload. Required: final video MP4' 
-            });
-            return;
-          }
         }
       }
       

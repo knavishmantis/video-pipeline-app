@@ -9,6 +9,7 @@ import PaymentTracking from './pages/PaymentTracking';
 import ProfileCompletion from './pages/ProfileCompletion';
 import Guide from './pages/Guide';
 import FlashbackReference from './pages/FlashbackReference';
+import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
@@ -99,6 +100,16 @@ function AppContent() {
               <ProfileCheckRoute>
                 <AppLayout>
                   <FlashbackReference />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/editing-reference"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <EditingReference />
                 </AppLayout>
               </ProfileCheckRoute>
             }

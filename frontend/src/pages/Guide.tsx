@@ -90,7 +90,7 @@ export default function Guide() {
 
                 <div className="p-4 bg-orange-50 border-2 border-orange-300 rounded-lg">
                   <p className="text-sm text-orange-900 font-semibold mb-1">
-                    ⚠️ Important: Flashback Reference Guide
+                    ⚠️ Important: Reference Guides
                   </p>
                   <p className="text-sm text-orange-800">
                     The <strong>Flashback Reference</strong> (available in the sidebar) contains the complete guide on how clips should be styled and formatted. 
@@ -139,6 +139,16 @@ export default function Guide() {
                   <p className="text-neutral-700">
                     When you mark editing as complete, the payment will be automatically tracked in the <strong>Payments</strong> view. 
                     You can check the Payments section at any time to see what you're owed and your payment history.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
+                  <p className="text-sm text-purple-900 font-semibold mb-1">
+                    ⚠️ Important: Editing Reference Guide
+                  </p>
+                  <p className="text-sm text-purple-800">
+                    The <strong>Editing Reference</strong> (available in the sidebar) contains the complete guide on how videos should be edited and formatted. 
+                    This is your primary reference document - make sure to check it regularly when editing videos!
                   </p>
                 </div>
               </div>

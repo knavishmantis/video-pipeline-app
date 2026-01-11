@@ -476,7 +476,7 @@ export const paymentsController = {
         // Admin stats
         let totalPaidQuery = `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'paid'`;
         let totalPendingQuery = `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'pending'`;
-        let videosQuery = `SELECT COUNT(*) as count FROM shorts WHERE status = 'ready_to_upload'`;
+        let videosQuery = `SELECT COUNT(*) as count FROM shorts WHERE status = 'uploaded'`;
         
         if (dateFilter) {
           totalPaidQuery += dateFilter;

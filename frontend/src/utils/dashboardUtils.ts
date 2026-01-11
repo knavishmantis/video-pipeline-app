@@ -1,6 +1,6 @@
 import { Short } from '../../../shared/types';
 
-export type ColumnType = 'idea' | 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'ready_to_upload' | 'uploaded';
+export type ColumnType = 'idea' | 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'uploaded';
 
 export interface Column {
   id: ColumnType;
@@ -17,8 +17,7 @@ export const columns: Column[] = [
   { id: 'clip_changes', title: 'Clip Changes', color: '#EF4444', order: 3 },
   { id: 'editing', title: 'Editing', color: '#10B981', order: 4 },
   { id: 'editing_changes', title: 'Editing Changes', color: '#06B6D4', order: 5 },
-  { id: 'ready_to_upload', title: 'Ready to Upload', color: '#6366F1', order: 6 },
-  { id: 'uploaded', title: 'Uploaded/Scheduled', color: '#84CC16', order: 7 },
+  { id: 'uploaded', title: 'Uploaded/Scheduled', color: '#84CC16', order: 6 },
 ];
 
 // Map database status to column
@@ -32,7 +31,6 @@ export const statusToColumn = (status: string): ColumnType => {
     'editing': 'editing',
     'editing_changes': 'editing_changes',
     'completed': 'editing_changes',
-    'ready_to_upload': 'ready_to_upload',
     'uploaded': 'uploaded',
   };
   return map[status] || 'idea';
@@ -47,14 +45,13 @@ export const columnToStatus = (column: ColumnType): string => {
     'clip_changes': 'clip_changes',
     'editing': 'editing',
     'editing_changes': 'editing_changes',
-    'ready_to_upload': 'ready_to_upload',
     'uploaded': 'uploaded',
   };
   return map[column];
 };
 
 // Get valid columns for a given column (can move forward or backward one step, or admin can move to clip_changes/editing_changes)
-// Also allows clips->editing and editing->ready_to_upload if marked complete
+// Also allows clips->editing and editing->uploaded if marked complete
 export const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = false, short?: Short): ColumnType[] => {
   const current = columns.find(c => c.id === currentColumn);
   if (!current) return [];
@@ -84,11 +81,11 @@ export const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = fa
     }
   }
   
-  // Allow editing->ready_to_upload if editing is marked complete
+  // Allow editing->uploaded if editing is marked complete
   if (currentColumn === 'editing' || currentColumn === 'editing_changes') {
     if (short?.editing_completed_at) {
-      const readyColumn = columns.find(c => c.id === 'ready_to_upload');
-      if (readyColumn) valid.push('ready_to_upload');
+      const uploadedColumn = columns.find(c => c.id === 'uploaded');
+      if (uploadedColumn) valid.push('uploaded');
     }
   }
   

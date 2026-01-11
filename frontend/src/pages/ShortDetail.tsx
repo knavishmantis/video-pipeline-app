@@ -292,7 +292,6 @@ export default function ShortDetail() {
               <option value="clip_changes">Clip Changes</option>
               <option value="editing">Editing</option>
               <option value="editing_changes">Editing Changes</option>
-              <option value="ready_to_upload">Ready to Upload</option>
             </select>
           </div>
         </div>

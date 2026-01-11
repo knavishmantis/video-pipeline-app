@@ -5,7 +5,7 @@ interface DashboardFiltersProps {
   showAssignedOnly: boolean;
   setShowAssignedOnly: (value: boolean) => void;
   visibleColumns: Set<ColumnType>;
-  toggleColumnView: (viewType: 'clipper' | 'script' | 'idea' | 'editing' | 'ready_to_upload' | 'uploaded') => void;
+  toggleColumnView: (viewType: 'clipper' | 'script' | 'idea' | 'editing' | 'uploaded') => void;
   isAdmin: boolean;
 }
 
@@ -142,22 +142,6 @@ export function DashboardFilters({
           }}
         >
           Editing View
-        </button>
-        <button
-          onClick={() => toggleColumnView('ready_to_upload')}
-          style={{
-            padding: '6px 12px',
-            background: visibleColumns.has('ready_to_upload') ? '#6366F1' : '#E2E8F0',
-            color: visibleColumns.has('ready_to_upload') ? '#FFFFFF' : '#475569',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: '500',
-            transition: 'all 0.2s',
-          }}
-        >
-          Ready to Upload
         </button>
         <button
           onClick={() => toggleColumnView('uploaded')}
