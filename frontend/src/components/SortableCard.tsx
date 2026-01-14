@@ -332,8 +332,16 @@ export function SortableCard({
       {/* Assign/Reassign Icon (Admin only, top right, to the left of gear and move icons) */}
       {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && !isDragging && (
         <button
+          ref={assignButtonRef}
           onClick={(e) => {
             e.stopPropagation();
+            if (!showAssignMenu && assignButtonRef.current) {
+              const rect = assignButtonRef.current.getBoundingClientRect();
+              setAssignMenuPosition({
+                top: rect.bottom + 4,
+                right: window.innerWidth - rect.right,
+              });
+            }
             setShowAssignMenu(!showAssignMenu);
           }}
           style={{
