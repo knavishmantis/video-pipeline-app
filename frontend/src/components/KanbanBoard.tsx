@@ -70,7 +70,7 @@ export function KanbanBoard({
           overflowY: 'hidden',
           paddingBottom: '0px',
           marginBottom: '24px',
-          height: 'calc(100vh - 160px)',
+          height: 'calc(100vh - 180px)',
           scrollbarGutter: 'stable',
           boxSizing: 'border-box',
         } as React.CSSProperties}
@@ -80,28 +80,36 @@ export function KanbanBoard({
           const sortableIds = columnShorts.map(s => `short-${s.id}`);
 
           return (
-            <DroppableColumn key={column.id} column={column} shorts={columnShorts}>
+            <div
+              key={column.id}
+              style={{
+                opacity: 1,
+                transition: 'opacity 0.3s ease-in-out',
+                minWidth: '280px',
+              }}
+            >
+              <DroppableColumn column={column} shorts={columnShorts}>
               {/* Column Header */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                marginBottom: '16px',
-                paddingBottom: '12px',
-                borderBottom: '2px solid #F1F5F9',
+                gap: '10px',
+                marginBottom: '20px',
+                paddingBottom: '14px',
+                borderBottom: '1px solid #E8ECF1',
               }}>
                 <div style={{
-                  width: '12px',
-                  height: '12px',
+                  width: '14px',
+                  height: '14px',
                   borderRadius: '50%',
-                  background: column.color,
-                  boxShadow: `0 0 8px ${column.color}40`,
+                  background: `linear-gradient(135deg, ${column.color} 0%, ${column.color}dd 100%)`,
+                  boxShadow: `0 2px 8px ${column.color}50`,
                 }} />
                 <h3 style={{
                   margin: 0,
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#1E293B',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  color: '#0F172A',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5px',
                 }}>
@@ -109,12 +117,13 @@ export function KanbanBoard({
                 </h3>
                 <span style={{
                   marginLeft: 'auto',
-                  background: '#F1F5F9',
-                  color: '#64748B',
-                  padding: '2px 8px',
+                  background: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
+                  color: '#475569',
+                  padding: '4px 10px',
                   borderRadius: '12px',
                   fontSize: '12px',
-                  fontWeight: '600',
+                  fontWeight: '700',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                 }}>
                   {columnShorts.length}
                 </span>
@@ -171,25 +180,36 @@ export function KanbanBoard({
                 <button
                   onClick={() => onCreateClick(column.id)}
                   style={{
-                    marginTop: '12px',
-                    padding: '8px 12px',
-                    background: column.color,
+                    marginTop: '16px',
+                    padding: '10px 16px',
+                    background: `linear-gradient(135deg, ${column.color} 0%, ${column.color}dd 100%)`,
                     color: 'white',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '500',
+                    fontSize: '13px',
+                    fontWeight: '600',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
+                    transition: 'all 0.2s ease-in-out',
+                    boxShadow: `0 2px 4px ${column.color}40`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = `0 4px 8px ${column.color}50`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = `0 2px 4px ${column.color}40`;
                   }}
                 >
                   <span>+</span> Add {column.title}
                 </button>
               )}
             </DroppableColumn>
+            </div>
           );
         })}
       </div>

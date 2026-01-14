@@ -631,9 +631,18 @@ export default function Dashboard() {
   };
 
   // Filter columns: hide 'idea' for non-admins, only show visible columns
+  // Also hide 'clip_changes' and 'editing_changes' if they're empty
   const filteredColumns = columns.filter(col => {
     if (col.id === 'idea' && !isAdmin) return false;
-    return visibleColumns.has(col.id);
+    if (!visibleColumns.has(col.id)) return false;
+    
+    // Hide clip_changes and editing_changes columns if they're empty
+    if (col.id === 'clip_changes' || col.id === 'editing_changes') {
+      const columnShorts = shorts.filter(short => statusToColumn(short.status) === col.id);
+      if (columnShorts.length === 0) return false;
+    }
+    
+    return true;
   });
 
   return (
@@ -661,9 +670,12 @@ export default function Dashboard() {
         div[data-kanban-grid] {
           scrollbar-width: auto; /* Firefox - make it thicker */
           scrollbar-color: #CBD5E1 #F1F5F9; /* Firefox */
+          transition: grid-template-columns 0.3s ease-in-out;
         }
       `}</style>
-    <div>
+    <div style={{
+      padding: '0 4px',
+    }}>
       <DashboardFilters
         showAssignedOnly={showAssignedOnly}
         setShowAssignedOnly={setShowAssignedOnly}
@@ -770,7 +782,7 @@ export default function Dashboard() {
         zIndex: 10,
         fontFamily: 'monospace',
       }}>
-        v1.1.6
+        v1.1.7
       </div>
     </React.Fragment>
   );

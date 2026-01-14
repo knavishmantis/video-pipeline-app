@@ -75,7 +75,9 @@ export function ContentModal({
           background: 'white',
           color: '#166534',
           border: '1px solid #86EFAC',
-          borderRadius: '6px',
+          borderRadius: '8px',
+          boxShadow: '0 1px 2px rgba(34, 197, 94, 0.1)',
+          transition: 'all 0.2s ease-in-out',
           fontSize: '12px',
           fontWeight: '500',
           cursor: isDownloading ? 'not-allowed' : 'pointer',
@@ -161,7 +163,8 @@ export function ContentModal({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(4px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -177,21 +180,26 @@ export function ContentModal({
       <div
         style={{
           background: 'white',
-          borderRadius: '12px',
-          padding: '24px',
-          maxWidth: '600px',
+          borderRadius: '16px',
+          padding: '28px',
+          maxWidth: '700px',
           width: '100%',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+          maxHeight: '90vh',
+          overflowY: 'auto',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
         }}
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
         <h2 style={{
-          margin: '0 0 20px 0',
-          fontSize: '20px',
-          fontWeight: '600',
-          color: '#1E293B',
+          margin: '0 0 24px 0',
+          fontSize: '22px',
+          fontWeight: '700',
+          color: '#0F172A',
+          letterSpacing: '-0.02em',
+          lineHeight: '1.3',
         }}>
           {contentColumn === 'script' && (() => {
             const hasScript = contentShort.files?.some(f => f.file_type === 'script');
@@ -227,10 +235,11 @@ export function ContentModal({
                     {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{
                         marginBottom: '16px',
-                        padding: '12px',
+                        padding: '14px',
                         background: '#F9FAFB',
-                        borderRadius: '8px',
-                        border: '1px solid #E5E7EB'
+                        borderRadius: '10px',
+                        border: '1px solid #E5E7EB',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
                       }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
                           Assignments:
@@ -271,10 +280,11 @@ export function ContentModal({
                     {!canEditScript && (scriptPdf || audioFile) && (
                       <div style={{
                         marginBottom: '16px',
-                        padding: '12px',
+                        padding: '14px',
                         background: '#F0FDF4',
-                        borderRadius: '8px',
-                        border: '1px solid #86EFAC'
+                        borderRadius: '10px',
+                        border: '1px solid #86EFAC',
+                        boxShadow: '0 1px 3px rgba(34, 197, 94, 0.15), 0 1px 2px rgba(34, 197, 94, 0.08)',
                       }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
                           Available Files:
@@ -294,7 +304,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -324,7 +335,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -351,10 +363,11 @@ export function ContentModal({
                         {contentShort.files && (
                           <div style={{ 
                             marginBottom: '16px', 
-                            padding: '12px', 
+                            padding: '14px', 
                             background: '#F0F9FF', 
-                            borderRadius: '8px',
-                            border: '1px solid #BAE6FD'
+                            borderRadius: '10px',
+                            border: '1px solid #BAE6FD',
+                            boxShadow: '0 1px 3px rgba(59, 130, 246, 0.15), 0 1px 2px rgba(59, 130, 246, 0.08)',
                           }}>
                             <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
                               File Status:
@@ -426,10 +439,11 @@ export function ContentModal({
                       </>
                     ) : (
                       <div style={{ 
-                        padding: '12px', 
+                        padding: '14px', 
                         background: '#FEF3C7', 
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         border: '1px solid #FCD34D',
+                        boxShadow: '0 1px 3px rgba(245, 158, 11, 0.15), 0 1px 2px rgba(245, 158, 11, 0.08)',
                         color: '#92400E',
                         fontSize: '14px'
                       }}>
@@ -446,10 +460,11 @@ export function ContentModal({
               {contentShort.files && (
                 <div style={{ 
                   marginBottom: '16px', 
-                  padding: '12px', 
+                  padding: '14px', 
                   background: '#F0F9FF', 
-                  borderRadius: '8px',
-                  border: '1px solid #BAE6FD'
+                  borderRadius: '10px',
+                  border: '1px solid #BAE6FD',
+                  boxShadow: '0 1px 3px rgba(59, 130, 246, 0.15), 0 1px 2px rgba(59, 130, 246, 0.08)',
                 }}>
                   <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
                     File Status:
@@ -504,10 +519,11 @@ export function ContentModal({
                     {((contentColumn === 'clips' || contentColumn === 'clip_changes') && canDownloadScript && (scriptPdf || audioFile)) && (
                       <div style={{
                         marginBottom: '16px',
-                        padding: '12px',
+                        padding: '14px',
                         background: '#F0FDF4',
-                        borderRadius: '8px',
-                        border: '1px solid #86EFAC'
+                        borderRadius: '10px',
+                        border: '1px solid #86EFAC',
+                        boxShadow: '0 1px 3px rgba(34, 197, 94, 0.15), 0 1px 2px rgba(34, 197, 94, 0.08)',
                       }}>
                         <div style={{ fontSize: '12px', color: '#15803D', marginBottom: '12px', lineHeight: '1.5' }}>
                           <div style={{ marginBottom: '6px' }}>
@@ -529,7 +545,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -559,7 +576,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -583,10 +601,11 @@ export function ContentModal({
                     {((contentColumn === 'editing' || contentColumn === 'editing_changes') && canDownloadScript && (scriptPdf || audioFile || clipsZip)) && (
                       <div style={{
                         marginBottom: '16px',
-                        padding: '12px',
+                        padding: '14px',
                         background: '#F0FDF4',
-                        borderRadius: '8px',
-                        border: '1px solid #86EFAC'
+                        borderRadius: '10px',
+                        border: '1px solid #86EFAC',
+                        boxShadow: '0 1px 3px rgba(34, 197, 94, 0.15), 0 1px 2px rgba(34, 197, 94, 0.08)',
                       }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {scriptPdf && (
@@ -603,7 +622,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -633,7 +653,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -663,7 +684,8 @@ export function ContentModal({
                                   background: '#FEF3C7',
                                   color: '#92400E',
                                   border: '1px solid #FCD34D',
-                                  borderRadius: '6px',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
                                   fontSize: '12px',
                                   display: 'flex',
                                   alignItems: 'center',
@@ -687,10 +709,11 @@ export function ContentModal({
                     {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{
                         marginBottom: '16px',
-                        padding: '12px',
+                        padding: '14px',
                         background: '#F9FAFB',
-                        borderRadius: '8px',
-                        border: '1px solid #E5E7EB'
+                        borderRadius: '10px',
+                        border: '1px solid #E5E7EB',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
                       }}>
                         <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
                           Assignments:

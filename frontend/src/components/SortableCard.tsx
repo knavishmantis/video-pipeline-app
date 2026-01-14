@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Short, Assignment, User } from '../../../shared/types';
@@ -29,7 +29,8 @@ export function SortableCard({
   navigate,
 }: SortableCardProps) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
-  const [showAllAssignments, setShowAllAssignments] = useState(false);
+  const [assignMenuPosition, setAssignMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const assignButtonRef = useRef<HTMLButtonElement>(null);
   
   const shortAssignments = assignments.filter(a => a.short_id === short.id);
   const scripter = short.script_writer;
@@ -46,10 +47,6 @@ export function SortableCard({
   
   const defaultRole = getDefaultRole();
   
-  // Reset showAllAssignments when column or short changes
-  useEffect(() => {
-    setShowAllAssignments(false);
-  }, [column.id, short.id]);
   
   const getProfilePicture = (user: User) => {
     if (user.profile_picture) {
@@ -206,28 +203,27 @@ export function SortableCard({
         ...style,
         background: isDisabled ? '#F8FAFC' : '#FFFFFF',
         border: '1px solid #E2E8F0',
-        borderRadius: '8px',
-        padding: '12px',
+        borderRadius: '12px',
+        padding: '14px',
         cursor: isDisabled ? 'not-allowed' : (onClick ? 'pointer' : 'default'),
-        transition: isDragging ? 'none' : 'all 0.2s',
-        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+        transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
         position: 'relative',
         opacity: isDisabled ? 0.6 : 1,
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
           e.currentTarget.style.borderColor = column.color;
-          e.currentTarget.style.boxShadow = `0 4px 12px ${column.color}20`;
-          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = `0 8px 16px ${column.color}30, 0 4px 8px rgba(0, 0, 0, 0.12)`;
+          e.currentTarget.style.transform = 'translateY(-3px)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isDragging) {
           e.currentTarget.style.borderColor = '#E2E8F0';
-          e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
+          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)';
           e.currentTarget.style.transform = 'translateY(0)';
-          // Reset showAllAssignments when mouse leaves card
-          setShowAllAssignments(false);
+          setShowAssignMenu(false);
         }
       }}
       onClick={(e) => {
@@ -248,26 +244,28 @@ export function SortableCard({
             position: 'absolute',
             top: '8px',
             right: '8px',
-            width: '24px',
-            height: '24px',
+            width: '28px',
+            height: '28px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: 'transparent',
             border: 'none',
-            borderRadius: '4px',
-            transition: 'all 0.2s',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease-in-out',
             zIndex: 2,
             opacity: 0.6,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F1F5F9';
+            e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
             e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.transform = 'scale(1.1)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
             e.currentTarget.style.opacity = '0.6';
+            e.currentTarget.style.transform = 'scale(1)';
           }}
           title="Edit settings"
         >
@@ -287,28 +285,30 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: !isDragging ? '36px' : '8px',
-            width: '24px',
-            height: '24px',
+            right: !isDragging ? '40px' : '8px',
+            width: '28px',
+            height: '28px',
             cursor: isDragging ? 'grabbing' : 'grab',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             opacity: isDragging ? 1 : 0.3,
-            borderRadius: '4px',
-            transition: isDragging ? 'none' : 'opacity 0.2s',
+            borderRadius: '8px',
+            transition: isDragging ? 'none' : 'all 0.2s ease-in-out',
             background: isDragging ? '#E2E8F0' : 'transparent',
           }}
           onMouseEnter={(e) => {
             if (!isDragging) {
               e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.background = '#F1F5F9';
+              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
+              e.currentTarget.style.transform = 'scale(1.1)';
             }
           }}
           onMouseLeave={(e) => {
             if (!isDragging) {
               e.currentTarget.style.opacity = '0.3';
               e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.transform = 'scale(1)';
             }
           }}
           onClick={(e) => {
@@ -328,14 +328,68 @@ export function SortableCard({
       
       {renderUploadStatusIcon()}
       
+      {/* Assign/Reassign Icon (Admin only, top right, to the left of gear and move icons) */}
+      {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && !isDragging && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowAssignMenu(!showAssignMenu);
+          }}
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: !isDragging ? '76px' : '40px',
+            width: '28px',
+            height: '28px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'transparent',
+            border: 'none',
+            borderRadius: '8px',
+            transition: 'all 0.2s ease-in-out',
+            zIndex: 2,
+            opacity: 0.6,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
+            e.currentTarget.style.opacity = '1';
+            e.currentTarget.style.transform = 'scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.opacity = '0.6';
+            e.currentTarget.style.transform = 'scale(1)';
+          }}
+          title={(() => {
+            if (column.id === 'script') {
+              return scripter ? 'Reassign Script Writer' : 'Assign Script Writer';
+            } else if (column.id === 'clips') {
+              return clipper ? 'Reassign Clipper' : 'Assign Clipper';
+            } else {
+              return editor ? 'Reassign Editor' : 'Assign Editor';
+            }
+          })()}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="8.5" cy="7" r="4"/>
+            <line x1="20" y1="8" x2="20" y2="14"/>
+            <line x1="23" y1="11" x2="17" y2="11"/>
+          </svg>
+        </button>
+      )}
+      
       <h4 style={{
         margin: 0,
-        marginBottom: '6px',
-        fontSize: '14px',
+        marginBottom: '8px',
+        fontSize: '15px',
         fontWeight: '600',
-        color: '#1E293B',
-        lineHeight: '1.4',
-        paddingRight: isAdmin ? '60px' : '32px',
+        color: '#0F172A',
+        lineHeight: '1.5',
+        letterSpacing: '-0.01em',
+        paddingRight: '32px',
         paddingLeft: '32px',
       }}>
         {short.title}
@@ -344,9 +398,10 @@ export function SortableCard({
       {short.description && column.id !== 'idea' && (
         <p style={{
           margin: 0,
-          fontSize: '12px',
+          marginBottom: '8px',
+          fontSize: '13px',
           color: '#64748B',
-          lineHeight: '1.4',
+          lineHeight: '1.6',
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
@@ -385,68 +440,20 @@ export function SortableCard({
         </p>
       )}
       
-      {/* Assignments Section - Show default role by column, all on hover */}
-      <div 
-        style={{
-          marginTop: '8px',
-          fontSize: '11px',
-          color: '#94A3B8',
-        }}
-        onMouseEnter={() => setShowAllAssignments(true)}
-        onMouseLeave={() => setShowAllAssignments(false)}
-      >
-        {showAllAssignments ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {scripter && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {scripter.profile_picture && !scripter.profile_picture.startsWith('http') ? (
-                  <span style={{ fontSize: '14px' }}>{scripter.profile_picture}</span>
-                ) : (
-                  <img 
-                    src={getProfilePicture(scripter)} 
-                    alt={scripter.name}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <span>Scripter: {scripter.discord_username || scripter.name}</span>
-                <TimezoneDisplay timezone={scripter.timezone} size="small" showTime={false} />
-              </div>
-            )}
-            {clipper && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {clipper.profile_picture && !clipper.profile_picture.startsWith('http') ? (
-                  <span style={{ fontSize: '14px' }}>{clipper.profile_picture}</span>
-                ) : (
-                  <img 
-                    src={getProfilePicture(clipper)} 
-                    alt={clipper.name}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <span>Clipper: {clipper.discord_username || clipper.name}</span>
-                <TimezoneDisplay timezone={clipper.timezone} size="small" showTime={false} />
-              </div>
-            )}
-            {editor && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                {editor.profile_picture && !editor.profile_picture.startsWith('http') ? (
-                  <span style={{ fontSize: '14px' }}>{editor.profile_picture}</span>
-                ) : (
-                  <img 
-                    src={getProfilePicture(editor)} 
-                    alt={editor.name}
-                    style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                )}
-                <span>Editor: {editor.discord_username || editor.name}</span>
-                <TimezoneDisplay timezone={editor.timezone} size="small" showTime={false} />
-              </div>
-            )}
-            {!scripter && !clipper && !editor && (
-              <span style={{ fontStyle: 'italic' }}>No assignments</span>
-            )}
-          </div>
-        ) : defaultRole ? (
+      {/* Assignments Section - Show default role by column, all on card hover (hover expansion temporarily disabled) */}
+      {defaultRole ? (
+        <div 
+          style={{
+            marginTop: '10px',
+            padding: '6px 8px',
+            borderRadius: '8px',
+            fontSize: '12px',
+            color: '#64748B',
+            backgroundColor: 'transparent',
+            position: 'relative',
+            zIndex: 1,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
               <span style={{ fontSize: '14px' }}>{defaultRole.user.profile_picture}</span>
@@ -461,122 +468,115 @@ export function SortableCard({
               {defaultRole.type === 'scripter' ? 'Scripter' : defaultRole.type === 'clipper' ? 'Clipper' : 'Editor'}: 
               {' '}{defaultRole.user.discord_username || defaultRole.user.name}
             </span>
-            <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
-          </div>
-        ) : null}
-      </div>
-      
-      {/* Assign Button (Admin only) */}
-      {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && (
-        <div style={{ position: 'relative', marginTop: '8px' }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowAssignMenu(!showAssignMenu);
-            }}
-            style={{
-              padding: '4px 8px',
-              background: '#F1F5F9',
-              color: '#475569',
-              border: '1px solid #E2E8F0',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '10px',
-              fontWeight: '500',
-            }}
-          >
-            {(() => {
-              if (column.id === 'script') {
-                return scripter ? 'Reassign' : 'Assign';
-              } else if (column.id === 'clips') {
-                return clipper ? 'Reassign' : 'Assign';
-              } else {
-                return editor ? 'Reassign' : 'Assign';
-              }
-            })()}
-          </button>
-          {showAssignMenu && (
-            <div 
-              className="assign-menu"
-              style={{
-                position: 'absolute',
-                bottom: '100%',
-                left: 0,
-                marginBottom: '4px',
-                background: 'white',
-                border: '1px solid #E2E8F0',
-                borderRadius: '6px',
-                padding: '8px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-                zIndex: 10,
-                minWidth: '200px',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div style={{ fontSize: '11px', fontWeight: '600', marginBottom: '6px', color: '#1E293B' }}>
-                Assign {column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}
-              </div>
-              {users
-                .filter(u => {
-                  if (column.id === 'script') {
-                    return u.roles?.includes('script_writer') || u.role === 'script_writer';
-                  } else if (column.id === 'clips') {
-                    return u.roles?.includes('clipper') || u.role === 'clipper';
-                  } else {
-                    return u.roles?.includes('editor') || u.role === 'editor';
-                  }
-                })
-                .map(u => (
-                  <div
-                    key={u.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
-                      onAssign(short.id, role, u.id);
-                      setShowAssignMenu(false);
-                    }}
-                    style={{
-                      padding: '6px',
-                      cursor: 'pointer',
-                      borderRadius: '4px',
-                      fontSize: '11px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#F1F5F9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                    }}
-                  >
-                    {u.profile_picture && !u.profile_picture.startsWith('http') ? (
-                      <span style={{ fontSize: '14px' }}>{u.profile_picture}</span>
-                    ) : (
-                      <img 
-                        src={getProfilePicture(u)} 
-                        alt={u.name}
-                        style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                    )}
-                    <span style={{ flex: 1 }}>{u.discord_username || u.name}</span>
-                    <TimezoneDisplay timezone={u.timezone} size="small" showTime={false} />
-                  </div>
-                ))}
+            <div style={{ position: 'relative', zIndex: 1001 }}>
+              <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
             </div>
-          )}
+          </div>
+        </div>
+      ) : null}
+      
+      {/* Assign Menu (Admin only) */}
+      {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && showAssignMenu && (
+        <div
+          className="assign-menu"
+          style={{
+            position: 'absolute',
+            top: '36px',
+            right: '8px',
+            background: 'white',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '12px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+            zIndex: 1000,
+            minWidth: '280px',
+            maxWidth: '320px',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ 
+            fontSize: '13px', 
+            fontWeight: '700', 
+            marginBottom: '12px', 
+            color: '#0F172A',
+            letterSpacing: '-0.01em',
+          }}>
+            {(column.id === 'script' && scripter) || 
+             (column.id === 'clips' && clipper) || 
+             (column.id === 'editing' && editor)
+              ? `Reassign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
+              : `Assign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
+            }
+          </div>
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '6px',
+          }}>
+            {users
+              .filter(u => {
+                if (column.id === 'script') {
+                  return u.roles?.includes('script_writer') || u.role === 'script_writer';
+                } else if (column.id === 'clips') {
+                  return u.roles?.includes('clipper') || u.role === 'clipper';
+                } else {
+                  return u.roles?.includes('editor') || u.role === 'editor';
+                }
+              })
+              .map(u => (
+                <div
+                  key={u.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
+                    onAssign(short.id, role, u.id);
+                    setShowAssignMenu(false);
+                  }}
+                  style={{
+                    padding: '8px 10px',
+                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease-in-out',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#F1F5F9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  {u.profile_picture && !u.profile_picture.startsWith('http') ? (
+                    <span style={{ fontSize: '16px', lineHeight: '1' }}>{u.profile_picture}</span>
+                  ) : (
+                    <img
+                      src={getProfilePicture(u)}
+                      alt={u.name}
+                      style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  )}
+                  <span style={{ color: '#1E293B', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {u.discord_username || u.name}
+                  </span>
+                </div>
+              ))}
+          </div>
         </div>
       )}
       
       {/* Created timestamp in bottom right */}
       <div style={{
         position: 'absolute',
-        bottom: '8px',
-        right: '8px',
+        bottom: '10px',
+        right: '10px',
         fontSize: '10px',
         color: '#94A3B8',
         whiteSpace: 'nowrap',
+        fontWeight: '500',
+        letterSpacing: '0.01em',
       }}>
         {new Date(short.created_at).toLocaleDateString()}
       </div>

@@ -101,7 +101,10 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
             width: isExpanded ? 280 : 80,
           }}
           transition={{ duration: animate ? 0.3 : 0, ease: "easeInOut" }}
-          className="relative h-full bg-gray-100 flex-shrink-0 overflow-hidden"
+          className="relative h-full flex-shrink-0 overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #E9ECF1 100%)',
+          }}
         >
           {children}
         </motion.div>

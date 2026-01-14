@@ -156,28 +156,28 @@ export function SidebarNav() {
       label: "Dashboard",
       href: "/",
       icon: (
-        <IconDashboard className="h-5 w-5 shrink-0 text-neutral-700" />
+        <IconDashboard className="h-5 w-5 shrink-0 text-neutral-900" />
       ),
     },
     {
       label: "Payments",
       href: "/payments",
       icon: (
-        <IconCurrencyDollar className="h-5 w-5 shrink-0 text-neutral-700" />
+        <IconCurrencyDollar className="h-5 w-5 shrink-0 text-neutral-900" />
       ),
     },
     {
       label: "Guide",
       href: "/guide",
       icon: (
-        <IconHelp className="h-5 w-5 shrink-0 text-neutral-700" />
+        <IconHelp className="h-5 w-5 shrink-0 text-neutral-900" />
       ),
     },
     {
       label: "YouTube Stats",
       href: "/youtube-stats",
       icon: (
-        <IconBrandYoutube className="h-5 w-5 shrink-0 text-neutral-700" />
+        <IconBrandYoutube className="h-5 w-5 shrink-0 text-neutral-900" />
       ),
     },
     ...((isClipper || isAdmin) ? [
@@ -185,7 +185,7 @@ export function SidebarNav() {
         label: "Flashback Reference",
         href: "/flashback-reference",
         icon: (
-          <IconCamera className="h-5 w-5 shrink-0 text-neutral-700" />
+          <IconCamera className="h-5 w-5 shrink-0 text-neutral-900" />
         ),
       },
     ] : []),
@@ -194,7 +194,7 @@ export function SidebarNav() {
         label: "Editing Reference",
         href: "/editing-reference",
         icon: (
-          <IconEdit className="h-5 w-5 shrink-0 text-neutral-700" />
+          <IconEdit className="h-5 w-5 shrink-0 text-neutral-900" />
         ),
       },
     ] : []),
@@ -203,7 +203,7 @@ export function SidebarNav() {
         label: "Users",
         href: "/users",
         icon: (
-          <IconUsers className="h-5 w-5 shrink-0 text-neutral-700" />
+          <IconUsers className="h-5 w-5 shrink-0 text-neutral-900" />
         ),
       },
     ] : []),
@@ -253,7 +253,7 @@ export function SidebarNav() {
               label: "Logout",
               href: "#",
               icon: (
-                <IconLogout className="h-5 w-5 shrink-0 text-neutral-700" />
+                <IconLogout className="h-5 w-5 shrink-0 text-neutral-900" />
               ),
             }}
             className="!text-red-600 hover:!bg-red-50 hover:!text-red-700"
