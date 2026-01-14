@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Short, Assignment, User } from '../../../shared/types';
@@ -29,8 +30,8 @@ export function SortableCard({
   navigate,
 }: SortableCardProps) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
-  const [assignMenuPosition, setAssignMenuPosition] = useState<{ top: number; right: number } | null>(null);
   const assignButtonRef = useRef<HTMLButtonElement>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
   
   const shortAssignments = assignments.filter(a => a.short_id === short.id);
   const scripter = short.script_writer;
@@ -224,12 +225,13 @@ export function SortableCard({
           e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)';
           e.currentTarget.style.transform = 'translateY(0)';
           setShowAssignMenu(false);
-          setAssignMenuPosition(null);
+          setMenuPosition(null);
         }
       }}
       onClick={(e) => {
         if (!(e.target as HTMLElement).closest('.drag-handle') && 
-            !(e.target as HTMLElement).closest('.assign-menu')) {
+            !(e.target as HTMLElement).closest('.assign-menu') &&
+            !(e.target as HTMLElement).closest('.assign-button')) {
           onClick?.();
         }
       }}
@@ -331,66 +333,163 @@ export function SortableCard({
       
       {/* Assign/Reassign Icon (Admin only, top right, to the left of gear and move icons) */}
       {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && !isDragging && (
-        <button
-          ref={assignButtonRef}
-          onClick={(e) => {
-            e.stopPropagation();
-            const newShowState = !showAssignMenu;
-            if (newShowState && assignButtonRef.current) {
-              const rect = assignButtonRef.current.getBoundingClientRect();
-              setAssignMenuPosition({
-                top: rect.bottom + 4,
-                right: window.innerWidth - rect.right,
-              });
-            } else if (!newShowState) {
-              setAssignMenuPosition(null);
-            }
-            setShowAssignMenu(newShowState);
-          }}
-          style={{
-            position: 'absolute',
-            top: '8px',
-            right: !isDragging ? '76px' : '40px',
-            width: '28px',
-            height: '28px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            borderRadius: '8px',
-            transition: 'all 0.2s ease-in-out',
-            zIndex: 2,
-            opacity: 0.6,
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-            e.currentTarget.style.opacity = '1';
-            e.currentTarget.style.transform = 'scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.opacity = '0.6';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
-          title={(() => {
-            if (column.id === 'script') {
-              return scripter ? 'Reassign Script Writer' : 'Assign Script Writer';
-            } else if (column.id === 'clips') {
-              return clipper ? 'Reassign Clipper' : 'Assign Clipper';
-            } else {
-              return editor ? 'Reassign Editor' : 'Assign Editor';
-            }
-          })()}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="8.5" cy="7" r="4"/>
-            <line x1="20" y1="8" x2="20" y2="14"/>
-            <line x1="23" y1="11" x2="17" y2="11"/>
-          </svg>
-        </button>
+        <>
+          <button
+            ref={assignButtonRef}
+            className="assign-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!showAssignMenu && assignButtonRef.current) {
+                const rect = assignButtonRef.current.getBoundingClientRect();
+                setMenuPosition({
+                  top: rect.bottom + 4,
+                  left: rect.left,
+                });
+                setShowAssignMenu(true);
+              } else {
+                setShowAssignMenu(false);
+                setMenuPosition(null);
+              }
+            }}
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: !isDragging ? '76px' : '40px',
+              width: '28px',
+              height: '28px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              transition: 'all 0.2s ease-in-out',
+              zIndex: 3,
+              opacity: 0.6,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
+              e.currentTarget.style.opacity = '1';
+              e.currentTarget.style.transform = 'scale(1.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.opacity = '0.6';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            title={(() => {
+              if (column.id === 'script') {
+                return scripter ? 'Reassign Script Writer' : 'Assign Script Writer';
+              } else if (column.id === 'clips') {
+                return clipper ? 'Reassign Clipper' : 'Assign Clipper';
+              } else {
+                return editor ? 'Reassign Editor' : 'Assign Editor';
+              }
+            })()}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+              <circle cx="8.5" cy="7" r="4"/>
+              <line x1="20" y1="8" x2="20" y2="14"/>
+              <line x1="23" y1="11" x2="17" y2="11"/>
+            </svg>
+          </button>
+          
+          {showAssignMenu && menuPosition && createPortal(
+            <div
+              className="assign-menu"
+              style={{
+                position: 'fixed',
+                top: `${menuPosition.top}px`,
+                left: `${menuPosition.left}px`,
+                background: 'white',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                padding: '12px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                zIndex: 10000,
+                minWidth: '280px',
+                maxWidth: '320px',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ 
+                fontSize: '13px', 
+                fontWeight: '700', 
+                marginBottom: '12px', 
+                color: '#0F172A',
+                letterSpacing: '-0.01em',
+              }}>
+                {(column.id === 'script' && scripter) || 
+                 (column.id === 'clips' && clipper) || 
+                 (column.id === 'editing' && editor)
+                  ? `Reassign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
+                  : `Assign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
+                }
+              </div>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+              }}>
+                {users
+                  .filter(u => {
+                    if (column.id === 'script') {
+                      return u.roles?.includes('script_writer') || u.role === 'script_writer';
+                    } else if (column.id === 'clips') {
+                      return u.roles?.includes('clipper') || u.role === 'clipper';
+                    } else {
+                      return u.roles?.includes('editor') || u.role === 'editor';
+                    }
+                  })
+                  .map(u => (
+                    <div
+                      key={u.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
+                        onAssign(short.id, role, u.id);
+                        setShowAssignMenu(false);
+          setMenuPosition(null);
+                        setMenuPosition(null);
+                      }}
+                      style={{
+                        padding: '8px 10px',
+                        cursor: 'pointer',
+                        borderRadius: '8px',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        transition: 'all 0.2s ease-in-out',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#F1F5F9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      {u.profile_picture && !u.profile_picture.startsWith('http') ? (
+                        <span style={{ fontSize: '16px', lineHeight: '1' }}>{u.profile_picture}</span>
+                      ) : (
+                        <img
+                          src={getProfilePicture(u)}
+                          alt={u.name}
+                          style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                        />
+                      )}
+                      <span style={{ color: '#1E293B', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {u.discord_username || u.name}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>,
+            document.body
+          )}
+        </>
       )}
       
       <h4 style={{
@@ -401,7 +500,7 @@ export function SortableCard({
         color: '#0F172A',
         lineHeight: '1.5',
         letterSpacing: '-0.01em',
-        paddingRight: '32px',
+        paddingRight: isAdmin ? '108px' : '32px',
         paddingLeft: '32px',
       }}>
         {short.title}
@@ -486,99 +585,6 @@ export function SortableCard({
           </div>
         </div>
       ) : null}
-      
-      {/* Assign Menu (Admin only) */}
-      {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && showAssignMenu && assignMenuPosition && (
-        <div
-          className="assign-menu"
-          style={{
-            position: 'fixed',
-            top: `${assignMenuPosition.top}px`,
-            right: `${assignMenuPosition.right}px`,
-            background: 'white',
-            border: '1px solid #E2E8F0',
-            borderRadius: '12px',
-            padding: '12px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
-            zIndex: 10000,
-            minWidth: '280px',
-            maxWidth: '320px',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div style={{ 
-            fontSize: '13px', 
-            fontWeight: '700', 
-            marginBottom: '12px', 
-            color: '#0F172A',
-            letterSpacing: '-0.01em',
-          }}>
-            {(column.id === 'script' && scripter) || 
-             (column.id === 'clips' && clipper) || 
-             (column.id === 'editing' && editor)
-              ? `Reassign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
-              : `Assign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
-            }
-          </div>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px',
-          }}>
-            {users
-              .filter(u => {
-                if (column.id === 'script') {
-                  return u.roles?.includes('script_writer') || u.role === 'script_writer';
-                } else if (column.id === 'clips') {
-                  return u.roles?.includes('clipper') || u.role === 'clipper';
-                } else {
-                  return u.roles?.includes('editor') || u.role === 'editor';
-                }
-              })
-              .map(u => (
-                <div
-                  key={u.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
-                    onAssign(short.id, role, u.id);
-                    setShowAssignMenu(false);
-                    setAssignMenuPosition(null);
-                  }}
-                  style={{
-                    padding: '8px 10px',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease-in-out',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#F1F5F9';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'transparent';
-                  }}
-                >
-                  {u.profile_picture && !u.profile_picture.startsWith('http') ? (
-                    <span style={{ fontSize: '16px', lineHeight: '1' }}>{u.profile_picture}</span>
-                  ) : (
-                    <img
-                      src={getProfilePicture(u)}
-                      alt={u.name}
-                      style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                    />
-                  )}
-                  <span style={{ color: '#1E293B', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {u.discord_username || u.name}
-                  </span>
-                </div>
-              ))}
-          </div>
-        </div>
-      )}
       
       {/* Created timestamp in bottom right */}
       <div style={{
