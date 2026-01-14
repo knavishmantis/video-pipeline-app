@@ -163,7 +163,18 @@ export default function Dashboard() {
   };
 
   const getShortsForColumn = (columnId: ColumnType): Short[] => {
-    return shorts.filter(short => statusToColumn(short.status) === columnId);
+    const filtered = shorts.filter(short => statusToColumn(short.status) === columnId);
+    
+    // Sort 'clips' and 'script' columns by created_at (oldest first)
+    if (columnId === 'clips' || columnId === 'script') {
+      return [...filtered].sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateA - dateB; // Oldest first
+      });
+    }
+    
+    return filtered;
   };
 
   const handleDragStart = (event: DragStartEvent) => {

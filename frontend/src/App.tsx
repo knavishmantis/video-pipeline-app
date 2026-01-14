@@ -14,13 +14,24 @@ import YouTubeStats from './pages/YouTubeStats';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
+import { IconBrandYoutube } from '@tabler/icons-react';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen w-full overflow-hidden bg-gray-100">
       <SidebarNav />
       <div className="flex flex-1 overflow-hidden relative">
-        <div className="flex h-full w-full flex-1 flex-col gap-2 rounded-tl-2xl border border-neutral-200 bg-white p-2 md:p-10 overflow-y-auto">
+        <div className="flex h-full w-full flex-1 flex-col gap-2 rounded-tl-2xl border border-neutral-200 bg-white p-2 md:p-10 overflow-y-auto relative">
+          {/* YouTube icon in top right */}
+          <a
+            href="https://youtube.com/@knavishmantis"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute top-4 right-4 z-10 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            title="Visit YouTube Channel"
+          >
+            <IconBrandYoutube className="h-6 w-6" />
+          </a>
           {children}
         </div>
       </div>

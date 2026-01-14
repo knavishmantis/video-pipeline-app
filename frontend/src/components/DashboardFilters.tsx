@@ -160,6 +160,15 @@ export function DashboardFilters({
           Uploaded/Scheduled
         </button>
       </div>
+      
+      {/* Note about processing order */}
+      <span style={{
+        fontSize: '12px',
+        color: '#64748B',
+        marginLeft: '8px',
+      }}>
+        Please work on shorts from top to bottom (oldest first) when possible <span style={{ fontSize: '16px' }}>😊</span>
+      </span>
     </div>
   );
 }

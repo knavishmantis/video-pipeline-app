@@ -130,7 +130,7 @@ export function SortableCard({
       }
     }
     
-    const StatusIcon = ({ color, title, isCheckmark, isUnassigned }: { color: string; title: string; isCheckmark: boolean; isUnassigned?: boolean }) => (
+    const StatusIcon = ({ color, title, isCheckmark, isUnassigned, isChanges }: { color: string; title: string; isCheckmark: boolean; isUnassigned?: boolean; isChanges?: boolean }) => (
       <div style={{
         position: 'absolute',
         top: '8px',
@@ -154,6 +154,12 @@ export function SortableCard({
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="12" y1="8" x2="12" y2="16"></line>
           </svg>
+        ) : isChanges ? (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
         ) : (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
@@ -163,10 +169,22 @@ export function SortableCard({
       </div>
     );
     
+    // Check for changes columns first (these should always show an icon)
+    if (column.id === 'clip_changes') {
+      return <StatusIcon color="#9333EA" title="Changes requested" isCheckmark={false} isChanges />;
+    }
+    if (column.id === 'editing_changes') {
+      return <StatusIcon color="#9333EA" title="Changes requested" isCheckmark={false} isChanges />;
+    }
+    // Check for uploaded column (should always show an icon)
+    if (column.id === 'uploaded') {
+      return <StatusIcon color="#84CC16" title="Uploaded/Scheduled" isCheckmark />;
+    }
+    
     // Check for incomplete and unassigned
     const scriptUnassigned = column.id === 'script' && !scripter && (!hasScript || !hasAudio);
-    const clipsUnassigned = (column.id === 'clips' || column.id === 'clip_changes') && !clipper && !hasClipsZip;
-    const editingUnassigned = (column.id === 'editing' || column.id === 'editing_changes') && !editor && !hasFinalVideo;
+    const clipsUnassigned = column.id === 'clips' && !clipper && !hasClipsZip;
+    const editingUnassigned = column.id === 'editing' && !editor && !hasFinalVideo;
     
     if (scriptUploaded) return <StatusIcon color="#10B981" title="Script & Audio uploaded" isCheckmark />;
     if (scriptInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
@@ -550,6 +568,18 @@ export function SortableCard({
           )}
         </div>
       )}
+      
+      {/* Created timestamp in bottom right */}
+      <div style={{
+        position: 'absolute',
+        bottom: '8px',
+        right: '8px',
+        fontSize: '10px',
+        color: '#94A3B8',
+        whiteSpace: 'nowrap',
+      }}>
+        {new Date(short.created_at).toLocaleDateString()}
+      </div>
     </div>
   );
 }
