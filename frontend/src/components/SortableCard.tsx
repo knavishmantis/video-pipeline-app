@@ -335,14 +335,17 @@ export function SortableCard({
           ref={assignButtonRef}
           onClick={(e) => {
             e.stopPropagation();
-            if (!showAssignMenu && assignButtonRef.current) {
+            const newShowState = !showAssignMenu;
+            if (newShowState && assignButtonRef.current) {
               const rect = assignButtonRef.current.getBoundingClientRect();
               setAssignMenuPosition({
                 top: rect.bottom + 4,
                 right: window.innerWidth - rect.right,
               });
+            } else if (!newShowState) {
+              setAssignMenuPosition(null);
             }
-            setShowAssignMenu(!showAssignMenu);
+            setShowAssignMenu(newShowState);
           }}
           style={{
             position: 'absolute',
