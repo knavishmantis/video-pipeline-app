@@ -489,7 +489,7 @@ export const shortsController = {
       const short = shortResult.rows[0];
       
       // Check if short is in clips stage
-      if (short.status !== 'clips' && short.status !== 'clip_changes') {
+      if (short.status !== 'clipping' && short.status !== 'clips' && short.status !== 'clip_changes') {
         res.status(400).json({ error: 'Short must be in clips stage to mark as complete' });
         return;
       }

@@ -616,7 +616,7 @@ export default function Dashboard() {
       } else if (viewType === 'editing') {
         columnsToToggle = ['editing', 'editing_changes'];
       } else if (viewType === 'uploaded') {
-        columnsToToggle = ['uploaded'];
+        columnsToToggle = ['ready_to_upload', 'uploaded'];
       }
       
       const allVisible = columnsToToggle.every(col => newSet.has(col));
@@ -782,7 +782,7 @@ export default function Dashboard() {
         zIndex: 10,
         fontFamily: 'monospace',
       }}>
-        v1.1.8
+        v1.1.9
       </div>
     </React.Fragment>
   );

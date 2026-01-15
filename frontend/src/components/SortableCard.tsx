@@ -174,6 +174,10 @@ export function SortableCard({
     if (column.id === 'editing_changes') {
       return <StatusIcon color="#9333EA" title="Changes requested" isCheckmark={false} isChanges />;
     }
+    // Check for ready_to_upload column (should always show an icon)
+    if (column.id === 'ready_to_upload') {
+      return <StatusIcon color="#F59E0B" title="Ready to Upload" isCheckmark />;
+    }
     // Check for uploaded column (should always show an icon)
     if (column.id === 'uploaded') {
       return <StatusIcon color="#84CC16" title="Uploaded/Scheduled" isCheckmark />;

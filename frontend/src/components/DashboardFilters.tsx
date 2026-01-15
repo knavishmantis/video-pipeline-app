@@ -229,29 +229,29 @@ export function DashboardFilters({
           onClick={() => toggleColumnView('uploaded')}
           style={{
             padding: '8px 16px',
-            background: visibleColumns.has('uploaded') 
+            background: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) 
               ? 'linear-gradient(135deg, #84CC16 0%, #65A30D 100%)' 
               : 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
-            color: visibleColumns.has('uploaded') ? '#FFFFFF' : '#475569',
-            border: visibleColumns.has('uploaded') ? 'none' : '1px solid #E2E8F0',
+            color: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) ? '#FFFFFF' : '#475569',
+            border: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) ? 'none' : '1px solid #E2E8F0',
             borderRadius: '8px',
             cursor: 'pointer',
             fontSize: '13px',
             fontWeight: '600',
             transition: 'all 0.2s ease-in-out',
-            boxShadow: visibleColumns.has('uploaded') 
+            boxShadow: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) 
               ? '0 2px 4px rgba(132, 204, 22, 0.3)' 
               : '0 1px 2px rgba(0, 0, 0, 0.05)',
           }}
           onMouseEnter={(e) => {
-            if (!visibleColumns.has('uploaded')) {
+            if (!visibleColumns.has('ready_to_upload') && !visibleColumns.has('uploaded')) {
               e.currentTarget.style.background = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
               e.currentTarget.style.transform = 'translateY(-1px)';
               e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
             }
           }}
           onMouseLeave={(e) => {
-            if (!visibleColumns.has('uploaded')) {
+            if (!visibleColumns.has('ready_to_upload') && !visibleColumns.has('uploaded')) {
               e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
