@@ -22,13 +22,30 @@ export function loadGradingCriteria(): string {
   }
 
   try {
-    const criteriaPath = path.join(__dirname, '../../script-grading-criteria.md');
+    // In production (compiled), __dirname is /app/dist/backend/src/services
+    // We need to go up 4 levels to reach /app where the file is copied
+    // In development, __dirname is the source directory, so we need a different path
+    let criteriaPath: string;
+    if (__dirname.includes('dist')) {
+      // Production: from /app/dist/backend/src/services to /app/script-grading-criteria.md
+      criteriaPath = path.join(__dirname, '../../../../script-grading-criteria.md');
+    } else {
+      // Development: from src/services to backend/script-grading-criteria.md
+      criteriaPath = path.join(__dirname, '../../script-grading-criteria.md');
+    }
+    
     logger.debug('Loading grading criteria from', { path: criteriaPath, __dirname });
     cachedCriteria = fs.readFileSync(criteriaPath, 'utf-8');
     logger.info('Grading criteria loaded successfully', { length: cachedCriteria.length });
     return cachedCriteria;
   } catch (error: any) {
-    const criteriaPath = path.join(__dirname, '../../script-grading-criteria.md');
+    let criteriaPath: string;
+    if (__dirname.includes('dist')) {
+      criteriaPath = path.join(__dirname, '../../../../script-grading-criteria.md');
+    } else {
+      criteriaPath = path.join(__dirname, '../../script-grading-criteria.md');
+    }
+    
     logger.error('Failed to load grading criteria', { 
       error: error.message,
       path: criteriaPath,

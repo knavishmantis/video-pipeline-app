@@ -135,9 +135,18 @@ export const scriptGradingController = {
 
       res.json(gradingResult);
     } catch (error: any) {
-      logger.error('Grade script error', { error, userId: req.userId });
+      const errorMessage = error?.message || String(error) || 'Unknown error';
+      const errorStack = error?.stack || 'No stack trace';
+      const errorName = error?.name || 'Error';
       
-      if (error.message?.includes('access token')) {
+      logger.error('Grade script error', { 
+        error: errorMessage,
+        errorName,
+        errorStack: errorStack.substring(0, 1000), // Limit stack trace size
+        userId: req.userId,
+      });
+      
+      if (errorMessage?.includes('access token')) {
         res.status(500).json({ 
           error: 'Authentication failed',
           details: 'Failed to authenticate with AI service. Please check service account permissions.'
@@ -145,17 +154,25 @@ export const scriptGradingController = {
         return;
       }
 
-      if (error.message?.includes('Vertex AI API error')) {
+      if (errorMessage?.includes('Vertex AI API error') || errorMessage?.includes('Vertex AI')) {
         res.status(500).json({ 
           error: 'AI service error',
-          details: error.message
+          details: errorMessage
+        });
+        return;
+      }
+
+      if (errorMessage?.includes('grading criteria')) {
+        res.status(500).json({ 
+          error: 'Configuration error',
+          details: 'Failed to load grading criteria. Please contact support.'
         });
         return;
       }
 
       res.status(500).json({ 
         error: 'Failed to grade script',
-        details: error.message || 'An unexpected error occurred'
+        details: errorMessage || 'An unexpected error occurred'
       });
     }
   },
