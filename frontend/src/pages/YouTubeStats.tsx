@@ -272,30 +272,29 @@ export default function YouTubeStats() {
   const filteredStats = useMemo(() => {
     if (!stats) return null;
     
-    if (timeFilter === 'all') {
-      // For 'all', calculate totals from all videos
-      const totalViews = allVideos.reduce((sum, v) => sum + v.rawViewCount, 0);
-      const totalLikes = allVideos.reduce((sum, v) => sum + v.rawLikeCount, 0);
-      const totalComments = allVideos.reduce((sum, v) => sum + v.rawCommentCount, 0);
-      const videoCount = allVideos.length;
+    const videosToUse = timeFilter === 'all' ? allVideos : filteredAndSortedVideos;
+    const totalViews = videosToUse.reduce((sum, v) => sum + v.rawViewCount, 0);
+    const totalLikes = videosToUse.reduce((sum, v) => sum + v.rawLikeCount, 0);
+    const totalComments = videosToUse.reduce((sum, v) => sum + v.rawCommentCount, 0);
+    const videoCount = videosToUse.length;
 
-      return {
-        ...stats,
-        viewCount: formatNumber(totalViews),
-        videoCount: formatNumber(videoCount),
-        likeCount: formatNumber(totalLikes),
-        commentCount: formatNumber(totalComments),
-        rawViewCount: totalViews,
-        rawVideoCount: videoCount,
-        rawLikeCount: totalLikes,
-        rawCommentCount: totalComments,
-      };
+    // Calculate posting frequency: days from first video to now / number of videos
+    let postingFrequency: string = 'N/A';
+    if (videosToUse.length > 0) {
+      const videoDates = videosToUse.map(v => new Date(v.publishedAt).getTime());
+      const oldestDate = Math.min(...videoDates);
+      const now = Date.now();
+      const daysDiff = (now - oldestDate) / (1000 * 60 * 60 * 24); // Convert ms to days
+      const daysPerVideo = daysDiff / videoCount;
+      
+      if (daysPerVideo < 1) {
+        postingFrequency = '< 1';
+      } else if (daysPerVideo < 10) {
+        postingFrequency = daysPerVideo.toFixed(1);
+      } else {
+        postingFrequency = Math.round(daysPerVideo).toString();
+      }
     }
-
-    const totalViews = filteredAndSortedVideos.reduce((sum, v) => sum + v.rawViewCount, 0);
-    const totalLikes = filteredAndSortedVideos.reduce((sum, v) => sum + v.rawLikeCount, 0);
-    const totalComments = filteredAndSortedVideos.reduce((sum, v) => sum + v.rawCommentCount, 0);
-    const videoCount = filteredAndSortedVideos.length;
 
     return {
       ...stats,
@@ -303,6 +302,7 @@ export default function YouTubeStats() {
       videoCount: formatNumber(videoCount),
       likeCount: formatNumber(totalLikes),
       commentCount: formatNumber(totalComments),
+      postingFrequency,
       rawViewCount: totalViews,
       rawVideoCount: videoCount,
       rawLikeCount: totalLikes,
@@ -495,6 +495,21 @@ export default function YouTubeStats() {
               </div>
               <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
                 {timeFilter === 'all' ? 'Total Comments' : 'Filtered Comments'}
+              </div>
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '24px', 
+              background: 'white', 
+              borderRadius: '12px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            }}>
+              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
+                1 every {filteredStats.postingFrequency}
+              </div>
+              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
+                {timeFilter === 'all' ? 'Days per Short' : 'Days per Short'}
               </div>
             </div>
           </div>
