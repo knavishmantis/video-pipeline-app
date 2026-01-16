@@ -180,8 +180,19 @@ Now grade ONLY the "Main Script" portion according to the criteria above. Ignore
     });
 
     return jsonText;
-  } catch (error) {
-    logger.error('Failed to grade script with Vertex AI', { error });
+  } catch (error: any) {
+    const errorMessage = error?.message || String(error) || 'Unknown error';
+    const errorStack = error?.stack || 'No stack trace';
+    const errorName = error?.name || 'Error';
+    
+    logger.error('Failed to grade script with Vertex AI', { 
+      error: errorMessage,
+      errorName,
+      errorStack: errorStack.substring(0, 1000), // Limit stack trace size
+      code: error?.code,
+      projectId: PROJECT_ID,
+      model: MODEL,
+    });
     throw error;
   }
 }
