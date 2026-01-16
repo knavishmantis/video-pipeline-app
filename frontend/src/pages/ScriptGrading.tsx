@@ -105,8 +105,16 @@ export default function ScriptGrading() {
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || errorData.details || 'Failed to grade PDF');
+          let errorMessage = 'Failed to grade PDF';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.details || errorMessage;
+          } catch (parseError) {
+            // If response is not JSON, try to get text
+            const errorText = await response.text();
+            errorMessage = errorText || errorMessage;
+          }
+          throw new Error(errorMessage);
         }
         
         gradingResult = await response.json();

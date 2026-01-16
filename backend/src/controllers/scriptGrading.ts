@@ -3,10 +3,13 @@ import { AuthRequest } from '../middleware/auth';
 import { gradeScript } from '../services/vertexAI';
 import { logger } from '../utils/logger';
 import { query } from '../db';
-import { PDFParse } from 'pdf-parse';
 
+// Lazy import pdf-parse to avoid startup issues
 // Wrapper function for pdf-parse v2.x class-based API
 async function pdfParse(buffer: Buffer): Promise<{ text: string }> {
+  // Dynamic import to avoid loading pdf-parse at module initialization
+  // This prevents startup crashes in Cloud Run
+  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: buffer });
   const result = await parser.getText();
   return { text: result.text || '' };

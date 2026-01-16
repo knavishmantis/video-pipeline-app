@@ -91,21 +91,34 @@ Now grade ONLY the "Main Script" portion according to the criteria above. Ignore
       }),
     });
 
+    const responseText = await response.text();
+    
     if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('Vertex AI API error', { status: response.status, error: errorText });
-      throw new Error(`Vertex AI API error: ${response.status} - ${errorText}`);
+      let errorText: string;
+      try {
+        const errorData = JSON.parse(responseText);
+        errorText = typeof errorData === 'string' ? errorData : JSON.stringify(errorData);
+      } catch {
+        errorText = responseText;
+      }
+      logger.error('Vertex AI API error', { 
+        status: response.status, 
+        statusText: response.statusText,
+        error: errorText.substring(0, 1000) // Limit log size
+      });
+      throw new Error(`Vertex AI API error: ${response.status} ${response.statusText} - ${errorText.substring(0, 500)}`);
     }
 
-    const data = await response.json() as {
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{
-            text?: string;
-          }>;
-        };
-      }>;
-    };
+    let data: any;
+    try {
+      data = JSON.parse(responseText);
+    } catch (jsonError) {
+      logger.error('Failed to parse Vertex AI response as JSON', { 
+        error: jsonError,
+        responsePreview: responseText.substring(0, 500)
+      });
+      throw new Error(`Invalid response from Vertex AI API: ${responseText.substring(0, 200)}`);
+    }
     
     if (!data.candidates || data.candidates.length === 0) {
       throw new Error('No response from Gemini API');
