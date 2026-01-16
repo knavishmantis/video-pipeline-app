@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconBrain } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { usersApi, filesApi } from "../services/api";
@@ -180,6 +180,15 @@ export function SidebarNav() {
         <IconBrandYoutube className="h-5 w-5 shrink-0 text-neutral-900" />
       ),
     },
+    ...(isAdmin ? [
+      {
+        label: "Script Grading",
+        href: "/script-grading",
+        icon: (
+          <IconBrain className="h-5 w-5 shrink-0 text-neutral-900" />
+        ),
+      },
+    ] : []),
     ...((isClipper || isAdmin) ? [
       {
         label: "Flashback Reference",

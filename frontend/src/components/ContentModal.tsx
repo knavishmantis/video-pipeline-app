@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Short, Assignment, User, File as FileInterface } from '../../../shared/types';
 import { ColumnType, columns } from '../utils/dashboardUtils';
 import { filesApi, shortsApi } from '../services/api';
@@ -59,6 +60,8 @@ export function ContentModal({
   loadData,
   setContentShort,
 }: ContentModalProps) {
+  const navigate = useNavigate();
+  
   if (!isOpen || !contentShort || !contentColumn) return null;
 
   // Helper function to render download button with progress
@@ -231,6 +234,57 @@ export function ContentModal({
                 
                 return (
                   <>
+                    {/* Grade Script Button (Admin only, when PDF exists) */}
+                    {isAdmin && scriptPdf && (
+                      <div style={{
+                        marginBottom: '16px',
+                        padding: '14px',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        borderRadius: '10px',
+                        border: '1px solid #6366f1',
+                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                      }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
+                          Script Grading:
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#E0E7FF', marginBottom: '12px' }}>
+                          {contentShort.script_rating !== null && contentShort.script_rating !== undefined
+                            ? `Current Rating: ${Number(contentShort.script_rating).toFixed(1)}/10`
+                            : 'Script has not been graded yet'}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigate(`/script-grading?shortId=${contentShort.id}`);
+                            onClose();
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#6366f1',
+                            background: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease-in-out',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                          }}
+                        >
+                          ⭐ {contentShort.script_rating !== null && contentShort.script_rating !== undefined ? 'Re-grade Script' : 'Grade Script'}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Assignments Section - Always show */}
                     {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{
@@ -705,6 +759,57 @@ export function ContentModal({
                       </div>
                     )}
                     
+                    {/* Grade Script Button (Admin only, when PDF exists) - For clips/editing stages */}
+                    {isAdmin && scriptPdf && (
+                      <div style={{
+                        marginBottom: '16px',
+                        padding: '14px',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        borderRadius: '10px',
+                        border: '1px solid #6366f1',
+                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                      }}>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
+                          Script Grading:
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#E0E7FF', marginBottom: '12px' }}>
+                          {contentShort.script_rating !== null && contentShort.script_rating !== undefined
+                            ? `Current Rating: ${Number(contentShort.script_rating).toFixed(1)}/10`
+                            : 'Script has not been graded yet'}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigate(`/script-grading?shortId=${contentShort.id}`);
+                            onClose();
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '10px 16px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#6366f1',
+                            background: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease-in-out',
+                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                          }}
+                        >
+                          ⭐ {contentShort.script_rating !== null && contentShort.script_rating !== undefined ? 'Re-grade Script' : 'Grade Script'}
+                        </button>
+                      </div>
+                    )}
+
                     {/* Assignments Section - Always show */}
                     {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{

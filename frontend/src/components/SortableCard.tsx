@@ -590,7 +590,7 @@ export function SortableCard({
         </div>
       ) : null}
       
-      {/* Created timestamp in bottom right */}
+      {/* Created timestamp and script rating in bottom right */}
       <div style={{
         position: 'absolute',
         bottom: '10px',
@@ -600,8 +600,30 @@ export function SortableCard({
         whiteSpace: 'nowrap',
         fontWeight: '500',
         letterSpacing: '0.01em',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: '8px',
       }}>
-        {new Date(short.created_at).toLocaleDateString()}
+        {short.script_rating !== null && short.script_rating !== undefined && (() => {
+          const rating = Number(short.script_rating);
+          let color = '#64748B'; // default gray
+          if (rating >= 8) {
+            color = '#10B981'; // green
+          } else if (rating >= 6) {
+            color = '#F59E0B'; // yellow/orange
+          } else if (rating >= 4) {
+            color = '#EF4444'; // red
+          } else {
+            color = '#DC2626'; // dark red
+          }
+          return (
+            <span style={{ color }}>
+              Script Rating: {rating.toFixed(1)}
+            </span>
+          );
+        })()}
+        <span>{new Date(short.created_at).toLocaleDateString()}</span>
       </div>
     </div>
   );

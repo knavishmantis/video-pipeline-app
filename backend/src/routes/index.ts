@@ -5,6 +5,7 @@ import { assignmentsRouter } from './assignments';
 import { filesRouter } from './files';
 import { paymentsRouter } from './payments';
 import { authRouter } from './auth';
+import { scriptGradingRouter } from './scriptGrading';
 
 export function setupRoutes(app: Express): void {
   app.use('/api/auth', authRouter);
@@ -13,5 +14,6 @@ export function setupRoutes(app: Express): void {
   app.use('/api/assignments', assignmentsRouter);
   app.use('/api/files', filesRouter);
   app.use('/api/payments', paymentsRouter);
+  app.use('/api/script-grading', scriptGradingRouter);
 }
 

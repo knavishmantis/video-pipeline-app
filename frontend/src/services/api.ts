@@ -8,7 +8,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // 30 second timeout (increased for OAuth verification)
+  timeout: 120000, // 2 minute timeout (increased for AI grading which can take time)
 });
 
 // Request interceptor: Add token and handle FormData Content-Type
@@ -294,6 +294,29 @@ export const paymentsApi = {
   },
   getStats: async (params?: { user_id?: number; month?: number; year?: number }): Promise<any> => {
     const response = await api.get('/payments/stats', { params });
+    return response.data;
+  },
+};
+
+export interface GradingResponse {
+  total_score: number;
+  rating: number;
+  categories: Array<{
+    name: string;
+    score: number;
+    max_score: number;
+    reason: string;
+  }>;
+  overall_feedback: string;
+  priority_fixes: string[];
+  error?: boolean;
+  message?: string;
+  suggestion?: string;
+}
+
+export const scriptGradingApi = {
+  gradeScript: async (scriptText: string, shortId?: number): Promise<GradingResponse> => {
+    const response = await api.post('/script-grading/grade', { scriptText, shortId });
     return response.data;
   },
 };

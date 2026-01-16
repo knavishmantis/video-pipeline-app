@@ -499,6 +499,22 @@ export default function Dashboard() {
       showAlert('Download URL not available', { type: 'error' });
       return;
     }
+    
+    // For files larger than 5GB, use direct download (browser can't handle Blobs >2GB)
+    const FILE_SIZE_LIMIT = 5 * 1024 * 1024 * 1024; // 5GB
+    if (file.file_size && file.file_size > FILE_SIZE_LIMIT) {
+      // Use direct download for large files
+      const link = document.createElement('a');
+      link.href = file.download_url;
+      link.download = file.file_name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Download started', 'success');
+      return;
+    }
+    
     try {
       setDownloading(file.id);
       setDownloadProgress(0);
@@ -782,7 +798,7 @@ export default function Dashboard() {
         zIndex: 10,
         fontFamily: 'monospace',
       }}>
-        v1.1.9
+        v2.0
       </div>
     </React.Fragment>
   );

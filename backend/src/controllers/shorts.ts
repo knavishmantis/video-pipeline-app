@@ -385,6 +385,14 @@ export const shortsController = {
         
         // Validate file requirements and completion status based on target status
         if (input.status === 'clipping' || input.status === 'clips') {
+          // Check if moving from script status - require script rating
+          if (short.status === 'script' && !short.script_rating) {
+            res.status(400).json({ 
+              error: 'Cannot move to clipping stage. Script must be graded (have a script rating) before moving out of script column.' 
+            });
+            return;
+          }
+          
           const hasScript = files.some((f: any) => f.file_type === 'script' || f.file_type === 'script_pdf');
           const hasAudio = files.some((f: any) => f.file_type === 'audio');
           if (!hasScript) {
@@ -445,6 +453,10 @@ export const shortsController = {
         updates.push(`script_writer_id = $${paramCount++}`);
         params.push(input.script_writer_id);
       }
+      if (input.script_rating !== undefined) {
+        updates.push(`script_rating = $${paramCount++}`);
+        params.push(input.script_rating);
+      }
       
       if (updates.length === 0) {
         res.status(400).json({ error: 'No fields to update' });
@@ -491,6 +503,12 @@ export const shortsController = {
       // Check if short is in clips stage
       if (short.status !== 'clipping' && short.status !== 'clips' && short.status !== 'clip_changes') {
         res.status(400).json({ error: 'Short must be in clips stage to mark as complete' });
+        return;
+      }
+      
+      // Require script rating before moving out of clips
+      if (!short.script_rating || short.script_rating === null) {
+        res.status(400).json({ error: 'Cannot mark clips complete. Script must be graded (have a script rating) before moving out of clips stage.' });
         return;
       }
       

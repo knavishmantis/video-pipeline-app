@@ -52,6 +52,14 @@ resource "google_project_service" "container_registry" {
   disable_on_destroy = false
 }
 
+# Enable Vertex AI API (for Gemini via Vertex AI)
+resource "google_project_service" "vertex_ai" {
+  project = var.project_id
+  service = "aiplatform.googleapis.com"
+  
+  disable_on_destroy = false
+}
+
 # Artifact Registry repository for Docker images
 # Using a standard repository name (gcr.io is a special format that auto-creates)
 # We'll create a proper Artifact Registry repository
@@ -249,6 +257,17 @@ resource "google_project_iam_member" "github_actions_artifact_registry_writer" {
   member  = "serviceAccount:${google_service_account.github_actions.email}"
 }
 
+# Grant service account permission to use Vertex AI (for Gemini API)
+resource "google_project_iam_member" "app_service_account_vertex_ai_user" {
+  project = var.project_id
+  role    = "roles/aiplatform.user"
+  member  = "serviceAccount:${google_service_account.app_service_account.email}"
+  
+  depends_on = [
+    google_project_service.vertex_ai
+  ]
+}
+
 # Service Account Key for GitHub Actions
 resource "google_service_account_key" "github_actions_key" {
   service_account_id = google_service_account.github_actions.id
@@ -316,4 +335,7 @@ output "github_actions_key_private_key" {
 # Helper: Save keys to files (run this after apply)
 # terraform output -raw service_account_key_private_key | base64 -d > ../backend/gcp-key-{env}.json
 # terraform output -raw github_actions_key_private_key | base64 -d > ../github-actions-key.json
+#
+# Note: Vertex AI Gemini uses service account authentication - no API key needed!
+# The service account (video-pipeline-dev/prod) has been granted aiplatform.user role
 

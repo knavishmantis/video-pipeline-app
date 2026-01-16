@@ -30,6 +30,7 @@ export interface Short {
   script_content?: string;
   script_writer_id?: number;
   status: ShortStatus;
+  script_rating?: number | null; // 0.0 to 10.0 rating from AI grading
   entered_clip_changes_at?: string | null;
   entered_editing_changes_at?: string | null;
   clips_completed_at?: string | null;
@@ -109,6 +110,7 @@ export interface UpdateShortInput {
   script_content?: string;
   status?: ShortStatus;
   script_writer_id?: number | null;
+  script_rating?: number; // 0.0 to 10.0
 }
 
 export interface CreateAssignmentInput {
