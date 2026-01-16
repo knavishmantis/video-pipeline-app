@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAlert } from '../hooks/useAlert';
 import { useToast } from '../hooks/useToast';
 import { scriptGradingApi, GradingResponse, filesApi } from '../services/api';
+import { File as FileInterface } from '../../../shared/types';
 
 export default function ScriptGrading() {
   const [searchParams] = useSearchParams();
@@ -11,7 +12,7 @@ export default function ScriptGrading() {
   const shortId = shortIdParam ? parseInt(shortIdParam, 10) : null;
 
   const [scriptText, setScriptText] = useState('');
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfFile, setPdfFile] = useState<globalThis.File | null>(null);
   const [pdfFileName, setPdfFileName] = useState<string>('');
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [grading, setGrading] = useState(false);
@@ -27,8 +28,8 @@ export default function ScriptGrading() {
       
       setLoadingPdf(true);
       try {
-        const files = await filesApi.getByShortId(shortId);
-        const scriptPdf = files.find(f => f.file_type === 'script' || f.file_type === 'script_pdf');
+        const files: FileInterface[] = await filesApi.getByShortId(shortId);
+        const scriptPdf: FileInterface | undefined = files.find((f: FileInterface) => f.file_type === 'script');
         
         if (!scriptPdf || !scriptPdf.download_url) {
           showAlert('No script PDF found for this short', { type: 'warning' });
@@ -42,7 +43,7 @@ export default function ScriptGrading() {
         }
         
         const blob = await response.blob();
-        const file = new File([blob], scriptPdf.file_name || 'script.pdf', { type: 'application/pdf' });
+        const file = new globalThis.File([blob], scriptPdf.file_name || 'script.pdf', { type: 'application/pdf' });
         setPdfFile(file);
         setPdfFileName(scriptPdf.file_name || 'script.pdf');
         setScriptText(''); // Clear text input
@@ -608,8 +609,8 @@ export default function ScriptGrading() {
       </div>
       )}
 
-      {AlertComponent}
-      {ToastComponent}
+      <AlertComponent />
+      <ToastComponent />
     </div>
   );
 }

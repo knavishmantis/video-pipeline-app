@@ -123,7 +123,7 @@ export const assignmentsApi = {
 };
 
 export const filesApi = {
-  getByShortId: async (shortId: number): Promise<File[]> => {
+  getByShortId: async (shortId: number): Promise<FileType[]> => {
     const response = await api.get(`/files/short/${shortId}`);
     return response.data;
   },
