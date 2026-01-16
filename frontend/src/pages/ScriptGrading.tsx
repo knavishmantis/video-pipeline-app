@@ -94,9 +94,10 @@ export default function ScriptGrading() {
         }
         
         // Use fetch directly to handle multipart/form-data
-        // Get auth token from API instance config or localStorage
+        // Use the same API URL as the api service
+        const API_URL = import.meta.env.VITE_API_URL || '/api';
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/script-grading/grade', {
+        const response = await fetch(`${API_URL}/script-grading/grade`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

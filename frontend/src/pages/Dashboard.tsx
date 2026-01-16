@@ -700,6 +700,39 @@ export default function Dashboard() {
         isAdmin={isAdmin}
       />
 
+      {loading && (
+        <div style={{
+          position: 'fixed',
+          bottom: '16px',
+          right: '16px',
+          zIndex: 1000,
+          background: 'white',
+          padding: '8px 12px',
+          borderRadius: '6px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          border: '1px solid #E5E7EB',
+        }}>
+          <div style={{
+            width: '16px',
+            height: '16px',
+            border: '2px solid #E5E7EB',
+            borderTopColor: '#3B82F6',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <span style={{
+            fontSize: '13px',
+            fontWeight: '500',
+            color: '#64748B',
+          }}>
+            Loading...
+          </span>
+        </div>
+      )}
+
       <KanbanBoard
         filteredColumns={filteredColumns}
         shorts={shorts}
