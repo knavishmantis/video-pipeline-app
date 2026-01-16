@@ -13,6 +13,7 @@ filesRouter.get('/short/:shortId', filesController.getByShortId);
 filesRouter.post('/upload', uploadLimiter, ...filesController.upload);
 filesRouter.post('/upload-url', uploadLimiter, filesController.getUploadUrl);
 filesRouter.post('/confirm-upload', uploadLimiter, filesController.confirmUpload);
+filesRouter.get('/:id/signed-url', filesController.getSignedUrlForFile);
 filesRouter.delete('/:id', filesController.delete);
 filesRouter.get('/:id/download', filesController.download);
 

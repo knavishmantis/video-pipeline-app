@@ -262,6 +262,61 @@ export const filesController = {
     }
   },
 
+  async getSignedUrlForFile(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const db = getPool();
+      
+      const result = await db.query('SELECT * FROM files WHERE id = $1', [id]);
+      
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'File not found' });
+        return;
+      }
+      
+      const file = result.rows[0];
+      
+      if (!file.gcp_bucket_path) {
+        res.status(400).json({ error: 'File does not have a bucket path' });
+        return;
+      }
+      
+      // Check permissions: admin or assigned user
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      
+      if (!isAdmin && req.userId) {
+        // Check if user is assigned to this short
+        const assignmentResult = await db.query(
+          `SELECT * FROM assignments 
+           WHERE short_id = $1 AND user_id = $2 AND role IN ('clipper', 'editor', 'script_writer')`,
+          [file.short_id, req.userId]
+        );
+        
+        // Also check if user is the script writer
+        const shortResult = await db.query(
+          'SELECT script_writer_id FROM shorts WHERE id = $1',
+          [file.short_id]
+        );
+        
+        const isScriptWriter = shortResult.rows.length > 0 && 
+                               shortResult.rows[0].script_writer_id === req.userId;
+        
+        if (assignmentResult.rows.length === 0 && !isScriptWriter) {
+          res.status(403).json({ error: 'You do not have permission to access this file' });
+          return;
+        }
+      }
+      
+      // Generate signed URL (1 hour expiry)
+      const url = await getSignedUrl(file.gcp_bucket_path, 3600);
+      
+      res.json({ download_url: url });
+    } catch (error) {
+      logger.error('Get signed URL error', { fileId: id, error });
+      res.status(500).json({ error: 'Failed to generate signed URL' });
+    }
+  },
+
   async delete(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params;
     try {

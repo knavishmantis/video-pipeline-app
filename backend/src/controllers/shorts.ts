@@ -2,7 +2,6 @@ import { Response } from 'express';
 import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { Short, CreateShortInput, UpdateShortInput } from '../../../shared/types';
-import { getSignedUrl } from '../services/gcpStorage';
 import { processProfilePicture } from '../utils/profilePicture';
 import { logger } from '../utils/logger';
 
@@ -73,48 +72,15 @@ export const shortsController = {
         shortIds
       );
       
-      // Group files by short_id
+      // Group files by short_id (without signed URLs - lazy load them when needed)
       const filesByShortId = new Map<number, any[]>();
       allFilesResult.rows.forEach((file: any) => {
         if (!filesByShortId.has(file.short_id)) {
           filesByShortId.set(file.short_id, []);
         }
-        filesByShortId.get(file.short_id)!.push(file);
+        // Don't generate signed URLs here - they'll be fetched on demand
+        filesByShortId.get(file.short_id)!.push({ ...file, download_url: null });
       });
-      
-      // Batch generate signed URLs for all files (do this in parallel batches to avoid overwhelming GCP)
-      const allFiles = allFilesResult.rows;
-      const BATCH_SIZE = 10; // Process 10 files at a time
-      const filesWithUrlsMap = new Map();
-      
-      for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
-        const batch = allFiles.slice(i, i + BATCH_SIZE);
-        const batchResults = await Promise.all(
-          batch.map(async (file: any) => {
-            try {
-              if (!file.gcp_bucket_path) {
-                logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
-                return { fileId: file.id, file: { ...file, download_url: null } };
-              }
-              const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-              return { fileId: file.id, file: { ...file, download_url: url } };
-            } catch (error) {
-              logger.error(`Failed to get signed URL for file ${file.id}`, { 
-                fileId: file.id, 
-                fileName: file.file_name,
-                bucketPath: file.gcp_bucket_path,
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined
-              });
-              return { fileId: file.id, file: { ...file, download_url: null } };
-            }
-          })
-        );
-        
-        batchResults.forEach(({ fileId, file }) => {
-          filesWithUrlsMap.set(fileId, file);
-        });
-      }
       
       // Combine data
       const shortsWithWriters = result.rows.map((short: any) => {
@@ -123,7 +89,7 @@ export const shortsController = {
         }
         
         const files = filesByShortId.get(short.id) || [];
-        short.files = files.map((file: any) => filesWithUrlsMap.get(file.id) || { ...file, download_url: null });
+        short.files = files;
         
         // Note: entered_clip_changes_at and entered_editing_changes_at are already in the short from the initial query
         return short;
@@ -190,48 +156,15 @@ export const shortsController = {
         shortIds
       );
       
-      // Group files by short_id
+      // Group files by short_id (without signed URLs - lazy load them when needed)
       const filesByShortId = new Map<number, any[]>();
       allFilesResult.rows.forEach((file: any) => {
         if (!filesByShortId.has(file.short_id)) {
           filesByShortId.set(file.short_id, []);
         }
-        filesByShortId.get(file.short_id)!.push(file);
+        // Don't generate signed URLs here - they'll be fetched on demand
+        filesByShortId.get(file.short_id)!.push({ ...file, download_url: null });
       });
-      
-      // Batch generate signed URLs for all files
-      const allFiles = allFilesResult.rows;
-      const BATCH_SIZE = 10;
-      const filesWithUrlsMap = new Map();
-      
-      for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
-        const batch = allFiles.slice(i, i + BATCH_SIZE);
-        const batchResults = await Promise.all(
-          batch.map(async (file: any) => {
-            try {
-              if (!file.gcp_bucket_path) {
-                logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
-                return { fileId: file.id, file: { ...file, download_url: null } };
-              }
-              const url = await getSignedUrl(file.gcp_bucket_path, 3600);
-              return { fileId: file.id, file: { ...file, download_url: url } };
-            } catch (error) {
-              logger.error(`Failed to get signed URL for file ${file.id}`, { 
-                fileId: file.id, 
-                fileName: file.file_name,
-                bucketPath: file.gcp_bucket_path,
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined
-              });
-              return { fileId: file.id, file: { ...file, download_url: null } };
-            }
-          })
-        );
-        
-        batchResults.forEach(({ fileId, file }) => {
-          filesWithUrlsMap.set(fileId, file);
-        });
-      }
       
       // Combine data
       const shortsWithWriters = result.rows.map((short: any) => {
@@ -240,7 +173,7 @@ export const shortsController = {
         }
         
         const files = filesByShortId.get(short.id) || [];
-        short.files = files.map((file: any) => filesWithUrlsMap.get(file.id) || { ...file, download_url: null });
+        short.files = files;
         
         return short;
       });
@@ -362,31 +295,11 @@ export const shortsController = {
         [id]
       );
       
-      // Generate download URLs for each file
-      const filesWithUrls = await Promise.all(
-        filesResult.rows.map(async (file: any) => {
-          try {
-            if (!file.gcp_bucket_path) {
-              logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
-              return { ...file, download_url: null };
-            }
-            const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-            return { ...file, download_url: url };
-          } catch (error) {
-            logger.error('Failed to get signed URL for file', { 
-              fileId: file.id, 
-              fileName: file.file_name,
-              bucketPath: file.gcp_bucket_path,
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
-            });
-            return { ...file, download_url: null };
-          }
-        })
-      );
+      // Don't generate signed URLs here - they'll be fetched on demand
+      const files = filesResult.rows.map((file: any) => ({ ...file, download_url: null }));
       
       short.assignments = assignmentsWithUsers;
-      short.files = filesWithUrls;
+      short.files = files;
       
       res.json(short);
     } catch (error) {

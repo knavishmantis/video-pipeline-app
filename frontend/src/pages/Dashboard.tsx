@@ -495,7 +495,23 @@ export default function Dashboard() {
   };
 
   const handleDownloadFile = async (file: FileType) => {
-    if (!file.download_url) {
+    // Lazy load signed URL if not present
+    let downloadUrl = file.download_url;
+    if (!downloadUrl) {
+      try {
+        setDownloading(file.id);
+        downloadUrl = await filesApi.getSignedUrl(file.id);
+      } catch (error: any) {
+        console.error('Failed to get signed URL:', error);
+        showAlert('Failed to get download URL', { type: 'error' });
+        setDownloading(null);
+        return;
+      } finally {
+        setDownloading(null);
+      }
+    }
+    
+    if (!downloadUrl) {
       showAlert('Download URL not available', { type: 'error' });
       return;
     }
@@ -505,7 +521,7 @@ export default function Dashboard() {
     if (file.file_size && file.file_size > FILE_SIZE_LIMIT) {
       // Use direct download for large files
       const link = document.createElement('a');
-      link.href = file.download_url;
+      link.href = downloadUrl;
       link.download = file.file_name;
       link.target = '_blank';
       document.body.appendChild(link);
@@ -520,7 +536,7 @@ export default function Dashboard() {
       setDownloadProgress(0);
       
       // Fetch the file with progress tracking
-      const response = await fetch(file.download_url);
+      const response = await fetch(downloadUrl);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -831,7 +847,7 @@ export default function Dashboard() {
         zIndex: 10,
         fontFamily: 'monospace',
       }}>
-        v2.0
+        v2.1
       </div>
     </React.Fragment>
   );

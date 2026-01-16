@@ -349,30 +349,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Script PDF:
                               </div>
-                              {scriptPdf.download_url ? (
-                                renderDownloadButton(scriptPdf)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {scriptPdf.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(scriptPdf)}
                             </div>
                           )}
                           {audioFile && (
@@ -380,30 +357,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Audio MP3:
                               </div>
-                              {audioFile.download_url ? (
-                                renderDownloadButton(audioFile)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {audioFile.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(audioFile)}
                             </div>
                           )}
                         </div>
@@ -590,30 +544,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Editing Script of Short:
                               </div>
-                              {scriptPdf.download_url ? (
-                                renderDownloadButton(scriptPdf)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {scriptPdf.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(scriptPdf)}
                             </div>
                           )}
                           {audioFile && (
@@ -621,30 +552,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Audio of Short:
                               </div>
-                              {audioFile.download_url ? (
-                                renderDownloadButton(audioFile)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {audioFile.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(audioFile)}
                             </div>
                           )}
                         </div>
@@ -667,30 +575,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Editing Script of Short:
                               </div>
-                              {scriptPdf.download_url ? (
-                                renderDownloadButton(scriptPdf)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {scriptPdf.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(scriptPdf)}
                             </div>
                           )}
                           {audioFile && (
@@ -698,30 +583,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Audio of Short:
                               </div>
-                              {audioFile.download_url ? (
-                                renderDownloadButton(audioFile)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {audioFile.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(audioFile)}
                             </div>
                           )}
                           {clipsZip && (
@@ -729,30 +591,7 @@ export function ContentModal({
                               <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
                                 Flashback Clips of Short:
                               </div>
-                              {clipsZip.download_url ? (
-                                renderDownloadButton(clipsZip)
-                              ) : (
-                                <div style={{
-                                  width: '100%',
-                                  padding: '8px 12px',
-                                  background: '#FEF3C7',
-                                  color: '#92400E',
-                                  border: '1px solid #FCD34D',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 1px 2px rgba(245, 158, 11, 0.1)',
-                                  fontSize: '12px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '8px',
-                                }}>
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="8" x2="12" y2="12"></line>
-                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                  </svg>
-                                  {clipsZip.file_name} (Download unavailable)
-                                </div>
-                              )}
+                              {renderDownloadButton(clipsZip)}
                             </div>
                           )}
                         </div>
@@ -875,11 +714,10 @@ export function ContentModal({
                               )}
                             </div>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                              {currentFile.download_url && (
-                                <button
-                                  type="button"
-                                  onClick={() => onDownloadFile(currentFile)}
-                                  disabled={downloading === currentFile.id}
+                              <button
+                                type="button"
+                                onClick={() => onDownloadFile(currentFile)}
+                                disabled={downloading === currentFile.id}
                                   style={{
                                     padding: '6px 12px',
                                     background: downloading === currentFile.id ? '#9CA3AF' : '#3B82F6',
@@ -908,8 +746,7 @@ export function ContentModal({
                                     </svg>
                                   )}
                                   {downloading === currentFile.id && downloadProgress !== null ? `Downloading ${downloadProgress}%` : 'Download'}
-                                </button>
-                              )}
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => onDeleteFile(currentFile.id)}
@@ -988,7 +825,7 @@ export function ContentModal({
                                 </span>
                               )}
                             </div>
-                            {currentFile.download_url && ((contentColumn === 'clips' || contentColumn === 'clip_changes') ? canDownloadClips : canDownloadFinalVideo) && (
+                            {((contentColumn === 'clips' || contentColumn === 'clip_changes') ? canDownloadClips : canDownloadFinalVideo) && (
                               <button
                                 type="button"
                                 onClick={() => onDownloadFile(currentFile)}

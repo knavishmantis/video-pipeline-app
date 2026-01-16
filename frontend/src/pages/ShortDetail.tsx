@@ -165,14 +165,26 @@ export default function ShortDetail() {
   };
 
   const handleDownload = async (file: FileInterface) => {
-    if (!file.download_url) {
+    // Lazy load signed URL if not present
+    let downloadUrl = file.download_url;
+    if (!downloadUrl) {
+      try {
+        downloadUrl = await filesApi.getSignedUrl(file.id);
+      } catch (error: any) {
+        console.error('Failed to get signed URL:', error);
+        showAlert('Failed to get download URL', { type: 'error' });
+        return;
+      }
+    }
+    
+    if (!downloadUrl) {
       showAlert('Download URL not available', { type: 'error' });
       return;
     }
     try {
       // Create a temporary anchor element to trigger download
       const link = document.createElement('a');
-      link.href = file.download_url;
+      link.href = downloadUrl;
       link.download = file.file_name;
       link.target = '_blank';
       document.body.appendChild(link);

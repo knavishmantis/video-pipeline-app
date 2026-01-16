@@ -31,13 +31,30 @@ export default function ScriptGrading() {
         const files: FileInterface[] = await filesApi.getByShortId(shortId);
         const scriptPdf: FileInterface | undefined = files.find((f: FileInterface) => f.file_type === 'script');
         
-        if (!scriptPdf || !scriptPdf.download_url) {
+        if (!scriptPdf) {
           showAlert('No script PDF found for this short', { type: 'warning' });
           return;
         }
 
+        // Lazy load signed URL if not present
+        let downloadUrl = scriptPdf.download_url;
+        if (!downloadUrl) {
+          try {
+            downloadUrl = await filesApi.getSignedUrl(scriptPdf.id);
+          } catch (error: any) {
+            console.error('Failed to get signed URL:', error);
+            showAlert('Failed to get download URL for PDF', { type: 'error' });
+            return;
+          }
+        }
+
+        if (!downloadUrl) {
+          showAlert('Download URL not available for PDF', { type: 'warning' });
+          return;
+        }
+
         // Fetch the PDF file
-        const response = await fetch(scriptPdf.download_url);
+        const response = await fetch(downloadUrl);
         if (!response.ok) {
           throw new Error('Failed to fetch PDF');
         }

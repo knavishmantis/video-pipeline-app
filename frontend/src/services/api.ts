@@ -127,6 +127,10 @@ export const filesApi = {
     const response = await api.get(`/files/short/${shortId}`);
     return response.data;
   },
+  getSignedUrl: async (fileId: number): Promise<string> => {
+    const response = await api.get(`/files/${fileId}/signed-url`);
+    return response.data.download_url;
+  },
   // Get signed URL for direct upload to GCS
   getUploadUrl: async (
     shortId: number,
