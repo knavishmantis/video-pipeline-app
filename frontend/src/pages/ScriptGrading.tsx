@@ -107,12 +107,20 @@ export default function ScriptGrading() {
         if (!response.ok) {
           let errorMessage = 'Failed to grade PDF';
           try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorData.details || errorMessage;
+            // Clone the response before reading to avoid "body already consumed" error
+            const clonedResponse = response.clone();
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+              const errorData = await clonedResponse.json();
+              errorMessage = errorData.error || errorData.details || errorMessage;
+            } else {
+              const errorText = await clonedResponse.text();
+              errorMessage = errorText || errorMessage;
+            }
           } catch (parseError) {
-            // If response is not JSON, try to get text
-            const errorText = await response.text();
-            errorMessage = errorText || errorMessage;
+            // If all parsing fails, use status text
+            errorMessage = response.statusText || `HTTP ${response.status}: Failed to grade PDF`;
           }
           throw new Error(errorMessage);
         }

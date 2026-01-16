@@ -32,6 +32,9 @@ RUN npm ci --only=production
 # Copy built files from builder
 COPY --from=builder /workspace/backend/dist ./dist
 
+# Copy script grading criteria file (needed at runtime)
+COPY --from=builder /workspace/backend/script-grading-criteria.md ./script-grading-criteria.md
+
 # Expose port
 EXPOSE 8080
 

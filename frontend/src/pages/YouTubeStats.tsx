@@ -4,6 +4,8 @@ interface ChannelStats {
   subscriberCount: string;
   viewCount: string;
   videoCount: string;
+  likeCount: string;
+  commentCount: string;
   title: string;
   description: string;
   thumbnail: string;
@@ -11,6 +13,8 @@ interface ChannelStats {
   rawSubscriberCount: number;
   rawViewCount: number;
   rawVideoCount: number;
+  rawLikeCount: number;
+  rawCommentCount: number;
 }
 
 interface VideoStats {
@@ -95,6 +99,8 @@ export default function YouTubeStats() {
           subscriberCount: formatNumber(channel.statistics.subscriberCount),
           viewCount: formatNumber(channel.statistics.viewCount),
           videoCount: formatNumber(channel.statistics.videoCount),
+          likeCount: '0', // Will be calculated from videos
+          commentCount: '0', // Will be calculated from videos
           title: channel.snippet.title,
           description: channel.snippet.description,
           thumbnail: channel.snippet.thumbnails.high?.url || channel.snippet.thumbnails.default.url,
@@ -102,6 +108,8 @@ export default function YouTubeStats() {
           rawSubscriberCount: parseInt(channel.statistics.subscriberCount || '0'),
           rawViewCount: parseInt(channel.statistics.viewCount || '0'),
           rawVideoCount: parseInt(channel.statistics.videoCount || '0'),
+          rawLikeCount: 0, // Will be calculated from videos
+          rawCommentCount: 0, // Will be calculated from videos
         });
       } else {
         setError('Channel not found');
@@ -265,20 +273,42 @@ export default function YouTubeStats() {
     if (!stats) return null;
     
     if (timeFilter === 'all') {
-      return stats;
+      // For 'all', calculate totals from all videos
+      const totalViews = allVideos.reduce((sum, v) => sum + v.rawViewCount, 0);
+      const totalLikes = allVideos.reduce((sum, v) => sum + v.rawLikeCount, 0);
+      const totalComments = allVideos.reduce((sum, v) => sum + v.rawCommentCount, 0);
+      const videoCount = allVideos.length;
+
+      return {
+        ...stats,
+        viewCount: formatNumber(totalViews),
+        videoCount: formatNumber(videoCount),
+        likeCount: formatNumber(totalLikes),
+        commentCount: formatNumber(totalComments),
+        rawViewCount: totalViews,
+        rawVideoCount: videoCount,
+        rawLikeCount: totalLikes,
+        rawCommentCount: totalComments,
+      };
     }
 
     const totalViews = filteredAndSortedVideos.reduce((sum, v) => sum + v.rawViewCount, 0);
+    const totalLikes = filteredAndSortedVideos.reduce((sum, v) => sum + v.rawLikeCount, 0);
+    const totalComments = filteredAndSortedVideos.reduce((sum, v) => sum + v.rawCommentCount, 0);
     const videoCount = filteredAndSortedVideos.length;
 
     return {
       ...stats,
       viewCount: formatNumber(totalViews),
       videoCount: formatNumber(videoCount),
+      likeCount: formatNumber(totalLikes),
+      commentCount: formatNumber(totalComments),
       rawViewCount: totalViews,
       rawVideoCount: videoCount,
+      rawLikeCount: totalLikes,
+      rawCommentCount: totalComments,
     };
-  }, [stats, filteredAndSortedVideos, timeFilter]);
+  }, [stats, filteredAndSortedVideos, allVideos, timeFilter]);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -435,6 +465,36 @@ export default function YouTubeStats() {
               </div>
               <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
                 {timeFilter === 'all' ? 'Total Videos' : 'Filtered Videos'}
+              </div>
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '24px', 
+              background: 'white', 
+              borderRadius: '12px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            }}>
+              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
+                {filteredStats.likeCount}
+              </div>
+              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
+                {timeFilter === 'all' ? 'Total Likes' : 'Filtered Likes'}
+              </div>
+            </div>
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '24px', 
+              background: 'white', 
+              borderRadius: '12px',
+              border: '1px solid #E5E7EB',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            }}>
+              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
+                {filteredStats.commentCount}
+              </div>
+              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
+                {timeFilter === 'all' ? 'Total Comments' : 'Filtered Comments'}
               </div>
             </div>
           </div>

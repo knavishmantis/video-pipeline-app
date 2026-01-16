@@ -23,11 +23,19 @@ export function loadGradingCriteria(): string {
 
   try {
     const criteriaPath = path.join(__dirname, '../../script-grading-criteria.md');
+    logger.debug('Loading grading criteria from', { path: criteriaPath, __dirname });
     cachedCriteria = fs.readFileSync(criteriaPath, 'utf-8');
+    logger.info('Grading criteria loaded successfully', { length: cachedCriteria.length });
     return cachedCriteria;
-  } catch (error) {
-    logger.error('Failed to load grading criteria', { error });
-    throw new Error('Failed to load grading criteria file');
+  } catch (error: any) {
+    const criteriaPath = path.join(__dirname, '../../script-grading-criteria.md');
+    logger.error('Failed to load grading criteria', { 
+      error: error.message,
+      path: criteriaPath,
+      __dirname,
+      code: error.code 
+    });
+    throw new Error(`Failed to load grading criteria file from ${criteriaPath}: ${error.message}`);
   }
 }
 

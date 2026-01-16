@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import { scriptGradingController } from '../controllers/scriptGrading';
 import { authenticateToken, requireRole } from '../middleware/auth';
@@ -26,5 +26,18 @@ const upload = multer({
   },
 });
 
-scriptGradingRouter.post('/grade', upload.single('pdfFile'), scriptGradingController.gradeScript);
+// Middleware to handle both JSON and multipart/form-data requests
+const handleGradeRequest = (req: Request, res: Response, next: NextFunction) => {
+  const contentType = req.headers['content-type'] || '';
+  
+  // If it's multipart/form-data, use multer, otherwise just pass through (for JSON)
+  if (contentType.includes('multipart/form-data')) {
+    return upload.single('pdfFile')(req, res, next);
+  } else {
+    // For JSON requests, just pass through
+    next();
+  }
+};
+
+scriptGradingRouter.post('/grade', handleGradeRequest, scriptGradingController.gradeScript);
 
