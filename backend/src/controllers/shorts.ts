@@ -35,66 +35,99 @@ export const shortsController = {
       
       const result = await query(sqlQuery, params);
       
-      // Get script writers and files for each short
-      const shortsWithWriters = await Promise.all(
-        result.rows.map(async (short: any) => {
-          if (short.script_writer_id) {
-            const writerResult = await query(
-              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
-              [short.script_writer_id]
-            );
-            if (writerResult.rows.length > 0) {
-              const scriptWriter = writerResult.rows[0];
-              // Process profile picture (convert bucket path to signed URL if needed)
-              scriptWriter.profile_picture = await processProfilePicture(scriptWriter.profile_picture);
-              short.script_writer = scriptWriter;
-            }
-          }
-          
-          // Get files for this short
-          const filesResult = await query(
-            'SELECT id, file_type, file_name, gcp_bucket_path, file_size, uploaded_at FROM files WHERE short_id = $1',
-            [short.id]
-          );
-          
-          // Add entered_clip_changes_at and entered_editing_changes_at to short for frontend
-          const shortWithTimestamps = await query(
-            'SELECT entered_clip_changes_at, entered_editing_changes_at FROM shorts WHERE id = $1',
-            [short.id]
-          );
-          if (shortWithTimestamps.rows.length > 0) {
-            short.entered_clip_changes_at = shortWithTimestamps.rows[0].entered_clip_changes_at;
-            short.entered_editing_changes_at = shortWithTimestamps.rows[0].entered_editing_changes_at;
-          }
-          
-          // Generate download URLs for each file
-          const filesWithUrls = await Promise.all(
-            filesResult.rows.map(async (file: any) => {
-              try {
-                if (!file.gcp_bucket_path) {
-                  logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
-                  return { ...file, download_url: null };
-                }
-                const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-                return { ...file, download_url: url };
-              } catch (error) {
-                logger.error(`Failed to get signed URL for file ${file.id}`, { 
-                  fileId: file.id, 
-                  fileName: file.file_name,
-                  bucketPath: file.gcp_bucket_path,
-                  error: error instanceof Error ? error.message : String(error),
-                  stack: error instanceof Error ? error.stack : undefined
-                });
-                return { ...file, download_url: null };
-              }
-            })
-          );
-          
-          short.files = filesWithUrls;
-          
-          return short;
-        })
+      if (result.rows.length === 0) {
+        res.json([]);
+        return;
+      }
+      
+      const shortIds = result.rows.map((s: any) => s.id);
+      
+      // Batch load script writers (JOIN would be better but this avoids duplicate rows)
+      const scriptWriterIds = [...new Set(result.rows.filter((s: any) => s.script_writer_id).map((s: any) => s.script_writer_id))];
+      const scriptWritersMap = new Map<number, any>();
+      
+      if (scriptWriterIds.length > 0) {
+        const placeholders = scriptWriterIds.map((_: any, i: number) => `$${i + 1}`).join(',');
+        const writersResult = await query(
+          `SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id IN (${placeholders})`,
+          scriptWriterIds
+        );
+        
+        // Process profile pictures in parallel
+        const writersWithProcessedPics = await Promise.all(
+          writersResult.rows.map(async (writer: any) => {
+            writer.profile_picture = await processProfilePicture(writer.profile_picture);
+            return writer;
+          })
+        );
+        
+        writersWithProcessedPics.forEach((writer: any) => {
+          scriptWritersMap.set(writer.id, writer);
+        });
+      }
+      
+      // Batch load all files for all shorts
+      const filesPlaceholders = shortIds.map((_: any, i: number) => `$${i + 1}`).join(',');
+      const allFilesResult = await query(
+        `SELECT id, short_id, file_type, file_name, gcp_bucket_path, file_size, uploaded_at FROM files WHERE short_id IN (${filesPlaceholders})`,
+        shortIds
       );
+      
+      // Group files by short_id
+      const filesByShortId = new Map<number, any[]>();
+      allFilesResult.rows.forEach((file: any) => {
+        if (!filesByShortId.has(file.short_id)) {
+          filesByShortId.set(file.short_id, []);
+        }
+        filesByShortId.get(file.short_id)!.push(file);
+      });
+      
+      // Batch generate signed URLs for all files (do this in parallel batches to avoid overwhelming GCP)
+      const allFiles = allFilesResult.rows;
+      const BATCH_SIZE = 10; // Process 10 files at a time
+      const filesWithUrlsMap = new Map();
+      
+      for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
+        const batch = allFiles.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map(async (file: any) => {
+            try {
+              if (!file.gcp_bucket_path) {
+                logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
+                return { fileId: file.id, file: { ...file, download_url: null } };
+              }
+              const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
+              return { fileId: file.id, file: { ...file, download_url: url } };
+            } catch (error) {
+              logger.error(`Failed to get signed URL for file ${file.id}`, { 
+                fileId: file.id, 
+                fileName: file.file_name,
+                bucketPath: file.gcp_bucket_path,
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
+              });
+              return { fileId: file.id, file: { ...file, download_url: null } };
+            }
+          })
+        );
+        
+        batchResults.forEach(({ fileId, file }) => {
+          filesWithUrlsMap.set(fileId, file);
+        });
+      }
+      
+      // Combine data
+      const shortsWithWriters = result.rows.map((short: any) => {
+        if (short.script_writer_id && scriptWritersMap.has(short.script_writer_id)) {
+          short.script_writer = scriptWritersMap.get(short.script_writer_id);
+        }
+        
+        const files = filesByShortId.get(short.id) || [];
+        short.files = files.map((file: any) => filesWithUrlsMap.get(file.id) || { ...file, download_url: null });
+        
+        // Note: entered_clip_changes_at and entered_editing_changes_at are already in the short from the initial query
+        return short;
+      });
       
       res.json(shortsWithWriters);
     } catch (error) {
@@ -119,66 +152,98 @@ export const shortsController = {
         [req.userId]
       );
       
-      // Get script writers and files for each short
-      const shortsWithWriters = await Promise.all(
-        result.rows.map(async (short: any) => {
-          if (short.script_writer_id) {
-            const writerResult = await query(
-              'SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id = $1',
-              [short.script_writer_id]
-            );
-            if (writerResult.rows.length > 0) {
-              const scriptWriter = writerResult.rows[0];
-              // Process profile picture (convert bucket path to signed URL if needed)
-              scriptWriter.profile_picture = await processProfilePicture(scriptWriter.profile_picture);
-              short.script_writer = scriptWriter;
-            }
-          }
-          
-          // Get files for this short
-          const filesResult = await query(
-            'SELECT id, file_type, file_name, gcp_bucket_path, file_size, uploaded_at FROM files WHERE short_id = $1',
-            [short.id]
-          );
-          
-          // Add entered_clip_changes_at and entered_editing_changes_at to short for frontend
-          const shortWithTimestamps = await query(
-            'SELECT entered_clip_changes_at, entered_editing_changes_at FROM shorts WHERE id = $1',
-            [short.id]
-          );
-          if (shortWithTimestamps.rows.length > 0) {
-            short.entered_clip_changes_at = shortWithTimestamps.rows[0].entered_clip_changes_at;
-            short.entered_editing_changes_at = shortWithTimestamps.rows[0].entered_editing_changes_at;
-          }
-          
-          // Generate download URLs for each file
-          const filesWithUrls = await Promise.all(
-            filesResult.rows.map(async (file: any) => {
-              try {
-                if (!file.gcp_bucket_path) {
-                  logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
-                  return { ...file, download_url: null };
-                }
-                const url = await getSignedUrl(file.gcp_bucket_path, 3600); // 1 hour expiry
-                return { ...file, download_url: url };
-              } catch (error) {
-                logger.error(`Failed to get signed URL for file ${file.id}`, { 
-                  fileId: file.id, 
-                  fileName: file.file_name,
-                  bucketPath: file.gcp_bucket_path,
-                  error: error instanceof Error ? error.message : String(error),
-                  stack: error instanceof Error ? error.stack : undefined
-                });
-                return { ...file, download_url: null };
-              }
-            })
-          );
-          
-          short.files = filesWithUrls;
-          
-          return short;
-        })
+      if (result.rows.length === 0) {
+        res.json([]);
+        return;
+      }
+      
+      const shortIds = result.rows.map((s: any) => s.id);
+      
+      // Batch load script writers
+      const scriptWriterIds = [...new Set(result.rows.filter((s: any) => s.script_writer_id).map((s: any) => s.script_writer_id))];
+      const scriptWritersMap = new Map<number, any>();
+      
+      if (scriptWriterIds.length > 0) {
+        const placeholders = scriptWriterIds.map((_: any, i: number) => `$${i + 1}`).join(',');
+        const writersResult = await query(
+          `SELECT id, email, name, discord_username, profile_picture, timezone FROM users WHERE id IN (${placeholders})`,
+          scriptWriterIds
+        );
+        
+        // Process profile pictures in parallel
+        const writersWithProcessedPics = await Promise.all(
+          writersResult.rows.map(async (writer: any) => {
+            writer.profile_picture = await processProfilePicture(writer.profile_picture);
+            return writer;
+          })
+        );
+        
+        writersWithProcessedPics.forEach((writer: any) => {
+          scriptWritersMap.set(writer.id, writer);
+        });
+      }
+      
+      // Batch load all files for all shorts
+      const filesPlaceholders = shortIds.map((_: any, i: number) => `$${i + 1}`).join(',');
+      const allFilesResult = await query(
+        `SELECT id, short_id, file_type, file_name, gcp_bucket_path, file_size, uploaded_at FROM files WHERE short_id IN (${filesPlaceholders})`,
+        shortIds
       );
+      
+      // Group files by short_id
+      const filesByShortId = new Map<number, any[]>();
+      allFilesResult.rows.forEach((file: any) => {
+        if (!filesByShortId.has(file.short_id)) {
+          filesByShortId.set(file.short_id, []);
+        }
+        filesByShortId.get(file.short_id)!.push(file);
+      });
+      
+      // Batch generate signed URLs for all files
+      const allFiles = allFilesResult.rows;
+      const BATCH_SIZE = 10;
+      const filesWithUrlsMap = new Map();
+      
+      for (let i = 0; i < allFiles.length; i += BATCH_SIZE) {
+        const batch = allFiles.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map(async (file: any) => {
+            try {
+              if (!file.gcp_bucket_path) {
+                logger.warn('File missing gcp_bucket_path', { fileId: file.id, fileName: file.file_name });
+                return { fileId: file.id, file: { ...file, download_url: null } };
+              }
+              const url = await getSignedUrl(file.gcp_bucket_path, 3600);
+              return { fileId: file.id, file: { ...file, download_url: url } };
+            } catch (error) {
+              logger.error(`Failed to get signed URL for file ${file.id}`, { 
+                fileId: file.id, 
+                fileName: file.file_name,
+                bucketPath: file.gcp_bucket_path,
+                error: error instanceof Error ? error.message : String(error),
+                stack: error instanceof Error ? error.stack : undefined
+              });
+              return { fileId: file.id, file: { ...file, download_url: null } };
+            }
+          })
+        );
+        
+        batchResults.forEach(({ fileId, file }) => {
+          filesWithUrlsMap.set(fileId, file);
+        });
+      }
+      
+      // Combine data
+      const shortsWithWriters = result.rows.map((short: any) => {
+        if (short.script_writer_id && scriptWritersMap.has(short.script_writer_id)) {
+          short.script_writer = scriptWritersMap.get(short.script_writer_id);
+        }
+        
+        const files = filesByShortId.get(short.id) || [];
+        short.files = files.map((file: any) => filesWithUrlsMap.get(file.id) || { ...file, download_url: null });
+        
+        return short;
+      });
       
       res.json(shortsWithWriters);
     } catch (error) {
