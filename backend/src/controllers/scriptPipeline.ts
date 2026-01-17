@@ -259,6 +259,7 @@ export const scriptPipelineController = {
         updates.push(`script_content = script_final_draft`);
         updates.push(`status = $${paramIndex++}`);
         params.push('script');
+        updates.push(`script_draft_stage = NULL`); // Clear draft stage so it appears in kanban
       }
       
       // Set completion timestamp

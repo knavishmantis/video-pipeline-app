@@ -16,14 +16,16 @@ export const shortsController = {
       `;
       const params: any[] = [];
       
+      // Exclude shorts that are still in the script pipeline
+      sqlQuery += ` WHERE s.script_draft_stage IS NULL`;
+      
       if (status) {
-        sqlQuery += ` WHERE s.status = $${params.length + 1}`;
+        sqlQuery += ` AND s.status = $${params.length + 1}`;
         params.push(status);
       }
       
       if (assigned === 'true' && req.userId) {
-        sqlQuery += status ? ' AND' : ' WHERE';
-        sqlQuery += ` EXISTS (
+        sqlQuery += ` AND EXISTS (
           SELECT 1 FROM assignments a 
           WHERE a.short_id = s.id AND a.user_id = $${params.length + 1}
         )`;
