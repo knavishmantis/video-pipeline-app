@@ -176,7 +176,8 @@ export function KanbanBoard({
               </SortableContext>
 
               {/* Add Button for Admin - at bottom */}
-              {isAdmin && column.canAdd && (
+              {/* Note: 'script' column no longer has add button - use Script Pipeline instead */}
+              {isAdmin && column.canAdd && column.id !== 'script' && (
                 <button
                   onClick={() => onCreateClick(column.id)}
                   style={{

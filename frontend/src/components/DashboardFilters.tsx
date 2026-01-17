@@ -5,7 +5,7 @@ interface DashboardFiltersProps {
   showAssignedOnly: boolean;
   setShowAssignedOnly: (value: boolean) => void;
   visibleColumns: Set<ColumnType>;
-  toggleColumnView: (viewType: 'clipper' | 'script' | 'idea' | 'editing' | 'uploaded') => void;
+  toggleColumnView: (viewType: 'clipper' | 'script' | 'editing' | 'uploaded') => void;
   isAdmin: boolean;
 }
 
@@ -83,43 +83,6 @@ export function DashboardFilters({
 
       {/* View Buttons */}
       <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
-        {isAdmin && (
-          <button
-            onClick={() => toggleColumnView('idea')}
-            style={{
-              padding: '8px 16px',
-              background: visibleColumns.has('idea') 
-                ? 'linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)' 
-                : 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
-              color: visibleColumns.has('idea') ? '#FFFFFF' : '#475569',
-              border: visibleColumns.has('idea') ? 'none' : '1px solid #E2E8F0',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '13px',
-              fontWeight: '600',
-              transition: 'all 0.2s ease-in-out',
-              boxShadow: visibleColumns.has('idea') 
-                ? '0 2px 4px rgba(139, 92, 246, 0.3)' 
-                : '0 1px 2px rgba(0, 0, 0, 0.05)',
-            }}
-            onMouseEnter={(e) => {
-              if (!visibleColumns.has('idea')) {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!visibleColumns.has('idea')) {
-                e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-              }
-            }}
-          >
-            Idea View
-          </button>
-        )}
         <button
           onClick={() => toggleColumnView('script')}
           style={{

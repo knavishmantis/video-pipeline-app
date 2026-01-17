@@ -510,7 +510,7 @@ export function SortableCard({
         {short.title}
       </h4>
       
-      {short.description && column.id !== 'idea' && (
+      {short.description && (
         <p style={{
           margin: 0,
           marginBottom: '8px',
@@ -526,7 +526,7 @@ export function SortableCard({
         </p>
       )}
       
-      {short.idea && column.id === 'idea' && (
+      {short.idea && (
         <p style={{
           margin: '6px 0 0 0',
           fontSize: '11px',

@@ -12,6 +12,8 @@ import FlashbackReference from './pages/FlashbackReference';
 import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
 import ScriptGrading from './pages/ScriptGrading';
+import ScriptPipeline from './pages/ScriptPipeline';
+import ScriptPipelineEdit from './pages/ScriptPipelineEdit';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -142,6 +144,26 @@ function AppContent() {
               <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <ScriptGrading />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/script-pipeline"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <ScriptPipeline />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/script-pipeline/:id"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <ScriptPipelineEdit />
                 </AppLayout>
               </ProfileCheckRoute>
             }

@@ -33,7 +33,7 @@ export function useCardClick({
     
     // All cards are now clickable - users can view even if not assigned
     // Open content modal based on column
-    if (column.id === 'script' && !short.script_content) {
+    if (column.id === 'script') {
       // Load full short data with files
       try {
         const fullShort = await shortsApi.getById(short.id);

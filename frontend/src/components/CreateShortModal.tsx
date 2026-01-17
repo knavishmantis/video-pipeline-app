@@ -109,35 +109,6 @@ export function CreateShortModal({
               placeholder="Enter description (optional)"
             />
           </div>
-          {createColumn === 'idea' && (
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{
-                display: 'block',
-                marginBottom: '6px',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#374151',
-              }}>
-                Idea
-              </label>
-              <textarea
-                value={createForm.idea || ''}
-                onChange={(e) => onFormChange({ ...createForm, idea: e.target.value })}
-                rows={4}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  border: '1px solid #D1D5DB',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                }}
-                placeholder="Enter idea details (optional)"
-              />
-            </div>
-          )}
           <div style={{
             display: 'flex',
             gap: '12px',

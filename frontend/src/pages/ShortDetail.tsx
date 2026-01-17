@@ -562,7 +562,7 @@ export default function ShortDetail() {
           <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
             <h2 className="text-xl font-semibold text-neutral-900">Script</h2>
             <div className="flex gap-2 items-center">
-              {(scriptWriterUser?.id === user?.id || isAdmin || (user?.roles?.includes('script_writer') && !scriptWriterUser)) && (
+              {(scriptWriterUser?.id === user?.id || isAdmin || (user?.roles?.includes('script_writer') && !scriptWriterUser) || (short.script_content && (isAdmin || user?.roles?.includes('script_writer')))) && (
                 <>
                   <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
                     uploading === 'script' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
@@ -634,6 +634,14 @@ export default function ShortDetail() {
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-neutral-700 mb-2">Idea</h3>
                 <p className="text-neutral-600 whitespace-pre-wrap">{short.idea}</p>
+              </div>
+            )}
+            {short.script_content && (
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-neutral-700 mb-2">Script Content</h3>
+                <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <pre className="text-neutral-700 whitespace-pre-wrap font-mono text-sm leading-relaxed">{short.script_content}</pre>
+                </div>
               </div>
             )}
             {scriptPdf && (

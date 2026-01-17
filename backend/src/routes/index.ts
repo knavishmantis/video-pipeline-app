@@ -6,10 +6,14 @@ import { filesRouter } from './files';
 import { paymentsRouter } from './payments';
 import { authRouter } from './auth';
 import { scriptGradingRouter } from './scriptGrading';
+import { scriptPipelineRouter } from './scriptPipeline';
 import { getCacheStats, clearCache } from '../db';
 
 export function setupRoutes(app: Express): void {
   app.use('/api/auth', authRouter);
+  // Register script pipeline routes BEFORE shorts routes to avoid route conflict
+  // (otherwise /api/shorts/script-pipeline matches /api/shorts/:id)
+  app.use('/api/shorts/script-pipeline', scriptPipelineRouter);
   app.use('/api/shorts', shortsRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/assignments', assignmentsRouter);

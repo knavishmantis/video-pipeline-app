@@ -227,7 +227,8 @@ export function ContentModal({
                 const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
                 const canEditScript = isAdmin || 
                   (contentShort.script_writer?.id === user?.id) ||
-                  (user?.roles?.includes('script_writer') && !contentShort.script_writer);
+                  (user?.roles?.includes('script_writer') && !contentShort.script_writer) ||
+                  (contentShort.script_content && (isAdmin || user?.roles?.includes('script_writer')));
                 
                 const scriptPdf = contentShort.files?.find(f => f.file_type === 'script');
                 const audioFile = contentShort.files?.find(f => f.file_type === 'audio');
@@ -1063,7 +1064,8 @@ export function ContentModal({
                 const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
                 const canEditScript = isAdmin || 
                   (contentShort.script_writer?.id === user?.id) ||
-                  (user?.roles?.includes('script_writer') && !contentShort.script_writer);
+                  (user?.roles?.includes('script_writer') && !contentShort.script_writer) ||
+                  (contentShort.script_content && (isAdmin || user?.roles?.includes('script_writer')));
                 if (!canEditScript) return null;
               } else {
                 const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);

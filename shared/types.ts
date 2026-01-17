@@ -6,6 +6,7 @@ export type FileType = 'script' | 'clip' | 'audio' | 'final_video' | 'clips_zip'
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentRole = 'script_writer' | 'clipper' | 'editor';
 export type AssignmentRole = 'script_writer' | 'clipper' | 'editor';
+export type ScriptDraftStage = 'first_draft' | 'second_draft' | 'final_draft' | null;
 
 export interface User {
   id: number;
@@ -35,6 +36,15 @@ export interface Short {
   entered_editing_changes_at?: string | null;
   clips_completed_at?: string | null;
   editing_completed_at?: string | null;
+  // Script pipeline fields
+  script_first_draft?: string;
+  script_second_draft?: string;
+  script_final_draft?: string;
+  script_draft_stage?: ScriptDraftStage;
+  script_pipeline_notes?: string;
+  first_draft_completed_at?: string | null;
+  second_draft_completed_at?: string | null;
+  final_draft_completed_at?: string | null;
   created_at: string;
   updated_at: string;
   // Populated fields
@@ -135,5 +145,21 @@ export interface UserRate {
 export interface AuthResponse {
   user: User;
   token: string;
+}
+
+export interface CreateScriptPipelineInput {
+  title: string;
+  description?: string;
+  idea?: string;
+}
+
+export interface UpdateScriptDraftInput {
+  draft_text?: string;
+  stage: 'first_draft' | 'second_draft' | 'final_draft';
+  notes?: string;
+}
+
+export interface AdvanceStageInput {
+  validated_rules: string[];
 }
 

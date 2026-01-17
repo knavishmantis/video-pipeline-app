@@ -634,7 +634,7 @@ export default function Dashboard() {
 
   const activeShort = activeId ? shorts.find(s => `short-${s.id}` === activeId) : null;
 
-  const toggleColumnView = (viewType: 'clipper' | 'script' | 'idea' | 'editing' | 'uploaded') => {
+  const toggleColumnView = (viewType: 'clipper' | 'script' | 'editing' | 'uploaded') => {
     setVisibleColumns(prev => {
       const newSet = new Set(prev);
       let columnsToToggle: ColumnType[] = [];
@@ -643,8 +643,6 @@ export default function Dashboard() {
         columnsToToggle = ['clips', 'clip_changes'];
       } else if (viewType === 'script') {
         columnsToToggle = ['script'];
-      } else if (viewType === 'idea') {
-        columnsToToggle = ['idea'];
       } else if (viewType === 'editing') {
         columnsToToggle = ['editing', 'editing_changes'];
       } else if (viewType === 'uploaded') {
@@ -662,10 +660,9 @@ export default function Dashboard() {
     });
   };
 
-  // Filter columns: hide 'idea' for non-admins, only show visible columns
+  // Filter columns: only show visible columns
   // Also hide 'clip_changes' and 'editing_changes' if they're empty
   const filteredColumns = columns.filter(col => {
-    if (col.id === 'idea' && !isAdmin) return false;
     if (!visibleColumns.has(col.id)) return false;
     
     // Hide clip_changes and editing_changes columns if they're empty

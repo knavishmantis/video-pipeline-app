@@ -1,6 +1,6 @@
 import { Short } from '../../../shared/types';
 
-export type ColumnType = 'idea' | 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'ready_to_upload' | 'uploaded';
+export type ColumnType = 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'ready_to_upload' | 'uploaded';
 
 export interface Column {
   id: ColumnType;
@@ -11,20 +11,19 @@ export interface Column {
 }
 
 export const columns: Column[] = [
-  { id: 'idea', title: 'Idea', color: '#8B5CF6', canAdd: true, order: 0 },
-  { id: 'script', title: 'Script', color: '#3B82F6', canAdd: true, order: 1 },
-  { id: 'clips', title: 'Clips', color: '#F59E0B', order: 2 },
-  { id: 'clip_changes', title: 'Clip Changes', color: '#EF4444', order: 3 },
-  { id: 'editing', title: 'Editing', color: '#10B981', order: 4 },
-  { id: 'editing_changes', title: 'Editing Changes', color: '#06B6D4', order: 5 },
-  { id: 'ready_to_upload', title: 'Ready to Upload', color: '#F59E0B', order: 6 },
-  { id: 'uploaded', title: 'Uploaded/Scheduled', color: '#84CC16', order: 7 },
+  { id: 'script', title: 'Script', color: '#3B82F6', canAdd: true, order: 0 },
+  { id: 'clips', title: 'Clips', color: '#F59E0B', order: 1 },
+  { id: 'clip_changes', title: 'Clip Changes', color: '#EF4444', order: 2 },
+  { id: 'editing', title: 'Editing', color: '#10B981', order: 3 },
+  { id: 'editing_changes', title: 'Editing Changes', color: '#06B6D4', order: 4 },
+  { id: 'ready_to_upload', title: 'Ready to Upload', color: '#F59E0B', order: 5 },
+  { id: 'uploaded', title: 'Uploaded/Scheduled', color: '#84CC16', order: 6 },
 ];
 
 // Map database status to column
 export const statusToColumn = (status: string): ColumnType => {
   const map: Record<string, ColumnType> = {
-    'idea': 'idea',
+    'idea': 'script', // Map 'idea' status to 'script' column (legacy support)
     'script': 'script',
     'clipping': 'clips',
     'clips': 'clips',
@@ -35,13 +34,12 @@ export const statusToColumn = (status: string): ColumnType => {
     'ready_to_upload': 'ready_to_upload',
     'uploaded': 'uploaded',
   };
-  return map[status] || 'idea';
+  return map[status] || 'script';
 };
 
 // Map column to database status
 export const columnToStatus = (column: ColumnType): string => {
   const map: Record<ColumnType, string> = {
-    'idea': 'idea',
     'script': 'script',
     'clips': 'clips',
     'clip_changes': 'clip_changes',

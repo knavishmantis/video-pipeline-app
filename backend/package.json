@@ -14,6 +14,7 @@
     "migrate-timezone": "tsx src/db/migrateTimezone.ts",
     "migrate-payments": "tsx src/db/migratePayments.ts",
     "migrate-paypal-link": "tsx src/db/migratePayPalLink.ts",
+    "migrate-script-pipeline": "tsx src/db/migrateScriptPipeline.ts",
     "setup-admin": "tsx src/scripts/setupAdmin.ts"
   },
   "keywords": [],
