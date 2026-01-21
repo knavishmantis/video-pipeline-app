@@ -187,6 +187,49 @@ export const scriptPipelineController = {
     }
   },
 
+  // Update description (admin/script_writer only)
+  async updateDescription(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { description } = req.body as { description?: string };
+      
+      // Check if short exists and is in pipeline
+      const checkResult = await query(
+        `SELECT script_draft_stage FROM shorts WHERE id = $1`,
+        [id]
+      );
+      
+      if (checkResult.rows.length === 0) {
+        res.status(404).json({ error: 'Short not found' });
+        return;
+      }
+      
+      const currentStage = checkResult.rows[0].script_draft_stage;
+      if (!currentStage) {
+        res.status(400).json({ error: 'Short is not in script pipeline' });
+        return;
+      }
+      
+      await query(
+        `UPDATE shorts 
+         SET description = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`,
+        [description?.trim() || null, id]
+      );
+      
+      // Fetch updated short
+      const result = await query(
+        `SELECT * FROM shorts WHERE id = $1`,
+        [id]
+      );
+      
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error('Update description error', { error });
+      res.status(500).json({ error: 'Failed to update description' });
+    }
+  },
+
   // Advance to next stage (admin/script_writer only)
   async advanceStage(req: AuthRequest, res: Response): Promise<void> {
     try {

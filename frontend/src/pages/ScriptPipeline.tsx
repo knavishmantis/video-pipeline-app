@@ -5,7 +5,7 @@ import { useAlert } from '../hooks/useAlert';
 import { useToast } from '../hooks/useToast';
 import { scriptPipelineApi } from '../services/api';
 import { Short, ScriptDraftStage } from '../../../shared/types';
-import { IconFileText, IconPlus, IconEdit, IconEye } from '@tabler/icons-react';
+import { IconFileText, IconPlus, IconEdit, IconEye, IconPencil } from '@tabler/icons-react';
 
 const STAGE_LABELS: Record<NonNullable<ScriptDraftStage>, string> = {
   first_draft: 'First Draft',
@@ -31,6 +31,9 @@ export default function ScriptPipeline() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createForm, setCreateForm] = useState({ title: '', description: '', idea: '' });
+  const [editingDescriptionId, setEditingDescriptionId] = useState<number | null>(null);
+  const [editingDescription, setEditingDescription] = useState('');
+  const [savingDescription, setSavingDescription] = useState(false);
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
   const isScriptWriter = user?.roles?.includes('script_writer') || user?.role === 'script_writer';
@@ -81,6 +84,35 @@ export default function ScriptPipeline() {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleEditDescription = (short: Short, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingDescriptionId(short.id);
+    setEditingDescription(short.description || '');
+  };
+
+  const handleSaveDescription = async () => {
+    if (editingDescriptionId === null) return;
+
+    setSavingDescription(true);
+    try {
+      await scriptPipelineApi.updateDescription(editingDescriptionId, editingDescription);
+      setEditingDescriptionId(null);
+      setEditingDescription('');
+      await loadShorts();
+      showToast('Description updated successfully!', 'success');
+    } catch (error: any) {
+      console.error('Failed to update description:', error);
+      showAlert(error?.response?.data?.error || 'Failed to update description. Please try again.', { type: 'error' });
+    } finally {
+      setSavingDescription(false);
+    }
+  };
+
+  const handleCancelEditDescription = () => {
+    setEditingDescriptionId(null);
+    setEditingDescription('');
   };
 
   const formatDate = (dateString?: string | null) => {
@@ -277,6 +309,14 @@ export default function ScriptPipeline() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px', flexShrink: 0, marginLeft: '12px' }}>
+                  {canEdit && (
+                    <IconPencil 
+                      size={20} 
+                      style={{ color: '#64748B', cursor: 'pointer' }}
+                      onClick={(e) => handleEditDescription(short, e)}
+                      title="Edit description"
+                    />
+                  )}
                   {canEdit ? (
                     <IconEdit size={20} style={{ color: '#64748B' }} />
                   ) : (
@@ -432,6 +472,93 @@ export default function ScriptPipeline() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Description Modal */}
+      {editingDescriptionId !== null && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={handleCancelEditDescription}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '100%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 20px 0', fontSize: '20px', fontWeight: '600', color: '#1E293B' }}>
+              Edit Description
+            </h2>
+            <textarea
+              value={editingDescription}
+              onChange={(e) => setEditingDescription(e.target.value)}
+              rows={4}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                border: '1px solid #D1D5DB',
+                borderRadius: '8px',
+                fontSize: '14px',
+                boxSizing: 'border-box',
+                resize: 'vertical',
+                fontFamily: 'inherit',
+                marginBottom: '20px',
+              }}
+              placeholder="Enter description (optional)"
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={handleCancelEditDescription}
+                disabled={savingDescription}
+                style={{
+                  padding: '10px 20px',
+                  background: '#F3F4F6',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: savingDescription ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveDescription}
+                disabled={savingDescription}
+                style={{
+                  padding: '10px 20px',
+                  background: savingDescription ? '#9CA3AF' : '#3B82F6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: savingDescription ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                }}
+              >
+                {savingDescription ? 'Saving...' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -415,6 +415,10 @@ export const scriptPipelineApi = {
     const response = await api.patch(`/shorts/script-pipeline/${id}/draft`, input);
     return response.data;
   },
+  updateDescription: async (id: number, description: string): Promise<Short> => {
+    const response = await api.patch(`/shorts/script-pipeline/${id}/description`, { description });
+    return response.data;
+  },
   advanceStage: async (id: number, input: AdvanceStageInput): Promise<Short & { message?: string }> => {
     const response = await api.post(`/shorts/script-pipeline/${id}/advance-stage`, input);
     return response.data;

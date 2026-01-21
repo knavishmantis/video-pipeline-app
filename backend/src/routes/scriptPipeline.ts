@@ -16,5 +16,6 @@ scriptPipelineRouter.get('/:id/draft', scriptPipelineController.getDraft);
 // Edit routes (admin or script_writer only)
 scriptPipelineRouter.post('/', requireRole('admin', 'script_writer'), scriptPipelineController.create);
 scriptPipelineRouter.patch('/:id/draft', requireRole('admin', 'script_writer'), scriptPipelineController.updateDraft);
+scriptPipelineRouter.patch('/:id/description', requireRole('admin', 'script_writer'), scriptPipelineController.updateDescription);
 scriptPipelineRouter.post('/:id/advance-stage', requireRole('admin', 'script_writer'), scriptPipelineController.advanceStage);
 
