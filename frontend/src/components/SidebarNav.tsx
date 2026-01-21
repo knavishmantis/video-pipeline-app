@@ -167,13 +167,6 @@ export function SidebarNav() {
       ),
     },
     {
-      label: "Script Review",
-      href: "/script-review",
-      icon: (
-        <IconTarget className="h-5 w-5 shrink-0 text-neutral-900" />
-      ),
-    },
-    {
       label: "Payments",
       href: "/payments",
       icon: (
@@ -200,6 +193,13 @@ export function SidebarNav() {
         href: "/script-grading",
         icon: (
           <IconBrain className="h-5 w-5 shrink-0 text-neutral-900" />
+        ),
+      },
+      {
+        label: "Script Review",
+        href: "/script-review",
+        icon: (
+          <IconTarget className="h-5 w-5 shrink-0 text-neutral-900" />
         ),
       },
     ] : []),

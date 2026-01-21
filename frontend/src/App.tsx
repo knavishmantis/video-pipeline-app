@@ -172,7 +172,7 @@ function AppContent() {
           <Route
             path="/script-review"
             element={
-              <ProfileCheckRoute>
+              <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <ScriptReview />
                 </AppLayout>

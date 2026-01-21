@@ -26,10 +26,10 @@ async function getChannelIdByHandle(handle: string): Promise<string | null> {
     // Handle format: @camman18 (without @)
     const cleanHandle = handle.replace('@', '');
     const response = await youtube.channels.list({
-      key: YOUTUBE_API_KEY,
       part: ['id', 'snippet'],
       forHandle: cleanHandle,
-    });
+      auth: YOUTUBE_API_KEY,
+    } as any);
 
     if (response.data.items && response.data.items.length > 0) {
       return response.data.items[0].id || null;
@@ -49,17 +49,17 @@ async function searchChannelByName(name: string): Promise<string | null> {
   try {
     // Search for channel by name
     const response = await youtube.search.list({
-      key: YOUTUBE_API_KEY,
       part: ['id', 'snippet'],
       q: name,
-      type: 'channel',
+      type: ['channel'],
       maxResults: 5,
-    });
+      auth: YOUTUBE_API_KEY,
+    } as any);
 
     if (response.data.items && response.data.items.length > 0) {
       // Try to find exact match
       const exactMatch = response.data.items.find(
-        item => item.snippet?.title?.toLowerCase() === name.toLowerCase()
+        (item: any) => item.snippet?.title?.toLowerCase() === name.toLowerCase()
       );
       if (exactMatch?.id?.channelId) {
         return exactMatch.id.channelId;
@@ -76,11 +76,11 @@ async function searchChannelByName(name: string): Promise<string | null> {
 
 async function getChannelUploadsPlaylistId(channelId: string): Promise<string | null> {
   try {
-    const response = await youtube.channels.list({
-      key: YOUTUBE_API_KEY,
+    const response: any = await youtube.channels.list({
       part: ['contentDetails'],
       id: [channelId],
-    });
+      auth: YOUTUBE_API_KEY,
+    } as any);
 
     if (response.data.items && response.data.items.length > 0) {
       const uploadsPlaylistId = response.data.items[0].contentDetails?.relatedPlaylists?.uploads;
@@ -114,32 +114,32 @@ async function fetchChannelVideos(channelId: string, maxResults: number = 1000):
   while (allVideos.length < maxResults) {
     try {
       // Use playlistItems.list to get videos from the uploads playlist
-      const response = await youtube.playlistItems.list({
-        key: YOUTUBE_API_KEY,
+      const response: any = await youtube.playlistItems.list({
         part: ['contentDetails', 'snippet'],
         playlistId: uploadsPlaylistId,
         maxResults: Math.min(maxPerPage, maxResults - allVideos.length),
         pageToken: nextPageToken,
-      });
+        auth: YOUTUBE_API_KEY,
+      } as any);
 
       if (!response.data.items || response.data.items.length === 0) {
         break;
       }
 
       const videoIds = response.data.items
-        .map(item => item.contentDetails?.videoId)
-        .filter((id): id is string => !!id);
+        .map((item: any) => item.contentDetails?.videoId)
+        .filter((id: any): id is string => !!id);
 
       if (videoIds.length === 0) {
         break;
       }
 
       // Get detailed video statistics
-      const videoDetails = await youtube.videos.list({
-        key: YOUTUBE_API_KEY,
+      const videoDetails: any = await youtube.videos.list({
         part: ['id', 'snippet', 'statistics', 'contentDetails'],
         id: videoIds,
-      });
+        auth: YOUTUBE_API_KEY,
+      } as any);
 
       if (videoDetails.data.items) {
         allVideos.push(...videoDetails.data.items);
@@ -178,33 +178,33 @@ async function fetchChannelVideosViaSearch(channelId: string, maxResults: number
 
   while (allVideos.length < maxResults) {
     try {
-      const response = await youtube.search.list({
-        key: YOUTUBE_API_KEY,
+      const response: any = await youtube.search.list({
         part: ['id', 'snippet'],
         channelId: channelId,
-        type: 'video',
+        type: ['video'],
         maxResults: Math.min(maxPerPage, maxResults - allVideos.length),
         order: 'date',
         pageToken: nextPageToken,
-      });
+        auth: YOUTUBE_API_KEY,
+      } as any);
 
       if (!response.data.items || response.data.items.length === 0) {
         break;
       }
 
       const videoIds = response.data.items
-        .map(item => item.id?.videoId)
-        .filter((id): id is string => !!id);
+        .map((item: any) => item.id?.videoId)
+        .filter((id: any): id is string => !!id);
 
       if (videoIds.length === 0) {
         break;
       }
 
-      const videoDetails = await youtube.videos.list({
-        key: YOUTUBE_API_KEY,
+      const videoDetails: any = await youtube.videos.list({
         part: ['id', 'snippet', 'statistics', 'contentDetails'],
         id: videoIds,
-      });
+        auth: YOUTUBE_API_KEY,
+      } as any);
 
       if (videoDetails.data.items) {
         allVideos.push(...videoDetails.data.items);
@@ -405,11 +405,11 @@ async function main() {
 
     // Get channel name
     try {
-      const channelResponse = await youtube.channels.list({
-        key: YOUTUBE_API_KEY,
+      const channelResponse: any = await youtube.channels.list({
         part: ['snippet'],
         id: [channelId],
-      });
+        auth: YOUTUBE_API_KEY,
+      } as any);
 
       if (channelResponse.data.items && channelResponse.data.items.length > 0) {
         channelName = channelResponse.data.items[0].snippet?.title || 'camman18';

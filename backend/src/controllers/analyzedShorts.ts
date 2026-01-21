@@ -203,7 +203,20 @@ export const analyzedShortsController = {
         ORDER BY reviewed_at DESC
       `, [req.userId]);
 
-      const allReviews = allReviewsResult.rows.map((r: any) => ({
+      interface ReviewRow {
+        user_guess_percentile: number;
+        percentile: number;
+        reviewed_at: string;
+      }
+
+      interface ReviewData {
+        guess: number;
+        actual: number;
+        error: number;
+        reviewed_at: string;
+      }
+
+      const allReviews: ReviewData[] = allReviewsResult.rows.map((r: ReviewRow) => ({
         guess: r.user_guess_percentile,
         actual: r.percentile,
         error: Math.abs(r.user_guess_percentile - r.percentile),
@@ -211,7 +224,7 @@ export const analyzedShortsController = {
       }));
 
       // Calculate stats
-      const calculateStats = (reviews: typeof allReviews) => {
+      const calculateStats = (reviews: ReviewData[]) => {
         if (reviews.length === 0) {
           return {
             count: 0,
@@ -221,10 +234,10 @@ export const analyzedShortsController = {
           };
         }
 
-        const errors = reviews.map(r => r.error);
+        const errors = reviews.map((r: ReviewData) => r.error);
         return {
           count: reviews.length,
-          avg_error: errors.reduce((a, b) => a + b, 0) / errors.length,
+          avg_error: errors.reduce((a: number, b: number) => a + b, 0) / errors.length,
           min_error: Math.min(...errors),
           max_error: Math.max(...errors),
         };
@@ -234,7 +247,8 @@ export const analyzedShortsController = {
       const last30 = allReviews.slice(0, 30);
       const allTime = allReviews;
 
-      // Get total count of scripts with transcripts
+      // Get total count of scripts with transcripts (only these can be reviewed)
+      // This matches the filter in getRandomUnrated endpoint
       const totalResult = await query(`
         SELECT COUNT(*) as total
         FROM analyzed_shorts
