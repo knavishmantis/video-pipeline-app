@@ -237,6 +237,75 @@ export const filesApi = {
   },
 };
 
+export interface AnalyzedShort {
+  id: number;
+  youtube_video_id: string;
+  channel_name: string;
+  channel_id: string;
+  title: string;
+  description?: string;
+  transcript: string;
+  transcript_source?: string;
+  views: number;
+  likes: number;
+  comments: number;
+  published_at?: string;
+  percentile?: number;
+  user_guess_percentile?: number;
+  notes?: string;
+  reviewed_at?: string;
+  review_user_id?: number;
+}
+
+export interface ReviewStats {
+  last10: {
+    count: number;
+    avg_error: number;
+    min_error: number;
+    max_error: number;
+  };
+  last30: {
+    count: number;
+    avg_error: number;
+    min_error: number;
+    max_error: number;
+  };
+  allTime: {
+    count: number;
+    avg_error: number;
+    min_error: number;
+    max_error: number;
+  };
+  total: number;
+  reviewed: number;
+}
+
+export interface ReviewResponse {
+  actual_percentile: number;
+  guess_percentile: number;
+  error: number;
+  difference: number;
+}
+
+export const analyzedShortsApi = {
+  getRandomUnrated: async (): Promise<AnalyzedShort> => {
+    const response = await api.get('/analyzed-shorts/random-unrated');
+    return response.data;
+  },
+  getById: async (id: number): Promise<AnalyzedShort> => {
+    const response = await api.get(`/analyzed-shorts/${id}`);
+    return response.data;
+  },
+  submitReview: async (id: number, guess_percentile: number, notes?: string): Promise<ReviewResponse> => {
+    const response = await api.post(`/analyzed-shorts/${id}/review`, { guess_percentile, notes });
+    return response.data;
+  },
+  getStats: async (): Promise<ReviewStats> => {
+    const response = await api.get('/analyzed-shorts/stats');
+    return response.data;
+  },
+};
+
 export const usersApi = {
   getAll: async (params?: { role?: string }): Promise<User[]> => {
     const response = await api.get('/users', { params });

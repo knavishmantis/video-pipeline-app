@@ -14,6 +14,7 @@ import YouTubeStats from './pages/YouTubeStats';
 import ScriptGrading from './pages/ScriptGrading';
 import ScriptPipeline from './pages/ScriptPipeline';
 import ScriptPipelineEdit from './pages/ScriptPipelineEdit';
+import ScriptReview from './pages/ScriptReview';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -164,6 +165,16 @@ function AppContent() {
               <ProfileCheckRoute>
                 <AppLayout>
                   <ScriptPipelineEdit />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/script-review"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <ScriptReview />
                 </AppLayout>
               </ProfileCheckRoute>
             }

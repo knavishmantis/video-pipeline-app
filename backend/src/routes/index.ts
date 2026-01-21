@@ -7,6 +7,7 @@ import { paymentsRouter } from './payments';
 import { authRouter } from './auth';
 import { scriptGradingRouter } from './scriptGrading';
 import { scriptPipelineRouter } from './scriptPipeline';
+import analyzedShortsRouter from './analyzedShorts';
 import { getCacheStats, clearCache } from '../db';
 
 export function setupRoutes(app: Express): void {
@@ -20,6 +21,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/files', filesRouter);
   app.use('/api/payments', paymentsRouter);
   app.use('/api/script-grading', scriptGradingRouter);
+  app.use('/api/analyzed-shorts', analyzedShortsRouter);
   
   // Debug endpoint for cache stats (only in non-production or with debug flag)
   if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ENDPOINTS === 'true') {

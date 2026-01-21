@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconBrain, IconFileText } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconBrain, IconFileText, IconTarget } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { usersApi, filesApi } from "../services/api";
@@ -164,6 +164,13 @@ export function SidebarNav() {
       href: "/script-pipeline",
       icon: (
         <IconFileText className="h-5 w-5 shrink-0 text-neutral-900" />
+      ),
+    },
+    {
+      label: "Script Review",
+      href: "/script-review",
+      icon: (
+        <IconTarget className="h-5 w-5 shrink-0 text-neutral-900" />
       ),
     },
     {
