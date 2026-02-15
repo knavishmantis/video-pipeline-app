@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * Script to download images from GitHub user-attachments URLs in editing-formula.md
+ * Script to download images from GitHub user-attachments URLs in markdown files
  * and update the markdown file to use local image paths
  * 
- * Usage: node scripts/download-editing-images.js
+ * Usage: 
+ *   node scripts/download-editing-images.js [editing|flashback]
+ *   Defaults to 'editing' if no argument provided
  */
 
 const fs = require('fs');
@@ -12,8 +14,13 @@ const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
 
-const MARKDOWN_FILE = path.join(__dirname, '../frontend/public/editing-formula.md');
-const IMAGES_DIR = path.join(__dirname, '../frontend/public/editing-images');
+// Get type from command line argument (editing or flashback)
+const type = process.argv[2] || 'editing';
+const isFlashback = type === 'flashback';
+
+const MARKDOWN_FILE = path.join(__dirname, `../frontend/public/${isFlashback ? 'flashback' : 'editing'}-formula.md`);
+const IMAGES_DIR = path.join(__dirname, `../frontend/public/${isFlashback ? 'flashback' : 'editing'}-images`);
+const IMAGE_PATH_PREFIX = `/${isFlashback ? 'flashback' : 'editing'}-images`;
 
 // Ensure images directory exists
 if (!fs.existsSync(IMAGES_DIR)) {
@@ -61,7 +68,8 @@ function extractImageUrls(markdown) {
   
   // Match HTML img tags with GitHub URLs
   // Format: <img ... src="https://github.com/user-attachments/..." ...>
-  const htmlImageRegex = /<img([^>]*)\ssrc=["'](https:\/\/github\.com\/user-attachments\/[^"']+)["']([^>]*)>/g;
+  // This regex matches img tags and captures the full tag and the URL
+  const htmlImageRegex = /<img([^>]*?)src=["'](https:\/\/github\.com\/user-attachments\/[^"']+)["']([^>]*)>/g;
   while ((match = htmlImageRegex.exec(markdown)) !== null) {
     const beforeSrc = match[1];
     const url = match[2];
@@ -100,6 +108,13 @@ async function processMarkdown() {
   console.log('Extracting image URLs...');
   const imageUrls = extractImageUrls(markdown);
   
+  // Debug: check for any GitHub URLs in the file
+  const allGithubUrls = markdown.match(/https:\/\/github\.com\/user-attachments\/[^\s"']+/g);
+  if (allGithubUrls && allGithubUrls.length > 0) {
+    console.log(`Found ${allGithubUrls.length} GitHub URLs in file (may not all be images):`);
+    allGithubUrls.slice(0, 5).forEach(url => console.log(`  - ${url}`));
+  }
+  
   if (imageUrls.length === 0) {
     console.log('No GitHub image URLs found in markdown file.');
     return;
@@ -126,7 +141,7 @@ async function processMarkdown() {
       
       const extension = getFileExtension(url);
       const filename = `${crypto.randomUUID()}.${extension}`;
-      const localPath = `/editing-images/${filename}`;
+      const localPath = `${IMAGE_PATH_PREFIX}/${filename}`;
       const filePath = path.join(IMAGES_DIR, filename);
       
       fs.writeFileSync(filePath, imageBuffer);
