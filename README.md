@@ -1,76 +1,57 @@
-# Video Pipeline App
+# Video Production Management Platform
 
-A scalable video production pipeline management system for YouTube Shorts.
+A fullstack workflow automation tool for coordinating YouTube Shorts production across distributed teams.
 
-## Quick Start
+**Live Impact:** Produced 28 shorts with 1.7M+ cumulative views
 
-```bash
-# Install dependencies
-cd backend && npm install
-cd ../frontend && npm install
+## Overview
 
-# Setup database (SQLite for local dev)
-cd backend
-echo "DATABASE_URL=sqlite://./dev.db" >> .env
-echo "JWT_SECRET=dev-secret" >> .env
-echo "FRONTEND_URL=http://localhost:3000" >> .env
-
-# Initialize database
-npm run migrate
-
-# Create admin account (Google OAuth - no password needed)
-npm run setup-admin
-
-# Start servers (2 terminals)
-npm run dev                    # Terminal 1: Backend
-cd ../frontend && npm run dev   # Terminal 2: Frontend
-```
-
-Open http://localhost:3000 and sign in with Google OAuth.
+This platform manages the entire video production pipeline from script creation to final delivery, coordinating work between script writers, video clippers, and editors while automating payments and quality control.
 
 ## Tech Stack
 
-- **Frontend**: React + TypeScript + Vite
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: SQLite (dev) / PostgreSQL (prod)
-- **Storage**: Google Cloud Storage (GCP)
-- **Auth**: Google OAuth + JWT
+- **Frontend:** React, TypeScript, Material-UI
+- **Backend:** Express.js, Node.js, TypeScript
+- **Database:** Google Cloud SQL (MySQL)
+- **Infrastructure:** Terraform, GitHub Actions CI/CD
+- **Auth:** Google OAuth 2.0
+- **AI:** GCP Vertex AI for script evaluation
 
-## Documentation
+## Key Features
 
-- **[Quick Start](docs/QUICK_START.md)** - Fast setup reference
-- **[Setup Guide](docs/SETUP.md)** - Complete setup instructions
-- **[Dev Environment Setup](docs/DEV_ENV_SETUP.md)** - GCP dev environment configuration
-- **[GCP Dev/Prod Setup](docs/GCP_DEV_PROD_SETUP.md)** - Separate dev/prod buckets
-- **[GCP Setup](docs/GCP_SETUP.md)** - GCP Storage and infrastructure setup
-- **[Google OAuth](docs/GOOGLE_OAUTH_SETUP.md)** - OAuth configuration
-- **[Domain & OAuth Setup](docs/DOMAIN_AND_OAUTH_SETUP.md)** - Production domain and OAuth configuration
-- **[Deployment](docs/DEPLOYMENT.md)** - Production deployment guide
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and patterns
+### 1. Kanban Workflow Management
+Visual board tracking scripts, clips, and edited videos through production stages with drag-and-drop interface.
 
-## Features
+<img width="1919" height="962" alt="image" src="https://github.com/user-attachments/assets/685e7b1d-4fee-49f3-b932-f6f73d162a9e" />
 
-- ✅ Google OAuth authentication
-- ✅ Role-based access (admin, script_writer, clipper, editor)
-- ✅ Short management with status tracking
-- ✅ Assignment system with due dates
-- ✅ File uploads to GCP Storage
-- ✅ Payment tracking (admin only)
-- ✅ Profile completion requirements
+### 2. AI-Powered Script Grading
+Custom Vertex AI integration evaluates script quality based on defined criteria, providing automated feedback to improve content.
 
-## Project Structure
+<img width="1918" height="964" alt="image" src="https://github.com/user-attachments/assets/12c9432d-2004-4354-a808-0d838cf8da84" />
 
-```
-video-pipeline-app/
-├── backend/     # Express API server
-├── frontend/    # React application
-├── shared/      # Shared TypeScript types
-├── terraform/   # GCP infrastructure
-└── docs/        # Documentation
-```
+### 3. Automated Payment Tracking
+Calculates contractor payments based on completed deliverables and configured rates.
 
-## Development
+(Numbers blacked out for privacy)
+<img width="1914" height="954" alt="2026-02-09_17-04" src="https://github.com/user-attachments/assets/b7106d26-9490-46ec-ad77-6fe36774af0f" />
 
-- **Maintainability First**: Clean code, clear separation of concerns
-- **Functional over Beautiful**: UI works, can be polished later
-- **Extensible**: Easy to add features like auto-uploads
+### 4. Competitive Script Analysis
+Interactive training tool for identifying high-performing content patterns. Presents competitor scripts with a percentile slider to calibrate judgment of what makes successful content—enabling reverse engineering of viral script structures.
+
+<img width="1918" height="962" alt="image" src="https://github.com/user-attachments/assets/723f0559-a578-4a57-a165-cd61c7761389" />
+
+## Architecture
+
+- **Monorepo** structure with separate frontend/backend
+- **RESTful API** with Express.js
+- **Cloud-native** deployment on GCP
+- **IaC** with Terraform for reproducible infrastructure
+- **CI/CD** via GitHub Actions for automated deployments
+
+## Deployment
+
+Infrastructure managed via Terraform with separate dev/prod environments. Automated deployments on merge to main via GitHub Actions.
+
+---
+
+**Built to solve a real production workflow problem - coordinating remote contractors while maintaining quality and tracking finances.**
