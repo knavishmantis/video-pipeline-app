@@ -25,9 +25,10 @@
     --gold-border: rgba(184, 146, 46, 0.32);
 
     /* Semantic status colors */
-    --red:   #B83224;
-    --green: #267050;
-    --blue:  #1D56D4;
+    --red:            #B83224;
+    --green:          #267050;
+    --blue:           #1D56D4;
+    --status-active:  #E6B800; /* bright yellow for in-progress/changes */
 
     /* Raised surface (above elevated — used for disabled/inactive states) */
     --bg-raised: #F2F0EB;
@@ -114,9 +115,10 @@
       --gold-dim:    rgba(212, 175, 80, 0.12);
       --gold-border: rgba(212, 175, 80, 0.32);
 
-      --red:   #E05C4C;
-      --green: #4CAF82;
-      --blue:  #60A5FA;
+      --red:            #E05C4C;
+      --green:          #4CAF82;
+      --blue:           #60A5FA;
+      --status-active:  #F5DC00;
 
       --bg-raised: #2A2722;
 
@@ -197,9 +199,10 @@
     --gold-dim:    rgba(212, 175, 80, 0.12);
     --gold-border: rgba(212, 175, 80, 0.32);
 
-    --red:   #E05C4C;
-    --green: #4CAF82;
-    --blue:  #60A5FA;
+    --red:            #E05C4C;
+    --green:          #4CAF82;
+    --blue:           #60A5FA;
+    --status-active:  #F5DC00;
 
     --bg-raised: #2A2722;
 

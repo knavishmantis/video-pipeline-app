@@ -79,9 +79,9 @@ export function SortableCard({
 
   const stateConfig: Record<CardState, { label: string; color: string; dotSize: number; glow: boolean }> = {
     unassigned:  { label: 'Unassigned',  color: 'var(--text-muted)',  dotSize: 10, glow: false },
-    in_progress: { label: 'In Progress', color: 'var(--gold)',         dotSize: 10, glow: true  },
+    in_progress: { label: 'In Progress', color: 'var(--gold)',           dotSize: 10, glow: true  },
     complete:    { label: 'Ready',       color: 'var(--green)',         dotSize: 10, glow: false },
-    changes:     { label: 'Changes',     color: 'var(--gold)',          dotSize: 10, glow: true  },
+    changes:     { label: 'Changes',     color: 'var(--gold)',            dotSize: 10, glow: true  },
     done:        { label: 'Done',        color: 'var(--green)',         dotSize: 10, glow: false },
   };
   const cfg = stateConfig[cardState];
@@ -450,6 +450,9 @@ export function SortableCard({
                 style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover', border: `1px solid ${isMyCard ? column.color : 'var(--border-default)'}`, flexShrink: 0 }}
               />
             )}
+            <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>
+              {defaultRole.type === 'scripter' ? 'Writer' : defaultRole.type === 'clipper' ? 'Clipper' : 'Editor'}:
+            </span>
             <span style={{ color: isMyCard ? column.color : 'var(--text-primary)', fontWeight: isMyCard ? '700' : '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {defaultRole.user.discord_username || defaultRole.user.name}
             </span>
