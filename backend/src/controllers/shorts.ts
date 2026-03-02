@@ -425,6 +425,30 @@ export const shortsController = {
         updates.push(`script_writer_id = $${paramCount++}`);
         params.push(input.script_writer_id);
       }
+      if (input.reflection_what_worked !== undefined) {
+        updates.push(`reflection_what_worked = $${paramCount++}`);
+        params.push(input.reflection_what_worked);
+      }
+      if (input.reflection_what_didnt !== undefined) {
+        updates.push(`reflection_what_didnt = $${paramCount++}`);
+        params.push(input.reflection_what_didnt);
+      }
+      if (input.reflection_would_do_differently !== undefined) {
+        updates.push(`reflection_would_do_differently = $${paramCount++}`);
+        params.push(input.reflection_would_do_differently);
+      }
+      if (input.reflection_rating !== undefined) {
+        updates.push(`reflection_rating = $${paramCount++}`);
+        params.push(input.reflection_rating);
+      }
+      const isReflectionUpdate =
+        input.reflection_what_worked !== undefined ||
+        input.reflection_what_didnt !== undefined ||
+        input.reflection_would_do_differently !== undefined ||
+        input.reflection_rating !== undefined;
+      if (isReflectionUpdate) {
+        updates.push(`reflection_at = CURRENT_TIMESTAMP`);
+      }
       if (updates.length === 0) {
         res.status(400).json({ error: 'No fields to update' });
         return;
@@ -685,6 +709,22 @@ export const shortsController = {
     } catch (error) {
       logger.error('Mark editing complete error', { shortId: id, error });
       res.status(500).json({ error: 'Failed to mark editing complete' });
+    }
+  },
+
+  async getReflectionStats(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const isAdmin = req.userRoles?.includes('admin');
+      const result = await query(`
+        SELECT COUNT(*) as count FROM shorts
+        WHERE status IN ('completed', 'uploaded')
+          AND reflection_at IS NULL
+          AND created_at < NOW() - INTERVAL '7 days'
+      `);
+      res.json({ overdue_count: isAdmin ? parseInt(result.rows[0].count, 10) : 0 });
+    } catch (error) {
+      logger.error('Get reflection stats error', { error });
+      res.status(500).json({ error: 'Failed to fetch reflection stats' });
     }
   },
 

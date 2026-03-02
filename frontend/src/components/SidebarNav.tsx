@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget, IconSun, IconMoon } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget, IconSun, IconMoon, IconPencil } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
-import { usersApi, filesApi } from "../services/api";
+import { usersApi, filesApi, shortsApi } from "../services/api";
 import { useToast } from "../hooks/useToast";
 import { useAlert } from "../hooks/useAlert";
 import { getErrorMessage } from "../utils/errorHandler";
@@ -27,6 +27,15 @@ export function SidebarNav() {
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string>('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [overdueCount, setOverdueCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const fetch = () => shortsApi.getReflectionStats().then(d => setOverdueCount(d.overdue_count)).catch(() => {});
+    fetch();
+    const interval = setInterval(fetch, 60_000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return null;
@@ -145,6 +154,18 @@ export function SidebarNav() {
       label: "Guide",
       href: "/guide",
       icon: <IconHelp className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+    },
+    {
+      label: "Reflections",
+      href: "/reflections",
+      icon: (
+        <div style={{ position: 'relative', display: 'inline-flex' }}>
+          <IconPencil className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />
+          {isAdmin && overdueCount > 0 && (
+            <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#e05a4e', display: 'block' }} />
+          )}
+        </div>
+      ),
     },
     {
       label: "YouTube Stats",

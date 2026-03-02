@@ -13,6 +13,10 @@ export const updateShortSchema = z.object({
   script_content: z.string().max(50000).optional(),
   status: z.enum(['idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'uploaded']).optional(),
   script_writer_id: z.number().int().positive().nullable().optional(),
+  reflection_what_worked: z.string().nullable().optional(),
+  reflection_what_didnt: z.string().nullable().optional(),
+  reflection_would_do_differently: z.string().nullable().optional(),
+  reflection_rating: z.number().int().min(1).max(10).nullable().optional(),
 });
 
 export type CreateShortInput = z.infer<typeof createShortSchema>;

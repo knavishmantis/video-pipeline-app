@@ -90,6 +90,10 @@ export const shortsApi = {
     const response = await api.post(`/shorts/${id}/mark-editing-complete`);
     return response.data;
   },
+  getReflectionStats: async (): Promise<{ overdue_count: number }> => {
+    const response = await api.get('/shorts/reflection-stats');
+    return response.data;
+  },
 };
 
 export const assignmentsApi = {

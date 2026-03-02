@@ -35,6 +35,11 @@ export interface Short {
   entered_editing_changes_at?: string | null;
   clips_completed_at?: string | null;
   editing_completed_at?: string | null;
+  reflection_what_worked?: string | null;
+  reflection_what_didnt?: string | null;
+  reflection_would_do_differently?: string | null;
+  reflection_rating?: number | null;
+  reflection_at?: string | null;
   created_at: string;
   updated_at: string;
   // Populated fields
@@ -110,6 +115,11 @@ export interface UpdateShortInput {
   script_content?: string;
   status?: ShortStatus;
   script_writer_id?: number | null;
+  reflection_what_worked?: string | null;
+  reflection_what_didnt?: string | null;
+  reflection_would_do_differently?: string | null;
+  reflection_rating?: number | null;
+  reflection_at?: string | null;
 }
 
 export interface CreateAssignmentInput {

@@ -13,6 +13,7 @@ import FlashbackReference from './pages/FlashbackReference';
 import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
 import ScriptReview from './pages/ScriptReview';
+import Reflections from './pages/Reflections';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -134,6 +135,16 @@ function AppContent() {
               <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <ScriptReview />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/reflections"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <Reflections />
                 </AppLayout>
               </ProfileCheckRoute>
             }

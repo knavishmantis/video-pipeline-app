@@ -12,6 +12,7 @@ shortsRouter.use(requireProfileComplete);
 
 shortsRouter.get('/', shortsController.getAll);
 shortsRouter.get('/assigned', shortsController.getAssigned);
+shortsRouter.get('/reflection-stats', shortsController.getReflectionStats);
 shortsRouter.get('/:id', shortsController.getById);
 shortsRouter.post('/', validate(createShortSchema), shortsController.create);
 shortsRouter.put('/:id', validate(updateShortSchema), shortsController.update);

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Short, Assignment, User, File as FileInterface } from '../../../shared/types';
 import { ColumnType } from '../utils/dashboardUtils';
-import { shortsApi } from '../services/api';
 import { TimezoneDisplay } from './TimezoneDisplay';
 
 interface ContentModalProps {
@@ -589,6 +588,7 @@ export function ContentModal({
                     </p>
                   </SectionCard>
                 )}
+
               </>
             )}
 
