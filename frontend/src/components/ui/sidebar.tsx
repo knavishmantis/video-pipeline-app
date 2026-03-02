@@ -98,13 +98,14 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
         {/* Sidebar - always visible, just collapsed/expanded */}
         <motion.div
           animate={{
-            width: isExpanded ? 240 : 80,
+            width: isExpanded ? 240 : 75,
           }}
           transition={{ duration: animate ? 0.25 : 0, ease: "easeInOut" }}
           className="relative h-full flex-shrink-0 overflow-hidden"
           style={{
-            background: '#13131A',
-            borderRight: '1px solid #30303E',
+            background: 'var(--sidebar-bg)',
+            borderRight: '1px solid var(--sidebar-border)',
+            boxShadow: 'none',
           }}
         >
           {children}
@@ -115,7 +116,7 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
           <button
             onClick={() => setOpen(true)}
             className="fixed left-4 top-4 z-50 rounded-md p-2"
-            style={{ background: '#1C1C24', border: '1px solid #2E2E3C', color: '#EEEEF5' }}
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
@@ -194,16 +195,15 @@ export const SidebarLink = ({ link, className, onClick }: SidebarLinkProps) => {
       onClick={handleClick}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all cursor-pointer relative",
-        isActive
-          ? "text-[#F5A623]"
-          : "text-[#AAAACC] hover:text-[#F0F0F8]",
         className
       )}
       style={isActive ? {
-        background: 'rgba(245, 166, 35, 0.1)',
-        borderLeft: '2px solid #F5A623',
+        background: 'var(--gold-dim)',
+        borderLeft: '2px solid var(--gold)',
+        color: 'var(--gold)',
       } : {
         borderLeft: '2px solid transparent',
+        color: 'var(--text-secondary)',
       }}
       title={!isExpanded ? link.label : undefined}
     >

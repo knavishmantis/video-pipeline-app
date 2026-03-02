@@ -371,10 +371,3 @@ export const paymentsApi = {
   },
 };
 
-export const youtubeApi = {
-  uploadToYoutube: async (shortId: number): Promise<{ youtube_video_id: string; youtube_url: string }> => {
-    const response = await api.post(`/youtube/shorts/${shortId}/upload`, {}, { timeout: 300000 }); // 5 min timeout
-    return response.data;
-  },
-};
-

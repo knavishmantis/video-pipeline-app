@@ -10,7 +10,7 @@ export default function ScriptReview() {
   const [guess, setGuess] = useState(50);
   const [notes, setNotes] = useState('');
   const [result, setResult] = useState<ReviewResponse | null>(null);
-  const { showToast } = useToast();
+  const { showToast, ToastComponent } = useToast();
 
   useEffect(() => {
     loadRandomScript();
@@ -58,7 +58,7 @@ export default function ScriptReview() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading script...</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading script…</div>
       </div>
     );
   }
@@ -67,10 +67,11 @@ export default function ScriptReview() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <div className="text-gray-500 mb-4">No unrated scripts available</div>
+          <div className="mb-4" style={{ color: 'var(--text-muted)' }}>No unrated scripts available</div>
           <button
             onClick={loadRandomScript}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+            style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
           >
             Try Again
           </button>
@@ -80,45 +81,44 @@ export default function ScriptReview() {
   }
 
   const difference = result ? result.guess_percentile - result.actual_percentile : null;
-  const errorColor = result
+  const errorVar = result
     ? result.error <= 5
-      ? 'text-green-600'
+      ? 'var(--green)'
       : result.error <= 15
-      ? 'text-yellow-600'
-      : 'text-red-600'
-    : '';
+      ? 'var(--gold)'
+      : 'var(--red)'
+    : 'var(--text-primary)';
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex justify-between items-start mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">Script Review</h1>
+        <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Script Review</h1>
         <ReviewStatsWidget />
       </div>
 
       {!result ? (
         <>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="rounded-xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-sm)' }}>
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 mb-2">{script.title}</h2>
-              {/* Hide views/likes to avoid giving away percentile */}
+              <h2 className="text-lg font-bold mb-2" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{script.title}</h2>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
                 Script Transcript
               </label>
-              <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto border border-gray-200">
-                <p className="text-gray-900 whitespace-pre-wrap leading-relaxed">
+              <div className="rounded-lg p-4 max-h-96 overflow-y-auto" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                <p className="whitespace-pre-wrap leading-relaxed text-sm" style={{ color: 'var(--text-primary)' }}>
                   {script.transcript}
                 </p>
               </div>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Percentile Guess (0-100)
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
+                Percentile Guess (0–100)
               </label>
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <input
                   type="range"
                   min="0"
@@ -126,9 +126,10 @@ export default function ScriptReview() {
                   value={guess}
                   onChange={(e) => setGuess(Number(e.target.value))}
                   className="w-full"
+                  style={{ accentColor: 'var(--gold)' }}
                 />
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">0%</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>0%</span>
                   <input
                     type="number"
                     min="0"
@@ -138,11 +139,12 @@ export default function ScriptReview() {
                       const val = Math.max(0, Math.min(100, Number(e.target.value)));
                       setGuess(val);
                     }}
-                    className="w-20 px-2 py-1 border border-gray-300 rounded text-center font-semibold"
+                    className="w-20 px-2 py-1 rounded text-center font-bold text-sm focus:outline-none"
+                    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                   />
-                  <span className="text-sm text-gray-600">100%</span>
+                  <span className="text-xs" style={{ color: 'var(--text-muted)' }}>100%</span>
                 </div>
-                <div className="text-xs text-gray-500 text-center">
+                <div className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
                   {guess === 99 ? '99th percentile (top 1%)' : 
                    guess >= 90 ? `${guess}th percentile (top ${100 - guess}%)` :
                    guess >= 50 ? `${guess}th percentile` :
@@ -152,59 +154,61 @@ export default function ScriptReview() {
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>
                 Notes (optional)
               </label>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add your thoughts on what makes this script good or bad..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows={4}
+                className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
               />
             </div>
 
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="w-full px-4 py-2.5 rounded-lg font-semibold transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: submitting ? 'not-allowed' : 'pointer' }}
             >
-              {submitting ? 'Submitting...' : 'Submit Review'}
+              {submitting ? 'Submitting…' : 'Submit Review'}
             </button>
           </div>
         </>
       ) : (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="rounded-xl p-6" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-sm)' }}>
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">{script.title}</h2>
-            <div className="text-sm text-gray-500 mb-4">
-              {script.views.toLocaleString()} views • {script.likes.toLocaleString()} likes • {script.comments.toLocaleString()} comments
+            <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{script.title}</h2>
+            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {script.views.toLocaleString()} views · {script.likes.toLocaleString()} likes · {script.comments.toLocaleString()} comments
             </div>
           </div>
 
           <div className="space-y-4 mb-6">
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600 mb-1">Your Guess</div>
-                <div className="text-2xl font-bold text-gray-900">{result.guess_percentile.toFixed(1)}%</div>
+              <div className="rounded-lg p-4" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>Your Guess</div>
+                <div className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{result.guess_percentile.toFixed(1)}%</div>
               </div>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="text-sm text-gray-600 mb-1">Actual Percentile</div>
-                <div className="text-2xl font-bold text-blue-600">{result.actual_percentile.toFixed(1)}%</div>
+              <div className="rounded-lg p-4" style={{ background: 'var(--gold-dim)', border: '1px solid var(--gold-border)' }}>
+                <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>Actual Percentile</div>
+                <div className="text-2xl font-bold" style={{ color: 'var(--gold)' }}>{result.actual_percentile.toFixed(1)}%</div>
               </div>
             </div>
 
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="rounded-lg p-4" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
               <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-sm text-gray-600 mb-1">Error</div>
-                  <div className={`text-xl font-bold ${errorColor}`}>
+                  <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>Error</div>
+                  <div className="text-xl font-bold" style={{ color: errorVar }}>
                     {result.error.toFixed(1)}%
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-600 mb-1">Difference</div>
-                  <div className={`text-xl font-bold ${difference && difference > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <div className="text-xs uppercase tracking-wide mb-1" style={{ color: 'var(--text-muted)' }}>Difference</div>
+                  <div className="text-xl font-bold" style={{ color: difference && difference > 0 ? 'var(--red)' : 'var(--green)' }}>
                     {difference && difference > 0 ? '+' : ''}{difference?.toFixed(1)}%
                   </div>
                 </div>
@@ -212,17 +216,17 @@ export default function ScriptReview() {
             </div>
 
             {result.error <= 5 && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
+              <div className="rounded-lg p-3 text-sm" style={{ background: 'color-mix(in srgb, var(--green) 12%, var(--bg-elevated))', border: '1px solid color-mix(in srgb, var(--green) 30%, var(--border-default))', color: 'var(--green)' }}>
                 🎯 Excellent guess! You're getting really good at this.
               </div>
             )}
             {result.error > 5 && result.error <= 15 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-yellow-800 text-sm">
+              <div className="rounded-lg p-3 text-sm" style={{ background: 'color-mix(in srgb, var(--gold) 12%, var(--bg-elevated))', border: '1px solid color-mix(in srgb, var(--gold) 30%, var(--border-default))', color: 'var(--gold)' }}>
                 👍 Good guess! Keep practicing.
               </div>
             )}
             {result.error > 15 && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
+              <div className="rounded-lg p-3 text-sm" style={{ background: 'color-mix(in srgb, var(--red) 12%, var(--bg-elevated))', border: '1px solid color-mix(in srgb, var(--red) 30%, var(--border-default))', color: 'var(--red)' }}>
                 💡 Keep learning! Review what makes high/low percentile scripts different.
               </div>
             )}
@@ -230,8 +234,8 @@ export default function ScriptReview() {
 
           {notes && (
             <div className="mb-6">
-              <div className="text-sm font-medium text-gray-700 mb-2">Your Notes</div>
-              <div className="bg-gray-50 rounded-lg p-4 text-gray-900 whitespace-pre-wrap">
+              <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Your Notes</div>
+              <div className="rounded-lg p-4 whitespace-pre-wrap text-sm" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}>
                 {notes}
               </div>
             </div>
@@ -239,13 +243,14 @@ export default function ScriptReview() {
 
           <button
             onClick={handleNext}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+            className="w-full px-4 py-2.5 rounded-lg font-semibold transition-opacity hover:opacity-80"
+            style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
           >
             Next Script
           </button>
         </div>
       )}
+      <ToastComponent />
     </div>
   );
 }
-

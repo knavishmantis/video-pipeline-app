@@ -8,30 +8,18 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        mono: ['DM Mono', 'Courier New', 'monospace'],
+        sans: ['Plus Jakarta Sans', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
-        'pipe': {
-          'base':     '#0E0E12',
-          'surface':  '#16161C',
-          'elevated': '#1C1C24',
-          'raised':   '#22222C',
-          'border':   '#2E2E3C',
-          'muted':    '#4A4A60',
-          'secondary':'#8888A8',
-          'primary':  '#EEEEF5',
-          'accent':   '#F5A623',
-          'green':    '#22D3A0',
-          'red':      '#FF5E5E',
-          'blue':     '#5C8EFF',
-          'violet':   '#B39DFF',
-          'lime':     '#A3E635',
-        },
+        // Luxury Matte tokens (light/dark via CSS vars)
+        'gold':      '#B8922E',
+        'gold-dark': '#D4AF50',
+        'cream':     '#F5F2EC',
+        'ink':       '#1C1A16',
       },
       boxShadow: {
-        'glow-amber': '0 0 24px rgba(245, 166, 35, 0.3)',
-        'glow-green': '0 0 16px rgba(34, 211, 160, 0.25)',
+        'card':    '0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(28,22,14,0.06)',
+        'modal':   '0 24px 64px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.06)',
       },
     },
   },

@@ -8,16 +8,6 @@ import { User, UserRole, UserRate } from '../../../shared/types';
 import { getErrorMessage } from '../utils/errorHandler';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
-import { cn } from '../lib/utils';
-
-const BottomGradient = () => {
-  return (
-    <>
-      <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
-      <span className="absolute inset-x-10 -bottom-px mx-auto block h-px w-1/2 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
-    </>
-  );
-};
 
 export default function UserManagement() {
   const { user } = useAuth();
@@ -227,67 +217,65 @@ export default function UserManagement() {
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=6366f1&color=fff&size=128&bold=true`;
   };
 
-  const roleColors: Record<UserRole, string> = {
-    admin: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    script_writer: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    clipper: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    editor: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  const roleColors: Record<UserRole, { bg: string; color: string; border: string }> = {
+    admin:         { bg: 'var(--gold-dim)',              color: 'var(--gold)',           border: 'var(--gold-border)' },
+    script_writer: { bg: 'var(--col-script-dim)',        color: 'var(--col-script)',     border: 'var(--col-script-border)' },
+    clipper:       { bg: 'var(--col-clips-dim)',         color: 'var(--col-clips)',      border: 'var(--col-clips-border)' },
+    editor:        { bg: 'var(--col-editing-dim)',       color: 'var(--col-editing)',    border: 'var(--col-editing-border)' },
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div style={{ padding: '0 4px', maxWidth: '1400px', margin: '0 auto' }}>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-neutral-900 dark:text-white mb-2">Users</h1>
-          <p className="text-neutral-600 dark:text-neutral-400">
-            {isAdmin ? 'Manage team members and their roles' : 'View team members'}
-          </p>
+          <p style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>Admin</p>
+          <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>Users</h1>
         </div>
         {isAdmin && (
           <button
             onClick={() => setShowAddModal(true)}
-            className="group/btn relative flex h-10 items-center justify-center space-x-2 rounded-md bg-gradient-to-br from-black to-neutral-600 px-6 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] transition-all hover:shadow-lg dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+            style={{ padding: '7px 16px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', letterSpacing: '-0.01em' }}
           >
-            <span>Add User</span>
-            <BottomGradient />
+            + Add User
           </button>
         )}
       </div>
 
       {/* Filter Buttons */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <button
-          onClick={() => setFilterRole('all')}
-          className={cn(
-            "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-            filterRole === 'all'
-              ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
-              : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-          )}
-        >
-          All
-        </button>
-        {(['admin', 'script_writer', 'clipper', 'editor'] as UserRole[]).map((role) => (
-          <button
-            key={role}
-            onClick={() => setFilterRole(role)}
-            className={cn(
-              "px-4 py-2 rounded-lg text-sm font-medium transition-colors capitalize",
-              filterRole === role
-                ? "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900"
-                : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-            )}
-          >
-            {role.replace('_', ' ')}
-          </button>
-        ))}
+      <div className="flex gap-2 mb-6 flex-wrap" style={{ padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '8px', boxShadow: 'var(--card-shadow)', alignItems: 'center' }}>
+        <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginRight: '4px' }}>Role</span>
+        {(['all', 'admin', 'script_writer', 'clipper', 'editor'] as (UserRole | 'all')[]).map((role) => {
+          const isActive = filterRole === role;
+          const rc = role !== 'all' ? roleColors[role as UserRole] : null;
+          return (
+            <button
+              key={role}
+              onClick={() => setFilterRole(role)}
+              style={{
+                padding: '5px 12px',
+                background: isActive ? (rc ? rc.bg : 'var(--gold-dim)') : 'transparent',
+                color: isActive ? (rc ? rc.color : 'var(--gold)') : 'var(--text-secondary)',
+                border: isActive ? `1px solid ${rc ? rc.border : 'var(--gold-border)'}` : '1px solid var(--border-default)',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
+                letterSpacing: '-0.01em',
+                textTransform: 'capitalize',
+              }}
+            >
+              {role === 'all' ? 'All' : role.replace('_', ' ')}
+            </button>
+          );
+        })}
       </div>
 
       {/* Users Grid */}
       {loading ? (
-        <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">Loading...</div>
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>Loading…</div>
       ) : users.length === 0 ? (
-        <div className="text-center py-12 text-neutral-600 dark:text-neutral-400">
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
           No users found
         </div>
       ) : (
@@ -295,31 +283,33 @@ export default function UserManagement() {
           {users.map((u) => (
             <div
               key={u.id}
-              className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 hover:shadow-lg transition-shadow"
+              style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', padding: '16px', boxShadow: 'var(--card-shadow)', transition: 'box-shadow 0.2s ease' }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--card-hover-shadow)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = 'var(--card-shadow)'; }}
             >
               <div className="flex items-start gap-4">
                 {u.profile_picture && !u.profile_picture.startsWith('http') ? (
-                  <div className="h-12 w-12 rounded-full flex items-center justify-center text-2xl bg-gray-100 dark:bg-neutral-800 flex-shrink-0">
+                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', background: 'var(--bg-elevated)', flexShrink: 0, border: '1px solid var(--border-default)' }}>
                     {u.profile_picture}
                   </div>
                 ) : (
                   <img
                     src={getProfilePicture(u)}
                     alt={u.name}
-                    className="h-12 w-12 rounded-full object-cover flex-shrink-0"
+                    style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid var(--border-default)' }}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}&background=random&size=128`;
+                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name || 'User')}&background=B8922E&color=fff&size=128&bold=true`;
                     }}
                   />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-neutral-900 dark:text-white truncate">{u.name}</h3>
-                      <p className="text-sm text-neutral-600 dark:text-neutral-400 truncate">{u.email}</p>
+                      <h3 style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '13px', letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.name}</h3>
+                      <p style={{ fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{u.email}</p>
                       {u.discord_username && (
-                        <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-1">
-                          Discord: {u.discord_username}
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>
+                          {u.discord_username}
                         </p>
                       )}
                     </div>
@@ -328,7 +318,9 @@ export default function UserManagement() {
                         {(u.roles || (u.role ? [u.role] : [])).some(r => r === 'clipper' || r === 'editor') && (
                           <button
                             onClick={() => handleShowRates(u)}
-                            className="p-1.5 text-neutral-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors dark:text-neutral-400 dark:hover:text-green-400 dark:hover:bg-green-900/20"
+                            style={{ padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s' }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                             title="Manage rates"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,7 +330,9 @@ export default function UserManagement() {
                         )}
                         <button
                           onClick={() => handleEditUser(u)}
-                          className="p-1.5 text-neutral-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors dark:text-neutral-400 dark:hover:text-blue-400 dark:hover:bg-blue-900/20"
+                          style={{ padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s' }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                           title="Edit user"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,7 +342,9 @@ export default function UserManagement() {
                         <button
                           onClick={() => handleDeleteUser(u.id)}
                           disabled={deletingUserId === u.id || u.id === user?.id}
-                          className="p-1.5 text-neutral-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:text-neutral-400 dark:hover:text-red-400 dark:hover:bg-red-900/20"
+                          style={{ padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.15s', opacity: deletingUserId === u.id || u.id === user?.id ? 0.4 : 1 }}
+                          onMouseEnter={(e) => { if (!(deletingUserId === u.id || u.id === user?.id)) { (e.currentTarget as HTMLElement).style.color = '#e05a4e'; (e.currentTarget as HTMLElement).style.background = 'rgba(224,90,78,0.1)'; } }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                           title={u.id === user?.id ? "Cannot delete yourself" : "Delete user"}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,21 +354,31 @@ export default function UserManagement() {
                       </div>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {(u.roles || (u.role ? [u.role] : [])).map((role) => (
-                      <span
-                        key={role}
-                        className={cn(
-                          "px-2 py-0.5 rounded text-xs font-medium",
-                          roleColors[role as UserRole] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                        )}
-                      >
-                        {role.replace('_', ' ')}
-                      </span>
-                    ))}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
+                    {(u.roles || (u.role ? [u.role] : [])).map((role) => {
+                      const rc = roleColors[role as UserRole];
+                      return (
+                        <span
+                          key={role}
+                          style={{
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            letterSpacing: '0.04em',
+                            textTransform: 'capitalize',
+                            background: rc ? rc.bg : 'var(--bg-elevated)',
+                            color: rc ? rc.color : 'var(--text-secondary)',
+                            border: rc ? `1px solid ${rc.border}` : '1px solid var(--border-default)',
+                          }}
+                        >
+                          {role.replace('_', ' ')}
+                        </span>
+                      );
+                    })}
                   </div>
                   {!u.discord_username || !u.paypal_email ? (
-                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', fontStyle: 'italic' }}>
                       Profile incomplete
                     </p>
                   ) : null}
@@ -385,17 +391,17 @@ export default function UserManagement() {
 
       {/* Add User Modal */}
       {showAddModal && isAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-black rounded-2xl p-6 md:p-8 max-w-md w-full shadow-xl">
-            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--modal-overlay)' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '24px', maxWidth: '420px', width: '100%', boxShadow: 'var(--modal-shadow)', border: '1px solid var(--border-default)' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
               Add New User
             </h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-6">
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Create a user account. They'll need to complete their profile on first login.
             </p>
 
             {error && (
-              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              <div style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(224,90,78,0.1)', border: '1px solid rgba(224,90,78,0.3)', fontSize: '12px', color: '#e05a4e' }}>
                 {error}
               </div>
             )}
@@ -416,22 +422,31 @@ export default function UserManagement() {
               <div>
                 <Label>Roles *</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {(['admin', 'script_writer', 'clipper', 'editor'] as UserRole[]).map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => handleRoleToggle(role)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize",
-                        newUser.roles.includes(role)
-                          ? roleColors[role] || "bg-gray-200 text-gray-800"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                      )}
-                    >
-                      {role.replace('_', ' ')}
-                      {newUser.roles.includes(role) && ' ✓'}
-                    </button>
-                  ))}
+                  {(['admin', 'script_writer', 'clipper', 'editor'] as UserRole[]).map((role) => {
+                    const active = newUser.roles.includes(role);
+                    const rc = roleColors[role];
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => handleRoleToggle(role)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          textTransform: 'capitalize',
+                          background: active ? rc.bg : 'var(--bg-elevated)',
+                          color: active ? rc.color : 'var(--text-secondary)',
+                          border: active ? `1px solid ${rc.border}` : '1px solid var(--border-default)',
+                        }}
+                      >
+                        {role.replace('_', ' ')}{active && ' ✓'}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -439,19 +454,14 @@ export default function UserManagement() {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="group/btn relative flex-1 h-10 rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+                  style={{ flex: 1, height: '38px', borderRadius: '8px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', fontSize: '13px', fontWeight: '700', cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.5 : 1, letterSpacing: '-0.01em' }}
                 >
-                  {creating ? 'Creating...' : 'Create User →'}
-                  <BottomGradient />
+                  {creating ? 'Creating…' : 'Create User →'}
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowAddModal(false);
-                    setNewUser({ email: '', roles: [] });
-                    setError('');
-                  }}
-                  className="px-4 h-10 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                  onClick={() => { setShowAddModal(false); setNewUser({ email: '', roles: [] }); setError(''); }}
+                  style={{ padding: '0 16px', height: '38px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -463,17 +473,17 @@ export default function UserManagement() {
 
       {/* Edit User Modal */}
       {showEditModal && editingUser && isAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-black rounded-2xl p-6 md:p-8 max-w-md w-full shadow-xl">
-            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--modal-overlay)' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '24px', maxWidth: '420px', width: '100%', boxShadow: 'var(--modal-shadow)', border: '1px solid var(--border-default)' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
               Edit User
             </h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-6">
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Update user information and roles.
             </p>
 
             {error && (
-              <div className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+              <div style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(224,90,78,0.1)', border: '1px solid rgba(224,90,78,0.3)', fontSize: '12px', color: '#e05a4e' }}>
                 {error}
               </div>
             )}
@@ -516,22 +526,31 @@ export default function UserManagement() {
               <div>
                 <Label>Roles *</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {(['admin', 'script_writer', 'clipper', 'editor'] as UserRole[]).map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => handleEditRoleToggle(role)}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize",
-                        editUser.roles.includes(role)
-                          ? roleColors[role] || "bg-gray-200 text-gray-800"
-                          : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
-                      )}
-                    >
-                      {role.replace('_', ' ')}
-                      {editUser.roles.includes(role) && ' ✓'}
-                    </button>
-                  ))}
+                  {(['admin', 'script_writer', 'clipper', 'editor'] as UserRole[]).map((role) => {
+                    const active = editUser.roles.includes(role);
+                    const rc = roleColors[role];
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => handleEditRoleToggle(role)}
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          textTransform: 'capitalize',
+                          background: active ? rc.bg : 'var(--bg-elevated)',
+                          color: active ? rc.color : 'var(--text-secondary)',
+                          border: active ? `1px solid ${rc.border}` : '1px solid var(--border-default)',
+                        }}
+                      >
+                        {role.replace('_', ' ')}{active && ' ✓'}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -539,10 +558,9 @@ export default function UserManagement() {
                 <button
                   type="submit"
                   disabled={updating}
-                  className="group/btn relative flex-1 h-10 rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+                  style={{ flex: 1, height: '38px', borderRadius: '8px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', fontSize: '13px', fontWeight: '700', cursor: updating ? 'not-allowed' : 'pointer', opacity: updating ? 0.5 : 1, letterSpacing: '-0.01em' }}
                 >
-                  {updating ? 'Updating...' : 'Update User →'}
-                  <BottomGradient />
+                  {updating ? 'Updating…' : 'Update User →'}
                 </button>
                 <button
                   type="button"
@@ -552,7 +570,7 @@ export default function UserManagement() {
                     setEditUser({ email: '', discord_username: '', paypal_email: '', roles: [] });
                     setError('');
                   }}
-                  className="px-4 h-10 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                  style={{ padding: '0 16px', height: '38px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -564,54 +582,53 @@ export default function UserManagement() {
 
       {/* Rates Modal */}
       {showRatesModal && ratesUser && isAdmin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-black rounded-2xl p-6 md:p-8 max-w-md w-full shadow-xl">
-            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200 mb-2">
-              Manage Rates for {ratesUser.name}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--modal-overlay)' }}>
+          <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '24px', maxWidth: '420px', width: '100%', boxShadow: 'var(--modal-shadow)', border: '1px solid var(--border-default)' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
+              Manage Rates — {ratesUser.name}
             </h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-300 mb-6">
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px' }}>
               Set payment rates for this user. Rates apply to all unpaid jobs.
             </p>
 
             {!editingRate ? (
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {(['clipper', 'editor'] as const).map((role) => {
                   const rate = userRates.find(r => r.role === role);
                   const hasRole = (ratesUser.roles || (ratesUser.role ? [ratesUser.role] : [])).includes(role);
+                  const rc = roleColors[role as UserRole];
                   
                   if (!hasRole) return null;
                   
                   return (
-                    <div key={role} className="p-4 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="font-medium text-neutral-900 dark:text-white capitalize">
-                              {role}
-                            </span>
-                          </div>
-                          <div className="text-2xl font-bold text-neutral-900 dark:text-white">
-                            ${rate ? Number(rate.rate).toFixed(2) : 'Not set'}
-                          </div>
-                          {rate?.rate_description && (
-                            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                              {rate.rate_description}
-                            </p>
-                          )}
+                    <div key={role} style={{ padding: '14px 16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'capitalize', letterSpacing: '0.04em', padding: '2px 8px', borderRadius: '4px', background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
+                            {role}
+                          </span>
                         </div>
-                        <button
-                          onClick={() => handleEditRate(role)}
-                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                        >
-                          {rate ? 'Edit' : 'Set Rate'}
-                        </button>
+                        <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+                          ${rate ? Number(rate.rate).toFixed(2) : '—'}
+                        </div>
+                        {rate?.rate_description && (
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {rate.rate_description}
+                          </p>
+                        )}
                       </div>
+                      <button
+                        onClick={() => handleEditRate(role)}
+                        style={{ padding: '6px 14px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        {rate ? 'Edit' : 'Set Rate'}
+                      </button>
                     </div>
                   );
                 })}
               </div>
             ) : (
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <Label htmlFor="rate-amount">Rate ($)</Label>
                   <Input
@@ -637,20 +654,19 @@ export default function UserManagement() {
               </div>
             )}
 
-            <div className="flex gap-3 mt-6">
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               {editingRate ? (
                 <>
                   <button
                     onClick={handleSaveRate}
                     disabled={savingRate || editingRate.rate <= 0}
-                    className="flex-1 group/btn relative flex h-10 items-center justify-center space-x-2 rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
+                    style={{ flex: 1, height: '38px', borderRadius: '8px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', fontSize: '13px', fontWeight: '700', cursor: (savingRate || editingRate.rate <= 0) ? 'not-allowed' : 'pointer', opacity: (savingRate || editingRate.rate <= 0) ? 0.5 : 1, letterSpacing: '-0.01em' }}
                   >
-                    {savingRate ? 'Saving...' : 'Save Rate →'}
-                    <BottomGradient />
+                    {savingRate ? 'Saving…' : 'Save Rate →'}
                   </button>
                   <button
                     onClick={() => setEditingRate(null)}
-                    className="px-4 h-10 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                    style={{ padding: '0 16px', height: '38px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                   >
                     Cancel
                   </button>
@@ -662,7 +678,7 @@ export default function UserManagement() {
                     setRatesUser(null);
                     setUserRates([]);
                   }}
-                  className="flex-1 px-4 h-10 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700 transition-colors"
+                  style={{ flex: 1, height: '38px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Close
                 </button>

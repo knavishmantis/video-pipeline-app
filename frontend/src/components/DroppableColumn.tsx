@@ -1,6 +1,6 @@
 import React from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Column } from '../utils/dashboardUtils';
+import { Column, colBorder, colDim } from '../utils/dashboardUtils';
 import { Short } from '../../../shared/types';
 
 interface DroppableColumnProps {
@@ -19,23 +19,20 @@ export function DroppableColumn({ column, children, shorts }: DroppableColumnPro
       ref={setNodeRef}
       style={{
         minWidth: '280px',
-        background: isOver ? '#1F1F28' : '#18181F',
-        borderRadius: '6px',
+        background: isOver ? 'var(--column-hover-bg)' : 'var(--column-bg)',
+        borderRadius: '10px',
         border: isOver
-          ? `1px solid ${column.color}66`
-          : '1px solid #32323E',
+          ? `1px solid ${colBorder(column.id)}`
+          : '1px solid var(--column-border)',
+        borderTop: `3px solid ${column.color}`,
         display: 'flex',
         flexDirection: 'column',
         height: 'calc(100vh - 220px)',
-        transition: 'all 0.2s ease-out',
+        transition: 'background 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out',
         boxSizing: 'border-box',
         overflow: 'visible',
-        /* Top accent line in the column's color */
-        borderTop: isOver
-          ? `2px solid ${column.color}`
-          : `2px solid ${column.color}`,
         boxShadow: isOver
-          ? `0 0 0 1px ${column.color}22, inset 0 0 32px ${column.color}08`
+          ? `0 0 0 2px ${colDim(column.id)}`
           : 'none',
       }}
     >

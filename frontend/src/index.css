@@ -3,27 +3,262 @@
 @tailwind utilities;
 
 @layer base {
+  /* ─────────────────────────────────────────────────────
+     Luxury Matte · LIGHT (default)
+  ───────────────────────────────────────────────────── */
   :root {
-    /* ── Dark broadcast palette ── */
-    --bg-base:        #0E0E14;
-    --bg-surface:     #18181F;
-    --bg-elevated:    #1F1F28;
-    --bg-raised:      #262632;
+    --bg-base:     #F9F7F4;
+    --bg-surface:  #FDFCFA;
+    --bg-elevated: #FFFFFF;
 
-    --border-subtle:  #28283A;
-    --border-default: #38384E;
-    --border-strong:  #4E4E68;
+    --text-primary:   #1C1A16;
+    --text-secondary: #4A4540;
+    --text-muted:     #8A7E74;
 
-    --text-primary:   #F0F0F8;
-    --text-secondary: #AAAACC;
-    --text-muted:     #6E6E90;
+    --border-subtle:  rgba(28, 22, 14, 0.07);
+    --border-default: rgba(28, 22, 14, 0.12);
+    --border-strong:  rgba(28, 22, 14, 0.20);
 
-    --accent:         #F5A623;
-    --accent-dim:     rgba(245, 166, 35, 0.15);
-    --accent-glow:    0 0 24px rgba(245, 166, 35, 0.25);
+    /* The one accent — burnished gold */
+    --gold:        #B8922E;
+    --gold-dim:    rgba(184, 146, 46, 0.12);
+    --gold-border: rgba(184, 146, 46, 0.32);
 
-    --red:            #FF5E5E;
-    --green:          #22D3A0;
+    /* Semantic status colors */
+    --red:   #B83224;
+    --green: #267050;
+    --blue:  #1D56D4;
+
+    /* Raised surface (above elevated — used for disabled/inactive states) */
+    --bg-raised: #F2F0EB;
+
+    /* ── Per-column accent colors ── */
+    --col-script:                  #6A58C0; /* indigo-violet   */
+    --col-script-dim:              rgba(106, 88,  192, 0.10);
+    --col-script-border:           rgba(106, 88,  192, 0.28);
+
+    --col-clips:                   #C0682A; /* burnt orange     */
+    --col-clips-dim:               rgba(192, 104, 42,  0.10);
+    --col-clips-border:            rgba(192, 104, 42,  0.28);
+
+    --col-clip-changes:            #B83838; /* crimson red      */
+    --col-clip-changes-dim:        rgba(184, 56,  56,  0.10);
+    --col-clip-changes-border:     rgba(184, 56,  56,  0.28);
+
+    --col-editing:                 #2A7A9A; /* teal-blue        */
+    --col-editing-dim:             rgba(42,  122, 154, 0.10);
+    --col-editing-border:          rgba(42,  122, 154, 0.28);
+
+    --col-editing-changes:         #8040A0; /* deep violet      */
+    --col-editing-changes-dim:     rgba(128, 64,  160, 0.10);
+    --col-editing-changes-border:  rgba(128, 64,  160, 0.28);
+
+    --col-uploaded:                #3870B8; /* medium blue      */
+    --col-uploaded-dim:            rgba(56,  112, 184, 0.10);
+    --col-uploaded-border:         rgba(56,  112, 184, 0.28);
+
+    --card-bg:           #FEFEFE;
+    --card-hover-bg:     #FFFFFF;
+    --card-shadow:       0 1px 3px rgba(0,0,0,0.07), 0 0 0 1px rgba(28,22,14,0.07);
+    --card-hover-shadow: 0 4px 16px rgba(0,0,0,0.10), 0 0 0 1px rgba(28,22,14,0.10);
+
+    --column-bg:       #F2F0EB;
+    --column-hover-bg: #EDEAE4;
+    --column-border:   rgba(28, 22, 14, 0.09);
+
+    --sidebar-bg:     #FDFCFA;
+    --sidebar-border: rgba(28, 22, 14, 0.09);
+
+    --filter-bg:     #FDFCFA;
+    --filter-border: rgba(28, 22, 14, 0.09);
+
+    --input-bg:     #FFFFFF;
+    --input-border: rgba(28, 22, 14, 0.16);
+
+    --modal-bg:      #FFFFFF;
+    --modal-border:  rgba(28, 22, 14, 0.12);
+    --modal-shadow:  0 24px 64px rgba(0,0,0,0.14), 0 4px 16px rgba(0,0,0,0.06);
+    --modal-overlay: rgba(20, 18, 14, 0.40);
+
+    --scrollbar-track:       rgba(0,0,0,0.05);
+    --scrollbar-thumb:       rgba(0,0,0,0.18);
+    --scrollbar-thumb-hover: rgba(0,0,0,0.30);
+
+    --version-text: rgba(0,0,0,0.30);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(28,22,14,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.10), 0 0 0 1px rgba(28,22,14,0.07);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(28,22,14,0.07);
+  }
+
+  /* ─────────────────────────────────────────────────────
+     Luxury Matte · DARK vars (reusable block)
+     Applied via system preference OR manual toggle
+  ───────────────────────────────────────────────────── */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg-base:     #141210;
+      --bg-surface:  #1C1A17;
+      --bg-elevated: #242118;
+
+      --text-primary:   #EDE9E0;
+      --text-secondary: #B0A89C;
+      --text-muted:     #7A7168;
+
+      --border-subtle:  rgba(255,255,255,0.06);
+      --border-default: rgba(255,255,255,0.11);
+      --border-strong:  rgba(255,255,255,0.18);
+
+      --gold:        #D4AF50;
+      --gold-dim:    rgba(212, 175, 80, 0.12);
+      --gold-border: rgba(212, 175, 80, 0.32);
+
+      --red:   #E05C4C;
+      --green: #4CAF82;
+      --blue:  #60A5FA;
+
+      --bg-raised: #2A2722;
+
+      --col-script:                  #8878E0; /* indigo-violet · dark */
+      --col-script-dim:              rgba(136, 120, 224, 0.10);
+      --col-script-border:           rgba(136, 120, 224, 0.28);
+
+      --col-clips:                   #E08848; /* burnt orange · dark  */
+      --col-clips-dim:               rgba(224, 136, 72,  0.10);
+      --col-clips-border:            rgba(224, 136, 72,  0.28);
+
+      --col-clip-changes:            #E05858; /* crimson red · dark   */
+      --col-clip-changes-dim:        rgba(224, 88,  88,  0.10);
+      --col-clip-changes-border:     rgba(224, 88,  88,  0.28);
+
+      --col-editing:                 #40A0C8; /* teal-blue · dark     */
+      --col-editing-dim:             rgba(64,  160, 200, 0.10);
+      --col-editing-border:          rgba(64,  160, 200, 0.28);
+
+      --col-editing-changes:         #A860C8; /* deep violet · dark   */
+      --col-editing-changes-dim:     rgba(168, 96,  200, 0.10);
+      --col-editing-changes-border:  rgba(168, 96,  200, 0.28);
+
+      --col-uploaded:                #5090D8; /* medium blue · dark   */
+      --col-uploaded-dim:            rgba(80,  144, 216, 0.10);
+      --col-uploaded-border:         rgba(80,  144, 216, 0.28);
+
+      --card-bg:           #1C1A17;
+      --card-hover-bg:     #242118;
+      --card-shadow:       0 1px 3px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.05);
+      --card-hover-shadow: 0 4px 16px rgba(0,0,0,0.50), 0 0 0 1px rgba(255,255,255,0.07);
+
+      --column-bg:       #1A1815;
+      --column-hover-bg: #1E1C19;
+      --column-border:   rgba(255,255,255,0.08);
+
+      --sidebar-bg:     #1C1A17;
+      --sidebar-border: rgba(255,255,255,0.08);
+
+      --filter-bg:     #1C1A17;
+      --filter-border: rgba(255,255,255,0.08);
+
+      --input-bg:     #242118;
+      --input-border: rgba(255,255,255,0.14);
+
+      --modal-bg:      #242118;
+      --modal-border:  rgba(255,255,255,0.11);
+      --modal-shadow:  0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.30);
+      --modal-overlay: rgba(0,0,0,0.60);
+
+      --scrollbar-track:       rgba(255,255,255,0.04);
+      --scrollbar-thumb:       rgba(255,255,255,0.14);
+      --scrollbar-thumb-hover: rgba(255,255,255,0.24);
+
+      --version-text: rgba(255,255,255,0.30);
+
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+      --shadow-lg: 0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
+    }
+  }
+
+  /* ── Manual dark toggle: data-theme="dark" on <html> ── */
+  :root[data-theme="dark"] {
+    --bg-base:     #141210;
+    --bg-surface:  #1C1A17;
+    --bg-elevated: #242118;
+
+    --text-primary:   #EDE9E0;
+    --text-secondary: #B0A89C;
+    --text-muted:     #7A7168;
+
+    --border-subtle:  rgba(255,255,255,0.06);
+    --border-default: rgba(255,255,255,0.11);
+    --border-strong:  rgba(255,255,255,0.18);
+
+    --gold:        #D4AF50;
+    --gold-dim:    rgba(212, 175, 80, 0.12);
+    --gold-border: rgba(212, 175, 80, 0.32);
+
+    --red:   #E05C4C;
+    --green: #4CAF82;
+    --blue:  #60A5FA;
+
+    --bg-raised: #2A2722;
+
+    --col-script:                  #8878E0;
+    --col-script-dim:              rgba(136, 120, 224, 0.10);
+    --col-script-border:           rgba(136, 120, 224, 0.28);
+
+    --col-clips:                   #E08848;
+    --col-clips-dim:               rgba(224, 136, 72,  0.10);
+    --col-clips-border:            rgba(224, 136, 72,  0.28);
+
+    --col-clip-changes:            #E05858;
+    --col-clip-changes-dim:        rgba(224, 88,  88,  0.10);
+    --col-clip-changes-border:     rgba(224, 88,  88,  0.28);
+
+    --col-editing:                 #40A0C8;
+    --col-editing-dim:             rgba(64,  160, 200, 0.10);
+    --col-editing-border:          rgba(64,  160, 200, 0.28);
+
+    --col-editing-changes:         #A860C8;
+    --col-editing-changes-dim:     rgba(168, 96,  200, 0.10);
+    --col-editing-changes-border:  rgba(168, 96,  200, 0.28);
+
+    --col-uploaded:                #5090D8;
+    --col-uploaded-dim:            rgba(80,  144, 216, 0.10);
+    --col-uploaded-border:         rgba(80,  144, 216, 0.28);
+
+    --card-bg:           #1C1A17;
+    --card-hover-bg:     #242118;
+    --card-shadow:       0 1px 3px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.05);
+    --card-hover-shadow: 0 4px 16px rgba(0,0,0,0.50), 0 0 0 1px rgba(255,255,255,0.07);
+
+    --column-bg:       #1A1815;
+    --column-hover-bg: #1E1C19;
+    --column-border:   rgba(255,255,255,0.08);
+
+    --sidebar-bg:     #1C1A17;
+    --sidebar-border: rgba(255,255,255,0.08);
+
+    --filter-bg:     #1C1A17;
+    --filter-border: rgba(255,255,255,0.08);
+
+    --input-bg:     #242118;
+    --input-border: rgba(255,255,255,0.14);
+
+    --modal-bg:      #242118;
+    --modal-border:  rgba(255,255,255,0.11);
+    --modal-shadow:  0 24px 64px rgba(0,0,0,0.55), 0 4px 16px rgba(0,0,0,0.30);
+    --modal-overlay: rgba(0,0,0,0.60);
+
+    --scrollbar-track:       rgba(255,255,255,0.04);
+    --scrollbar-thumb:       rgba(255,255,255,0.14);
+    --scrollbar-thumb-hover: rgba(255,255,255,0.24);
+
+    --version-text: rgba(255,255,255,0.30);
+
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
   }
 }
 
@@ -34,109 +269,231 @@
 }
 
 html {
-  color-scheme: dark;
+  font-size: 15px;
 }
 
 body {
-  font-family: 'DM Mono', 'Courier New', monospace;
+  font-size: 1rem; /* inherits scaled value from html */
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont,
+    'Helvetica Neue', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-base);
-  /* Subtle dot grid — feels like a broadcast monitor or graph paper */
-  background-image: radial-gradient(
-    circle,
-    rgba(255, 255, 255, 0.035) 1px,
-    transparent 1px
-  );
-  background-size: 28px 28px;
-  color: var(--text-primary);
   overflow-x: hidden;
+  color: var(--text-primary);
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* ── Typography ── */
-h1, h2, h3, h4, h5, h6,
-.font-display {
-  font-family: 'Syne', sans-serif;
+code {
+  font-family: 'SF Mono', 'Fira Code', Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-code, pre {
-  font-family: 'DM Mono', 'Courier New', monospace;
-}
-
-/* ── Custom scrollbar — thin amber rail ── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--bg-surface);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent);
-}
-
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) var(--bg-surface);
-}
-
-/* ── Utility classes ── */
+/* ── Reusable surface classes ── */
 .surface {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
 }
 
-.surface-elevated {
+/* Legacy glass class aliases (keep for any remaining usages) */
+.glass        { background: var(--bg-surface);  border: 1px solid var(--border-default); box-shadow: var(--card-shadow); }
+.glass-heavy  { background: var(--modal-bg);    border: 1px solid var(--modal-border);   box-shadow: var(--modal-shadow); }
+.glass-light  { background: var(--column-bg);   border: 1px solid var(--column-border);  }
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-track); border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Global Tailwind class overrides — maps legacy Tailwind color classes to
+   the Luxury Matte CSS variables so old-style pages pick up the theme
+   automatically without requiring a full rewrite.
+───────────────────────────────────────────────────────────────────────── */
+
+/* Backgrounds */
+.bg-white    { background-color: var(--bg-surface) !important; }
+.bg-gray-50  { background-color: var(--bg-elevated) !important; }
+.bg-gray-100 { background-color: var(--bg-elevated) !important; }
+.bg-gray-200 { background-color: var(--bg-elevated) !important; }
+.bg-neutral-50  { background-color: var(--bg-elevated) !important; }
+.bg-neutral-100 { background-color: var(--bg-elevated) !important; }
+.bg-neutral-200 { background-color: var(--bg-elevated) !important; }
+
+/* Text */
+.text-neutral-900,
+.text-gray-900  { color: var(--text-primary) !important; }
+.text-neutral-800,
+.text-gray-800  { color: var(--text-primary) !important; }
+.text-neutral-700,
+.text-gray-700  { color: var(--text-secondary) !important; }
+.text-neutral-600,
+.text-gray-600  { color: var(--text-secondary) !important; }
+.text-neutral-500,
+.text-gray-500  { color: var(--text-muted) !important; }
+.text-neutral-400,
+.text-gray-400  { color: var(--text-muted) !important; }
+
+/* Borders */
+.border-neutral-200,
+.border-gray-200  { border-color: var(--border-default) !important; }
+.border-neutral-300,
+.border-gray-300  { border-color: var(--border-default) !important; }
+
+/* Shadows */
+.shadow-sm  { box-shadow: var(--shadow-sm) !important; }
+.shadow-md  { box-shadow: var(--shadow-md) !important; }
+
+/* Min height full screen pages */
+.min-h-screen.bg-white,
+.min-h-screen.bg-gray-50 { background-color: var(--bg-base) !important; }
+
+/* Blue accent → gold */
+.bg-blue-600 { background-color: var(--gold) !important; color: var(--bg-surface) !important; }
+.bg-blue-50  { background-color: var(--gold-dim) !important; }
+.border-blue-200 { border-color: var(--gold-border) !important; }
+.text-blue-600 { color: var(--gold) !important; }
+.text-blue-700 { color: var(--gold) !important; }
+.hover\:bg-blue-700:hover { background-color: var(--gold-dark, var(--gold)) !important; }
+
+/* Green accent */
+.bg-green-600 { background-color: var(--green) !important; color: #fff !important; }
+.bg-green-50  { background-color: rgba(74,167,74,0.08) !important; }
+.border-green-200 { border-color: rgba(74,167,74,0.25) !important; }
+.text-green-600 { color: var(--green) !important; }
+.text-green-700 { color: var(--green) !important; }
+.hover\:bg-green-700:hover { background-color: var(--green) !important; filter: brightness(0.9); }
+
+/* Red accent */
+.bg-red-600  { background-color: var(--red) !important; color: #fff !important; }
+.bg-red-50   { background-color: rgba(224,90,78,0.08) !important; }
+.border-red-200 { border-color: rgba(224,90,78,0.25) !important; }
+.text-red-600 { color: var(--red) !important; }
+.hover\:bg-red-50:hover  { background-color: rgba(224,90,78,0.08) !important; }
+.hover\:bg-red-700:hover { background-color: var(--red) !important; filter: brightness(0.9); }
+
+/* Orange accent → col-clips */
+.bg-orange-100 { background-color: var(--col-clips-dim) !important; }
+.text-orange-600 { color: var(--col-clips) !important; }
+.bg-orange-50  { background-color: var(--col-clips-dim) !important; }
+.border-orange-300 { border-color: var(--col-clips-border) !important; }
+.text-orange-800, .text-orange-900 { color: var(--col-clips) !important; }
+
+/* Purple accent → col-editing */
+.bg-purple-100 { background-color: var(--col-editing-dim) !important; }
+.text-purple-600 { color: var(--col-editing) !important; }
+.bg-purple-50  { background-color: var(--col-editing-dim) !important; }
+.border-purple-300 { border-color: var(--col-editing-border) !important; }
+.text-purple-800, .text-purple-900 { color: var(--col-editing) !important; }
+
+/* Gray/Gray-600 buttons */
+.bg-gray-600 { background-color: var(--bg-elevated) !important; color: var(--text-primary) !important; border: 1px solid var(--border-default); }
+.hover\:bg-gray-700:hover { background-color: var(--bg-elevated) !important; }
+.bg-gray-100.text-gray-700 { background-color: var(--bg-elevated) !important; color: var(--text-secondary) !important; }
+.hover\:bg-gray-200:hover { background-color: var(--border-default) !important; }
+
+/* Form elements */
+select.border-neutral-300,
+input.border-neutral-300,
+select.bg-white,
+input.bg-white {
+  background-color: var(--bg-elevated) !important;
+  border-color: var(--border-default) !important;
+  color: var(--text-primary) !important;
+}
+select:focus, input[type="datetime-local"]:focus, input[type="number"]:focus, input[type="text"]:focus {
+  outline: none;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 2px var(--gold-dim) !important;
+}
+
+/* ── Prose theme for Markdown pages ── */
+.prose-theme {
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.prose-theme h1,
+.prose-theme h2,
+.prose-theme h3,
+.prose-theme h4,
+.prose-theme h5,
+.prose-theme h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+.prose-theme h1 { font-size: 22px; }
+.prose-theme h2 { font-size: 18px; border-bottom: 1px solid var(--border-subtle); padding-bottom: 6px; }
+.prose-theme h3 { font-size: 15px; }
+.prose-theme h4 { font-size: 13px; }
+.prose-theme p  { margin-bottom: 1em; color: var(--text-primary); }
+.prose-theme strong { color: var(--text-primary); font-weight: 700; }
+.prose-theme em { color: var(--text-muted); }
+.prose-theme ul,
+.prose-theme ol { padding-left: 20px; margin-bottom: 1em; }
+.prose-theme li { margin-bottom: 4px; color: var(--text-primary); }
+.prose-theme code {
+  font-family: 'SF Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
+  color: var(--gold);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
-
-/* ── Focus ring ── */
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.prose-theme pre {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin-bottom: 1em;
 }
-
-/* ── Smooth page transitions ── */
-@keyframes fadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.prose-theme pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 13px;
 }
-
-.animate-fade-up {
-  animation: fadeUp 0.3s ease-out both;
+.prose-theme blockquote {
+  border-left: 3px solid var(--gold-border);
+  padding-left: 14px;
+  margin: 1em 0;
+  color: var(--text-muted);
+  font-style: italic;
 }
-
-/* ── Amber glow pulse (used for status indicators) ── */
-@keyframes pulse-amber {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4); }
-  50%       { box-shadow: 0 0 0 6px rgba(245, 166, 35, 0); }
+.prose-theme hr {
+  border: none;
+  border-top: 1px solid var(--border-default);
+  margin: 1.5em 0;
 }
-
-.pulse-amber {
-  animation: pulse-amber 2s ease-in-out infinite;
+.prose-theme table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1em;
+  font-size: 13px;
 }
-
-/* ── Spin ── */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+.prose-theme th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.prose-theme td {
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
 }

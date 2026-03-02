@@ -10,14 +10,20 @@ export interface Column {
   order: number; // For validation
 }
 
+// Luxury Matte — warm-earth progression per column (resolves via CSS variables)
 export const columns: Column[] = [
-  { id: 'script',          title: 'Script',             color: '#5C8EFF', canAdd: true, order: 0 },
-  { id: 'clips',           title: 'Clips',              color: '#F5A623', order: 1 },
-  { id: 'clip_changes',    title: 'Clip Changes',       color: '#FF5E5E', order: 2 },
-  { id: 'editing',         title: 'Editing',            color: '#22D3A0', order: 3 },
-  { id: 'editing_changes', title: 'Editing Changes',    color: '#B39DFF', order: 4 },
-  { id: 'uploaded',        title: 'Uploaded/Scheduled', color: '#A3E635', order: 5 },
+  { id: 'script',          title: 'Script',             color: 'var(--col-script)',          canAdd: true, order: 0 },
+  { id: 'clips',           title: 'Clips',              color: 'var(--col-clips)',            order: 1 },
+  { id: 'clip_changes',    title: 'Clip Changes',       color: 'var(--col-clip-changes)',     order: 2 },
+  { id: 'editing',         title: 'Editing',            color: 'var(--col-editing)',          order: 3 },
+  { id: 'editing_changes', title: 'Editing Changes',    color: 'var(--col-editing-changes)',  order: 4 },
+  { id: 'uploaded',        title: 'Uploaded/Scheduled', color: 'var(--col-uploaded)',         order: 5 },
 ];
+
+/** Return the CSS variable name for a column's muted tint (icon bg, hover, etc.) */
+export const colDim    = (id: ColumnType) => `var(--col-${id.replace(/_/g, '-')}-dim)`;
+/** Return the CSS variable name for a column's border tint */
+export const colBorder = (id: ColumnType) => `var(--col-${id.replace(/_/g, '-')}-border)`;
 
 // Map database status to column
 export const statusToColumn = (status: string): ColumnType => {

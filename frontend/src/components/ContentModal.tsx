@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Short, Assignment, User, File as FileInterface } from '../../../shared/types';
-import { ColumnType, columns } from '../utils/dashboardUtils';
-import { filesApi, shortsApi, youtubeApi } from '../services/api';
+import { ColumnType } from '../utils/dashboardUtils';
+import { shortsApi } from '../services/api';
 import { TimezoneDisplay } from './TimezoneDisplay';
 
 interface ContentModalProps {
@@ -16,7 +16,7 @@ interface ContentModalProps {
   };
   uploading: boolean;
   uploadProgress: number | null;
-  downloading: number | null; // fileId of file being downloaded
+  downloading: number | null;
   downloadProgress: number | null;
   assignments: Assignment[];
   user: User | null;
@@ -36,6 +36,243 @@ interface ContentModalProps {
   loadData: () => Promise<void>;
   setContentShort: (short: Short | null) => void;
 }
+
+// ── Shared sub-components ────────────────────────────────────────────
+
+/** A labelled section card */
+function SectionCard({
+  label,
+  children,
+}: {
+  label?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      marginBottom: '14px',
+      borderRadius: '8px',
+      border: '1px solid var(--border-default)',
+      overflow: 'hidden',
+    }}>
+      {label && (
+        <div style={{
+          padding: '8px 14px',
+          borderBottom: '1px solid var(--border-default)',
+          background: 'var(--bg-elevated)',
+          fontSize: '10px',
+          fontWeight: '700',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase' as const,
+          color: 'var(--text-muted)',
+        }}>
+          {label}
+        </div>
+      )}
+      <div style={{ padding: '14px', background: 'var(--bg-surface)' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** A file download row */
+function DownloadRow({
+  label,
+  file,
+  downloading,
+  downloadProgress,
+  onDownload,
+}: {
+  label: string;
+  file: FileInterface;
+  downloading: number | null;
+  downloadProgress: number | null;
+  onDownload: (f: FileInterface) => void;
+}) {
+  const isActive = downloading === file.id;
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '8px 0',
+      borderBottom: '1px solid var(--border-default)',
+    }}
+    className="download-row-last-no-border"
+    >
+      <div>
+        <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' as const, marginBottom: '1px' }}>
+          {label}
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+          {file.file_name}
+          {file.file_size && (
+            <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>
+              {(file.file_size / (1024 * 1024)).toFixed(1)} MB
+            </span>
+          )}
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={() => onDownload(file)}
+        disabled={isActive}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '5px 12px',
+          background: 'var(--gold-dim)',
+          color: 'var(--gold)',
+          border: '1px solid var(--gold-border)',
+          borderRadius: '6px',
+          fontSize: '11px',
+          fontWeight: '600',
+          cursor: isActive ? 'not-allowed' : 'pointer',
+          opacity: isActive ? 0.6 : 1,
+          flexShrink: 0,
+          transition: 'opacity 0.15s',
+        }}
+      >
+        {isActive ? (
+          <svg style={{ width: '12px', height: '12px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        ) : (
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+        )}
+        {isActive && downloadProgress !== null ? `${downloadProgress}%` : 'Download'}
+      </button>
+    </div>
+  );
+}
+
+/** A file input styled to match the theme */
+function FileInput({
+  label,
+  accept,
+  required,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  accept?: string;
+  required?: boolean;
+  disabled?: boolean;
+  onChange: (f: File | null) => void;
+}) {
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <label style={{
+        display: 'block',
+        fontSize: '11px',
+        fontWeight: '700',
+        letterSpacing: '0.07em',
+        textTransform: 'uppercase' as const,
+        color: 'var(--text-muted)',
+        marginBottom: '6px',
+      }}>
+        {label}{required && <span style={{ color: 'var(--gold)', marginLeft: '2px' }}>*</span>}
+      </label>
+      <label style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '10px 14px',
+        borderRadius: '7px',
+        border: '1px dashed var(--border-strong)',
+        background: 'var(--bg-elevated)',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.55 : 1,
+        transition: 'border-color 0.15s, background 0.15s',
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span style={{ fontSize: '12px', color: fileName ? 'var(--text-primary)' : 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {fileName || 'Choose file…'}
+        </span>
+        <input
+          type="file"
+          accept={accept}
+          required={required}
+          disabled={disabled}
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0] || null;
+            setFileName(f ? f.name : null);
+            onChange(f);
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
+/** A compact pill button to download a file */
+function CompactDownloadPill({
+  label,
+  file,
+  downloading,
+  downloadProgress,
+  onDownload,
+}: {
+  label: string;
+  file: FileInterface;
+  downloading: number | null;
+  downloadProgress: number | null;
+  onDownload: (f: FileInterface) => void;
+}) {
+  const isActive = downloading === file.id;
+  return (
+    <button
+      type="button"
+      onClick={() => onDownload(file)}
+      disabled={isActive}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '5px 12px',
+        background: isActive ? 'var(--gold-dim)' : 'var(--bg-elevated)',
+        color: isActive ? 'var(--gold)' : 'var(--text-secondary)',
+        border: '1px solid var(--border-default)',
+        borderRadius: '20px',
+        fontSize: '11px',
+        fontWeight: '600',
+        cursor: isActive ? 'not-allowed' : 'pointer',
+        transition: 'all 0.15s',
+        whiteSpace: 'nowrap',
+      }}
+      title={file.file_name}
+      onMouseEnter={(e) => { if (!isActive) { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; } }}
+      onMouseLeave={(e) => { if (!isActive) { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; } }}
+    >
+      {isActive ? (
+        <svg style={{ width: '11px', height: '11px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
+      ) : (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+      )}
+      {isActive && downloadProgress !== null ? `${downloadProgress}%` : label}
+    </button>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────
 
 export function ContentModal({
   isOpen,
@@ -59,78 +296,17 @@ export function ContentModal({
   loadData,
   setContentShort,
 }: ContentModalProps) {
-  const [ytUploading, setYtUploading] = useState(false);
-
   if (!isOpen || !contentShort || !contentColumn) return null;
 
-  const handleYouTubeUpload = async () => {
-    if (!contentShort || ytUploading) return;
-    setYtUploading(true);
-    try {
-      const result = await youtubeApi.uploadToYoutube(contentShort.id);
-      // Reload the short to reflect new status/youtube_video_id
-      const updated = await shortsApi.getById(contentShort.id);
-      setContentShort(updated);
-      await loadData();
-      showAlert(`Uploaded! YouTube URL: ${result.youtube_url}`, { type: 'success' });
-    } catch (error: any) {
-      const msg = error?.response?.data?.error || error?.message || 'YouTube upload failed';
-      showAlert(msg, { type: 'error' });
-    } finally {
-      setYtUploading(false);
-    }
-  };
-
-  // Helper function to render download button with progress
-  const renderDownloadButton = (file: FileInterface, label?: string) => {
-    const isDownloading = downloading === file.id;
-    return (
-      <button
-        type="button"
-        onClick={() => onDownloadFile(file)}
-        disabled={isDownloading}
-        style={{
-          width: '100%',
-          padding: '8px 12px',
-          background: 'white',
-          color: '#166534',
-          border: '1px solid #86EFAC',
-          borderRadius: '8px',
-          boxShadow: '0 1px 2px rgba(34, 197, 94, 0.1)',
-          transition: 'all 0.2s ease-in-out',
-          fontSize: '12px',
-          fontWeight: '500',
-          cursor: isDownloading ? 'not-allowed' : 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          textAlign: 'left',
-          opacity: isDownloading ? 0.6 : 1,
-        }}
-      >
-        {isDownloading ? (
-          <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-        )}
-        {label || file.file_name} {isDownloading && downloadProgress !== null ? `(${downloadProgress}%)` : ''}
-      </button>
-    );
-  };
+  // ── Helpers ──────────────────────────────────────────────────────
 
   const handleMarkComplete = async () => {
     if (!contentShort) return;
-    const hasRequiredFile = (contentColumn === 'clips' || contentColumn === 'clip_changes')
-      ? contentShort.files?.some(f => f.file_type === 'clips_zip')
-      : contentShort.files?.some(f => f.file_type === 'final_video');
-    
+    const hasRequiredFile =
+      contentColumn === 'clips' || contentColumn === 'clip_changes'
+        ? contentShort.files?.some((f) => f.file_type === 'clips_zip')
+        : contentShort.files?.some((f) => f.file_type === 'final_video');
+
     if (!hasRequiredFile) {
       showAlert(
         contentColumn === 'clips' || contentColumn === 'clip_changes'
@@ -140,1014 +316,677 @@ export function ContentModal({
       );
       return;
     }
-    
-    // Check for assignment and rate before calling API
-    const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
-    const relevantAssignment = (contentColumn === 'clips' || contentColumn === 'clip_changes')
-      ? shortAssignments.find(a => a.role === 'clipper')
-      : shortAssignments.find(a => a.role === 'editor');
-    
+    const shortAssignments = assignments.filter((a) => a.short_id === contentShort.id);
+    const relevantAssignment =
+      contentColumn === 'clips' || contentColumn === 'clip_changes'
+        ? shortAssignments.find((a) => a.role === 'clipper')
+        : shortAssignments.find((a) => a.role === 'editor');
+
     if (!relevantAssignment) {
       showAlert(
         contentColumn === 'clips' || contentColumn === 'clip_changes'
-          ? 'Cannot mark complete. No clipper assignment found for this short.'
-          : 'Cannot mark complete. No editor assignment found for this short.',
+          ? 'Cannot mark complete. No clipper assignment found.'
+          : 'Cannot mark complete. No editor assignment found.',
         { type: 'error' }
       );
       return;
     }
-    
-    // Rate validation is now handled by the backend (checks user rates)
     try {
       await onMarkComplete(contentShort.id, contentColumn);
     } catch (error: unknown) {
-      // Error handling is done in Dashboard.tsx, but we catch here to prevent unhandled promise rejection
-      // The error will be displayed via showAlert in Dashboard
-      throw error; // Re-throw so Dashboard can handle it
+      throw error;
     }
   };
+
+  // ── Derived data ─────────────────────────────────────────────────
+
+  const shortAssignments = assignments.filter((a) => a.short_id === contentShort.id);
+  const clipperAssignment = shortAssignments.find((a) => a.role === 'clipper');
+  const editorAssignment = shortAssignments.find((a) => a.role === 'editor');
+
+  const scriptPdf = contentShort.files?.find((f) => f.file_type === 'script');
+  const audioFile = contentShort.files?.find((f) => f.file_type === 'audio');
+  const clipsZip = contentShort.files?.find((f) => f.file_type === 'clips_zip');
+  const finalVideo = contentShort.files?.find((f) => f.file_type === 'final_video');
+
+  const canEditScript =
+    isAdmin ||
+    contentShort.script_writer?.id === user?.id ||
+    (user?.roles?.includes('script_writer') && !contentShort.script_writer) ||
+    (contentShort.script_content && (isAdmin || user?.roles?.includes('script_writer')));
+
+  const canEditClipsOrVideo =
+    isAdmin ||
+    ((contentColumn === 'clips' || contentColumn === 'clip_changes') &&
+      clipperAssignment?.user_id === user?.id) ||
+    ((contentColumn === 'editing' || contentColumn === 'editing_changes') &&
+      editorAssignment?.user_id === user?.id);
+
+  const isClipsStage = contentColumn === 'clips' || contentColumn === 'clip_changes';
+  const isEditingStage = contentColumn === 'editing' || contentColumn === 'editing_changes';
+  const isUploadedStage = contentColumn === 'uploaded';
+  const isScriptStage = contentColumn === 'script';
+
+  const currentFile = isClipsStage ? clipsZip : isEditingStage ? finalVideo : null;
+
+  // Title text
+  const modalTitle = (() => {
+    if (isScriptStage)
+      return scriptPdf || audioFile ? 'Replace Script & Audio' : 'Upload Script & Audio';
+    if (isClipsStage)
+      return clipsZip ? 'Replace Clips ZIP' : 'Upload Clips ZIP';
+    if (isEditingStage)
+      return finalVideo ? 'Replace Final Video' : 'Upload Final Video';
+    if (isUploadedStage)
+      return contentShort.youtube_video_id ? 'Uploaded to YouTube' : 'Completed';
+    return 'File Upload';
+  })();
+
+  // Whether we can submit
+  const canSubmit =
+    isScriptStage
+      ? !!contentForm.scriptFile && !!contentForm.audioFile
+      : !!contentForm.file;
+
+  const showSubmitButton =
+    (isScriptStage && canEditScript) || (!isScriptStage && !isUploadedStage && canEditClipsOrVideo);
+
+  // Mark-complete availability
+  const hasMarkCompleteFile = isClipsStage
+    ? !!clipsZip
+    : !!finalVideo;
+
+  // ── Render ───────────────────────────────────────────────────────
 
   return (
     <>
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
+          to   { transform: rotate(360deg); }
         }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
+        /* remove bottom border from last download row */
+        .download-row-last-no-border:last-child {
+          border-bottom: none !important;
+        }
+        /* themed file input hover */
+        .file-input-label:hover {
+          border-color: var(--gold-border) !important;
+          background: var(--gold-dim) !important;
         }
       `}</style>
+
+      {/* Overlay */}
       <div
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(4px)',
+          background: 'var(--modal-overlay)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 9000,
           padding: '20px',
         }}
-        onClick={() => {
-          if (!uploading) {
-            onClose();
-          }
-        }}
+        onClick={() => { if (!uploading) onClose(); }}
       >
-      <div
-        style={{
-          background: 'white',
-          borderRadius: '16px',
-          padding: '28px',
-          maxWidth: '700px',
-          width: '100%',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-          border: '1px solid rgba(226, 232, 240, 0.8)',
-        }}
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <h2 style={{
-          margin: '0 0 24px 0',
-          fontSize: '22px',
-          fontWeight: '700',
-          color: '#0F172A',
-          letterSpacing: '-0.02em',
-          lineHeight: '1.3',
-        }}>
-          {contentColumn === 'script' && (() => {
-            const hasScript = contentShort.files?.some(f => f.file_type === 'script');
-            const hasAudio = contentShort.files?.some(f => f.file_type === 'audio');
-            return (hasScript || hasAudio) ? 'Replace Script & Audio' : 'Upload Script & Audio';
-          })()}
-          {(contentColumn === 'clips' || contentColumn === 'clip_changes') && (
-            contentShort.files?.some(f => f.file_type === 'clips_zip') ? 'Replace Zip of Clips' : 'Upload Zip of Clips'
-          )}
-          {(contentColumn === 'editing' || contentColumn === 'editing_changes') && (
-            contentShort.files?.some(f => f.file_type === 'final_video') ? 'Replace Final Video' : 'Upload Final Video'
-          )}
-          {contentColumn === 'uploaded' && (
-            contentShort.youtube_video_id ? 'Uploaded to YouTube' : 'Upload to YouTube'
-          )}
-        </h2>
-        <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
-          {contentShort.title}
-        </p>
-        <form onSubmit={onSubmit}>
-          {contentColumn === 'script' ? (
-            <>
-              {(() => {
-                // Check permissions for script stage - only script writer or admin can edit
-                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
-                const canEditScript = isAdmin || 
-                  (contentShort.script_writer?.id === user?.id) ||
-                  (user?.roles?.includes('script_writer') && !contentShort.script_writer) ||
-                  (contentShort.script_content && (isAdmin || user?.roles?.includes('script_writer')));
-                
-                const scriptPdf = contentShort.files?.find(f => f.file_type === 'script');
-                const audioFile = contentShort.files?.find(f => f.file_type === 'audio');
-                
-                return (
-                  <>
-                    {/* Assignments Section - Always show */}
-                    {(shortAssignments.length > 0 || contentShort.script_writer) && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: '#F9FAFB',
-                        borderRadius: '10px',
-                        border: '1px solid #E5E7EB',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
-                      }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                          Assignments:
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {contentShort.script_writer && (
-                            <div style={{ fontSize: '12px', color: '#6B7280' }}>
-                              Script Writer: {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}
-                            </div>
-                          )}
-                          {shortAssignments.map(assignment => {
-                            if (assignment.role === 'clipper' && assignment.user) {
-                              return (
-                                <div key={assignment.id} style={{ fontSize: '12px', color: '#6B7280' }}>
-                                  Clipper: {assignment.user.discord_username || assignment.user.name || assignment.user.email}
-                                </div>
-                              );
-                            }
-                            if (assignment.role === 'editor' && assignment.user) {
-                              return (
-                                <div key={assignment.id} style={{ fontSize: '12px', color: '#6B7280' }}>
-                                  Editor: {assignment.user.discord_username || assignment.user.name || assignment.user.email}
-                                </div>
-                              );
-                            }
-                            return null;
-                          })}
-                          {!contentShort.script_writer && shortAssignments.length === 0 && (
-                            <div style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic' }}>
-                              No assignments
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Download Section for non-editors */}
-                    {!canEditScript && (scriptPdf || audioFile) && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: '#F0FDF4',
-                        borderRadius: '10px',
-                        border: '1px solid #86EFAC',
-                        boxShadow: '0 1px 3px rgba(34, 197, 94, 0.15), 0 1px 2px rgba(34, 197, 94, 0.08)',
-                      }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
-                          Available Files:
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {scriptPdf && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Script PDF:
-                              </div>
-                              {renderDownloadButton(scriptPdf)}
-                            </div>
-                          )}
-                          {audioFile && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Audio MP3:
-                              </div>
-                              {renderDownloadButton(audioFile)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Edit Section - Only for script writers/admins */}
-                    {canEditScript ? (
-                      <>
-                        {/* Show existing files */}
-                        {contentShort.files && (
-                          <div style={{ 
-                            marginBottom: '16px', 
-                            padding: '14px', 
-                            background: '#F0F9FF', 
-                            borderRadius: '10px',
-                            border: '1px solid #BAE6FD',
-                            boxShadow: '0 1px 3px rgba(59, 130, 246, 0.15), 0 1px 2px rgba(59, 130, 246, 0.08)',
-                          }}>
-                            <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
-                              File Status:
-                            </div>
-                            <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'script') ? '#0C4A6E' : '#64748B', marginBottom: '4px' }}>
-                              {contentShort.files.some(f => f.file_type === 'script') ? '✓ Script PDF uploaded' : '✗ Script PDF not uploaded'}
-                            </div>
-                            <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'audio') ? '#0C4A6E' : '#64748B' }}>
-                              {contentShort.files.some(f => f.file_type === 'audio') ? '✓ Audio MP3 uploaded' : '✗ Audio MP3 not uploaded'}
-                            </div>
-                          </div>
-                        )}
-                        <div style={{ marginBottom: '16px' }}>
-                          <label style={{
-                            display: 'block',
-                            marginBottom: '6px',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: '#374151',
-                          }}>
-                            Script PDF File *
-                          </label>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={(e) => onFormChange({ ...contentForm, scriptFile: e.target.files?.[0] || null })}
-                            required
-                            disabled={uploading}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              border: '1px solid #D1D5DB',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              boxSizing: 'border-box',
-                              opacity: uploading ? 0.6 : 1,
-                              cursor: uploading ? 'not-allowed' : 'pointer',
-                            }}
-                          />
-                        </div>
-                        <div style={{ marginBottom: '16px' }}>
-                          <label style={{
-                            display: 'block',
-                            marginBottom: '6px',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: '#374151',
-                          }}>
-                            Audio MP3 File *
-                          </label>
-                          <input
-                            type="file"
-                            accept="audio/mpeg,.mp3,audio/*"
-                            onChange={(e) => onFormChange({ ...contentForm, audioFile: e.target.files?.[0] || null })}
-                            required
-                            disabled={uploading}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              border: '1px solid #D1D5DB',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              boxSizing: 'border-box',
-                              opacity: uploading ? 0.6 : 1,
-                              cursor: uploading ? 'not-allowed' : 'pointer',
-                            }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ 
-                        padding: '14px', 
-                        background: '#FEF3C7', 
-                        borderRadius: '10px',
-                        border: '1px solid #FCD34D',
-                        boxShadow: '0 1px 3px rgba(245, 158, 11, 0.15), 0 1px 2px rgba(245, 158, 11, 0.08)',
-                        color: '#92400E',
-                        fontSize: '14px'
-                      }}>
-                        You don't have permission to edit this file. Only the assigned script writer or admin can manage files.
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </>
-          ) : contentColumn === 'uploaded' ? (
-            <>
-              {/* YouTube Upload Section */}
-              {isAdmin && contentShort.status === 'completed' && !contentShort.youtube_video_id && (
-                <div style={{
-                  marginBottom: '16px',
-                  padding: '20px',
-                  background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
-                  borderRadius: '12px',
-                  border: '1px solid #FF0000',
-                  boxShadow: '0 4px 16px rgba(255, 0, 0, 0.25)',
-                }}>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
-                    Ready to Upload
-                  </div>
-                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', marginBottom: '16px' }}>
-                    Editing is complete. Click below to upload this short directly to YouTube.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleYouTubeUpload}
-                    disabled={ytUploading}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      fontSize: '15px',
-                      fontWeight: '700',
-                      color: '#CC0000',
-                      background: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: ytUploading ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease-in-out',
-                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '10px',
-                      opacity: ytUploading ? 0.7 : 1,
-                    }}
-                    onMouseEnter={(e) => { if (!ytUploading) e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
-                  >
-                    {ytUploading ? (
-                      <>
-                        <svg style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Uploading to YouTube... (this may take 1-2 minutes)
-                      </>
-                    ) : (
-                      <>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                        </svg>
-                        Upload to YouTube
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* YouTube link if already uploaded */}
-              {contentShort.youtube_video_id && (
-                <div style={{
-                  marginBottom: '16px',
-                  padding: '16px',
-                  background: '#F0FDF4',
-                  borderRadius: '10px',
-                  border: '1px solid #86EFAC',
-                }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
-                    ✓ Uploaded to YouTube
-                  </div>
-                  <a
-                    href={`https://youtube.com/shorts/${contentShort.youtube_video_id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: '13px',
-                      color: '#0369A1',
-                      textDecoration: 'underline',
-                      wordBreak: 'break-all',
-                    }}
-                  >
-                    https://youtube.com/shorts/{contentShort.youtube_video_id}
-                  </a>
-                </div>
-              )}
-
-              {/* Show short info */}
-              {contentShort.description && (
-                <div style={{
-                  padding: '14px',
-                  background: '#F9FAFB',
-                  borderRadius: '10px',
-                  border: '1px solid #E5E7EB',
-                  marginBottom: '16px',
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Description:</div>
-                  <div style={{ fontSize: '13px', color: '#6B7280' }}>{contentShort.description}</div>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {/* Show existing files for clips/editing */}
-              {contentShort.files && (
-                <div style={{ 
-                  marginBottom: '16px', 
-                  padding: '14px', 
-                  background: '#F0F9FF', 
-                  borderRadius: '10px',
-                  border: '1px solid #BAE6FD',
-                  boxShadow: '0 1px 3px rgba(59, 130, 246, 0.15), 0 1px 2px rgba(59, 130, 246, 0.08)',
-                }}>
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
-                    File Status:
-                  </div>
-                  {(contentColumn === 'clips' || contentColumn === 'clip_changes') && (
-                    <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'clips_zip') ? '#0C4A6E' : '#64748B' }}>
-                      {contentShort.files.some(f => f.file_type === 'clips_zip') 
-                        ? `✓ Clips ZIP uploaded: ${contentShort.files.find(f => f.file_type === 'clips_zip')?.file_name}`
-                        : '✗ Clips ZIP not uploaded'}
-                    </div>
-                  )}
-                  {(contentColumn === 'editing' || contentColumn === 'editing_changes') && (
-                    <div style={{ fontSize: '12px', color: contentShort.files.some(f => f.file_type === 'final_video') ? '#0C4A6E' : '#64748B' }}>
-                      {contentShort.files.some(f => f.file_type === 'final_video')
-                        ? `✓ Final video uploaded: ${contentShort.files.find(f => f.file_type === 'final_video')?.file_name}`
-                        : '✗ Final video not uploaded'}
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* File Management for Clips/Editing */}
-              {(() => {
-                const currentFile = (contentColumn === 'clips' || contentColumn === 'clip_changes')
-                  ? contentShort.files?.find(f => f.file_type === 'clips_zip')
-                  : contentShort.files?.find(f => f.file_type === 'final_video');
-                
-                // Get dependency files
-                const scriptPdf = contentShort.files?.find(f => f.file_type === 'script');
-                const audioFile = contentShort.files?.find(f => f.file_type === 'audio');
-                const clipsZip = contentShort.files?.find(f => f.file_type === 'clips_zip');
-                
-                // Check permissions - only assigned clipper/editor or admin can edit
-                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
-                const clipperAssignment = shortAssignments.find(a => a.role === 'clipper');
-                const editorAssignment = shortAssignments.find(a => a.role === 'editor');
-                const canEdit = isAdmin || 
-                  ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
-                  ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
-                
-                // Download permissions based on stage, not assignment:
-                // - If in clips stage, anyone can download script/audio/clips
-                // - If in editing stage, anyone can download script/audio/clips/final video
-                const canDownloadScript = (contentColumn === 'clips' || contentColumn === 'clip_changes') || 
-                  (contentColumn === 'editing' || contentColumn === 'editing_changes');
-                const canDownloadClips = (contentColumn === 'clips' || contentColumn === 'clip_changes') || 
-                  (contentColumn === 'editing' || contentColumn === 'editing_changes');
-                const canDownloadFinalVideo = (contentColumn === 'editing' || contentColumn === 'editing_changes');
-                
-                return (
-                  <div style={{ marginBottom: '16px' }}>
-                    {/* Download Dependencies Section for Clippers - Show if in clips stage and files exist */}
-                    {((contentColumn === 'clips' || contentColumn === 'clip_changes') && canDownloadScript && (scriptPdf || audioFile)) && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: '#F0FDF4',
-                        borderRadius: '10px',
-                        border: '1px solid #86EFAC',
-                        boxShadow: '0 1px 3px rgba(34, 197, 94, 0.15), 0 1px 2px rgba(34, 197, 94, 0.08)',
-                      }}>
-                        <div style={{ fontSize: '12px', color: '#15803D', marginBottom: '12px', lineHeight: '1.5' }}>
-                          <div style={{ marginBottom: '6px' }}>
-                            📖 Refer to the <a href="/guide" target="_blank" style={{ color: '#166534', textDecoration: 'underline', fontWeight: '500' }}>Guide</a> and <a href="/flashback-reference" target="_blank" style={{ color: '#166534', textDecoration: 'underline', fontWeight: '500' }}>Flashback Reference</a> for clip creation guidelines.
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {scriptPdf && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Editing Script of Short:
-                              </div>
-                              {renderDownloadButton(scriptPdf)}
-                            </div>
-                          )}
-                          {audioFile && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Audio of Short:
-                              </div>
-                              {renderDownloadButton(audioFile)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Download Dependencies Section for Editors - Show if in editing stage and files exist */}
-                    {((contentColumn === 'editing' || contentColumn === 'editing_changes') && canDownloadScript && (scriptPdf || audioFile || clipsZip)) && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: '#F0FDF4',
-                        borderRadius: '10px',
-                        border: '1px solid #86EFAC',
-                        boxShadow: '0 1px 3px rgba(34, 197, 94, 0.15), 0 1px 2px rgba(34, 197, 94, 0.08)',
-                      }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {scriptPdf && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Editing Script of Short:
-                              </div>
-                              {renderDownloadButton(scriptPdf)}
-                            </div>
-                          )}
-                          {audioFile && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Audio of Short:
-                              </div>
-                              {renderDownloadButton(audioFile)}
-                            </div>
-                          )}
-                          {clipsZip && (
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: '500', color: '#166534', marginBottom: '4px' }}>
-                                Flashback Clips of Short:
-                              </div>
-                              {renderDownloadButton(clipsZip)}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Assignments Section - Always show */}
-                    {(shortAssignments.length > 0 || contentShort.script_writer) && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: '#F9FAFB',
-                        borderRadius: '10px',
-                        border: '1px solid #E5E7EB',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)',
-                      }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-                          Assignments:
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {clipperAssignment && clipperAssignment.user && (
-                            <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>Clipper: {clipperAssignment.user.discord_username || clipperAssignment.user.name || clipperAssignment.user.email}</span>
-                              <TimezoneDisplay timezone={clipperAssignment.user.timezone} size="small" />
-                            </div>
-                          )}
-                          {editorAssignment && editorAssignment.user && (
-                            <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>Editor: {editorAssignment.user.discord_username || editorAssignment.user.name || editorAssignment.user.email}</span>
-                              <TimezoneDisplay timezone={editorAssignment.user.timezone} size="small" />
-                            </div>
-                          )}
-                          {contentShort.script_writer && (
-                            <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span>Script Writer: {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}</span>
-                              <TimezoneDisplay timezone={contentShort.script_writer.timezone} size="small" />
-                            </div>
-                          )}
-                          {!clipperAssignment && !editorAssignment && !contentShort.script_writer && (
-                            <div style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic' }}>
-                              No assignments
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* File Management Section - Only show if canEdit */}
-                    {canEdit ? (
-                      <>
-                        {/* Current File Section (if exists) */}
-                        {currentFile && (
-                          <div style={{
-                            marginBottom: '16px',
-                            padding: '12px',
-                            background: '#F0F9FF',
-                            borderRadius: '8px',
-                            border: '1px solid #BAE6FD'
-                          }}>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
-                              {(contentColumn === 'clips' || contentColumn === 'clip_changes') ? 'Your Clips ZIP' : 'Your Final Video'}
-                            </div>
-                            <div style={{ fontSize: '13px', color: '#0C4A6E', marginBottom: '12px' }}>
-                              {currentFile.file_name}
-                              {currentFile.file_size && (
-                                <span style={{ color: '#64748B', marginLeft: '8px' }}>
-                                  ({(currentFile.file_size / (1024 * 1024)).toFixed(2)} MB)
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                              <button
-                                type="button"
-                                onClick={() => onDownloadFile(currentFile)}
-                                disabled={downloading === currentFile.id}
-                                  style={{
-                                    padding: '6px 12px',
-                                    background: downloading === currentFile.id ? '#9CA3AF' : '#3B82F6',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '6px',
-                                    fontSize: '12px',
-                                    fontWeight: '500',
-                                    cursor: downloading === currentFile.id ? 'not-allowed' : 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    opacity: downloading === currentFile.id ? 0.6 : 1,
-                                  }}
-                                >
-                                  {downloading === currentFile.id ? (
-                                    <svg style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                  ) : (
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                      <polyline points="7 10 12 15 17 10"></polyline>
-                                      <line x1="12" y1="15" x2="12" y2="3"></line>
-                                    </svg>
-                                  )}
-                                  {downloading === currentFile.id && downloadProgress !== null ? `Downloading ${downloadProgress}%` : 'Download'}
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => onDeleteFile(currentFile.id)}
-                                style={{
-                                  padding: '6px 12px',
-                                  background: '#DC2626',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  fontWeight: '500',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                }}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="3 6 5 6 21 6"></polyline>
-                                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                                Delete
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Upload/Replace Section */}
-                        <div style={{ marginBottom: '16px' }}>
-                          <label style={{
-                            display: 'block',
-                            marginBottom: '6px',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            color: '#374151',
-                          }}>
-                            {currentFile ? 'Replace File' : 'Upload File'} *
-                          </label>
-                          <input
-                            type="file"
-                            accept={(contentColumn === 'clips' || contentColumn === 'clip_changes') ? '.zip,application/zip' : 'video/*'}
-                            onChange={(e) => onFormChange({ ...contentForm, file: e.target.files?.[0] || null })}
-                            disabled={uploading}
-                            style={{
-                              width: '100%',
-                              padding: '10px 12px',
-                              border: '1px solid #D1D5DB',
-                              borderRadius: '8px',
-                              fontSize: '14px',
-                              boxSizing: 'border-box',
-                              opacity: uploading ? 0.6 : 1,
-                              cursor: uploading ? 'not-allowed' : 'pointer',
-                            }}
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        {/* View-only section for non-editors */}
-                        {currentFile && (
-                          <div style={{
-                            marginBottom: '16px',
-                            padding: '12px',
-                            background: '#F0F9FF',
-                            borderRadius: '8px',
-                            border: '1px solid #BAE6FD'
-                          }}>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0369A1', marginBottom: '8px' }}>
-                              {(contentColumn === 'clips' || contentColumn === 'clip_changes') ? 'Clips ZIP' : 'Final Video'}
-                            </div>
-                            <div style={{ fontSize: '13px', color: '#0C4A6E', marginBottom: '12px' }}>
-                              {currentFile.file_name}
-                              {currentFile.file_size && (
-                                <span style={{ color: '#64748B', marginLeft: '8px' }}>
-                                  ({(currentFile.file_size / (1024 * 1024)).toFixed(2)} MB)
-                                </span>
-                              )}
-                            </div>
-                            {((contentColumn === 'clips' || contentColumn === 'clip_changes') ? canDownloadClips : canDownloadFinalVideo) && (
-                              <button
-                                type="button"
-                                onClick={() => onDownloadFile(currentFile)}
-                                style={{
-                                  padding: '6px 12px',
-                                  background: '#3B82F6',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  fontWeight: '500',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px',
-                                }}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                  <polyline points="7 10 12 15 17 10"></polyline>
-                                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                                </svg>
-                                Download
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        <div style={{ 
-                          padding: '12px', 
-                          background: '#FEF3C7', 
-                          borderRadius: '8px',
-                          border: '1px solid #FCD34D',
-                          color: '#92400E',
-                          fontSize: '14px'
-                        }}>
-                          You don't have permission to edit this file. Only the assigned {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'clipper' : 'editor'} or admin can manage files.
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
-            </>
-          )}
-          
-          {/* Mark Complete Button (Admin only, for clips/editing) */}
-          {isAdmin && (contentColumn === 'clips' || contentColumn === 'clip_changes' || contentColumn === 'editing' || contentColumn === 'editing_changes') && (
-            <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              background: '#F0FDF4',
-              borderRadius: '8px',
-              border: '1px solid #86EFAC',
-              borderStyle: 'dashed',
-            }}>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
-                {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'Mark Clips Complete' : 'Mark Editing Complete'}
-              </div>
-              <div style={{ fontSize: '12px', color: '#15803D', marginBottom: '12px' }}>
-                {contentColumn === 'clips' || contentColumn === 'clip_changes' 
-                  ? 'Mark this short\'s clips as complete. This will create a payment for the assigned clipper and allow moving to editing.'
-                  : 'Mark this short\'s editing as complete. This will create a payment for the assigned editor and enable YouTube upload.'}
-              </div>
-              <button
-                type="button"
-                onClick={handleMarkComplete}
-                disabled={uploading || (
-                  (contentColumn === 'clips' || contentColumn === 'clip_changes')
-                    ? !contentShort.files?.some(f => f.file_type === 'clips_zip')
-                    : !contentShort.files?.some(f => f.file_type === 'final_video')
-                )}
-                style={{
-                  padding: '10px 20px',
-                  background: (contentColumn === 'clips' || contentColumn === 'clip_changes')
-                    ? (!contentShort.files?.some(f => f.file_type === 'clips_zip') || uploading)
-                      ? '#9CA3AF'
-                      : '#10B981'
-                    : (!contentShort.files?.some(f => f.file_type === 'final_video') || uploading)
-                      ? '#9CA3AF'
-                      : '#10B981',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: (uploading || (
-                    (contentColumn === 'clips' || contentColumn === 'clip_changes')
-                      ? !contentShort.files?.some(f => f.file_type === 'clips_zip')
-                      : !contentShort.files?.some(f => f.file_type === 'final_video')
-                  )) ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {contentColumn === 'clips' || contentColumn === 'clip_changes' ? 'Mark Clips Complete' : 'Mark Editing Complete'}
-              </button>
-              {((contentColumn === 'clips' || contentColumn === 'clip_changes') && contentShort.clips_completed_at) && (
-                <div style={{ marginTop: '8px', fontSize: '12px', color: '#15803D' }}>
-                  ✓ Completed on {new Date(contentShort.clips_completed_at).toLocaleDateString()}
-                </div>
-              )}
-              {((contentColumn === 'editing' || contentColumn === 'editing_changes') && contentShort.editing_completed_at) && (
-                <div style={{ marginTop: '8px', fontSize: '12px', color: '#15803D' }}>
-                  ✓ Completed on {new Date(contentShort.editing_completed_at).toLocaleDateString()}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* Upload Progress Indicator */}
-          {uploading && uploadProgress !== null && (
-            <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              background: '#F0F9FF',
-              borderRadius: '8px',
-              border: '1px solid #BAE6FD',
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '8px',
-              }}>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#0369A1',
-                }}>
-                  Uploading...
-                </span>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#0369A1',
-                }}>
-                  {uploadProgress}%
-                </span>
-              </div>
-              <div style={{
-                width: '100%',
-                height: '8px',
-                background: '#E0F2FE',
-                borderRadius: '4px',
-                overflow: 'hidden',
-              }}>
-                <div style={{
-                  width: `${uploadProgress}%`,
-                  height: '100%',
-                  background: '#3B82F6',
-                  borderRadius: '4px',
-                  transition: 'width 0.3s ease',
-                }} />
-              </div>
-            </div>
-          )}
-          
-          {/* Download Progress Indicator */}
-          {downloading !== null && (
-            <div style={{
-              marginTop: '20px',
-              padding: '16px',
-              background: '#F0FDF4',
-              borderRadius: '8px',
-              border: '1px solid #86EFAC',
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '8px',
-              }}>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#15803D',
-                }}>
-                  Downloading...
-                </span>
-                <span style={{
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#15803D',
-                }}>
-                  {downloadProgress !== null ? `${downloadProgress}%` : '...'}
-                </span>
-              </div>
-              <div style={{
-                width: '100%',
-                height: '8px',
-                background: '#D1FAE5',
-                borderRadius: '4px',
-                overflow: 'hidden',
-              }}>
-                <div style={{
-                  width: downloadProgress !== null ? `${downloadProgress}%` : '100%',
-                  height: '100%',
-                  background: downloadProgress !== null ? '#22C55E' : '#86EFAC',
-                  borderRadius: '4px',
-                  transition: 'width 0.3s ease',
-                  animation: downloadProgress === null ? 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite' : 'none',
-                }} />
-              </div>
-            </div>
-          )}
-          
-          <div style={{
+        {/* Modal panel */}
+        <div
+          style={{
+            background: 'var(--modal-bg)',
+            borderRadius: '12px',
+            maxWidth: '680px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: 'var(--modal-shadow)',
+            border: '1px solid var(--modal-border)',
             display: 'flex',
-            gap: '12px',
-            justifyContent: 'flex-end',
-            marginTop: '24px',
+            flexDirection: 'column',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Header ── */}
+          <div style={{
+            padding: '20px 24px 16px',
+            borderBottom: '1px solid var(--border-default)',
+            flexShrink: 0,
           }}>
-            <button
-              type="button"
-              onClick={() => {
-                if (!uploading) {
-                  onClose();
-                }
-              }}
-              disabled={uploading}
-              style={{
-                padding: '10px 20px',
-                background: '#F3F4F6',
-                color: '#374151',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: uploading ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-              }}
-            >
-              Cancel
-            </button>
-            {(() => {
-              // Only show submit button if user can edit
-              if (contentColumn === 'script') {
-                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
-                const canEditScript = isAdmin || 
-                  (contentShort.script_writer?.id === user?.id) ||
-                  (user?.roles?.includes('script_writer') && !contentShort.script_writer) ||
-                  (contentShort.script_content && (isAdmin || user?.roles?.includes('script_writer')));
-                if (!canEditScript) return null;
-              } else {
-                const shortAssignments = assignments.filter(a => a.short_id === contentShort.id);
-                const clipperAssignment = shortAssignments.find(a => a.role === 'clipper');
-                const editorAssignment = shortAssignments.find(a => a.role === 'editor');
-                const canEdit = isAdmin || 
-                  ((contentColumn === 'clips' || contentColumn === 'clip_changes') && clipperAssignment?.user_id === user?.id) ||
-                  ((contentColumn === 'editing' || contentColumn === 'editing_changes') && editorAssignment?.user_id === user?.id);
-                if (!canEdit) return null;
-              }
-              
-              return (contentColumn === 'script' || contentForm.file) && (
-                <button
-                  type="submit"
-                  disabled={uploading || (contentColumn === 'script' ? (!contentForm.scriptFile || !contentForm.audioFile) : !contentForm.file)}
-                  style={{
-                    padding: '10px 20px',
-                    background: uploading ? '#9CA3AF' : columns.find(c => c.id === contentColumn)?.color || '#3B82F6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: uploading ? 'not-allowed' : 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
+            <div style={{
+              fontSize: '10px',
+              fontWeight: '700',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: 'var(--text-muted)',
+              marginBottom: '4px',
+            }}>
+              {contentShort.title}
+            </div>
+            <h2 style={{
+              margin: 0,
+              fontSize: '20px',
+              fontWeight: '700',
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.02em',
+              lineHeight: '1.25',
+            }}>
+              {modalTitle}
+            </h2>
+          </div>
+
+          {/* ── Body ── */}
+          <form onSubmit={onSubmit} style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
+
+            {/* ── Assignments ── */}
+            {(clipperAssignment?.user || editorAssignment?.user || contentShort.script_writer) && (
+              <SectionCard label="Assignments">
+                {contentShort.script_writer && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: clipperAssignment || editorAssignment ? '8px' : 0 }}>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', width: '90px', flexShrink: 0, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>Script</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {contentShort.script_writer.discord_username || contentShort.script_writer.name || contentShort.script_writer.email}
+                    </span>
+                    <TimezoneDisplay timezone={contentShort.script_writer.timezone} size="small" />
+                  </div>
+                )}
+                {clipperAssignment?.user && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: editorAssignment ? '8px' : 0 }}>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', width: '90px', flexShrink: 0, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>Clipper</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {clipperAssignment.user.discord_username || clipperAssignment.user.name || clipperAssignment.user.email}
+                    </span>
+                    <TimezoneDisplay timezone={clipperAssignment.user.timezone} size="small" />
+                  </div>
+                )}
+                {editorAssignment?.user && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', width: '90px', flexShrink: 0, letterSpacing: '0.04em', textTransform: 'uppercase' as const }}>Editor</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {editorAssignment.user.discord_username || editorAssignment.user.name || editorAssignment.user.email}
+                    </span>
+                    <TimezoneDisplay timezone={editorAssignment.user.timezone} size="small" />
+                  </div>
+                )}
+              </SectionCard>
+            )}
+
+            {/* ── Script stage ── */}
+            {isScriptStage && (() => {
+              return (
+                <>
+                  {/* File status */}
+                  <SectionCard label="File Status">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <StatusRow
+                        ok={!!scriptPdf}
+                        label={scriptPdf ? `Script PDF · ${scriptPdf.file_name}` : 'Script PDF — not uploaded'}
+                      />
+                      <StatusRow
+                        ok={!!audioFile}
+                        label={audioFile ? `Audio MP3 · ${audioFile.file_name}` : 'Audio MP3 — not uploaded'}
+                      />
+                    </div>
+                  </SectionCard>
+
+                  {/* Download for non-editors */}
+                  {!canEditScript && (scriptPdf || audioFile) && (
+                    <SectionCard label="Download Files">
+                      {scriptPdf && (
+                        <DownloadRow
+                          label="Script PDF"
+                          file={scriptPdf}
+                          downloading={downloading}
+                          downloadProgress={downloadProgress}
+                          onDownload={onDownloadFile}
+                        />
+                      )}
+                      {audioFile && (
+                        <DownloadRow
+                          label="Audio MP3"
+                          file={audioFile}
+                          downloading={downloading}
+                          downloadProgress={downloadProgress}
+                          onDownload={onDownloadFile}
+                        />
+                      )}
+                    </SectionCard>
+                  )}
+
+                  {/* Upload for editors */}
+                  {canEditScript ? (
+                    <SectionCard label="Upload Files">
+                      <FileInput
+                        label="Script PDF"
+                        accept="application/pdf"
+                        required
+                        disabled={uploading}
+                        onChange={(f) => onFormChange({ ...contentForm, scriptFile: f })}
+                      />
+                      <FileInput
+                        label="Audio MP3"
+                        accept="audio/mpeg,.mp3,audio/*"
+                        required
+                        disabled={uploading}
+                        onChange={(f) => onFormChange({ ...contentForm, audioFile: f })}
+                      />
+                    </SectionCard>
+                  ) : (
+                    <PermissionNotice role="script writer" />
+                  )}
+                </>
+              );
+            })()}
+
+            {/* ── Uploaded/Completed stage ── */}
+            {isUploadedStage && (
+              <>
+
+                {/* Description */}
+                {contentShort.description && (
+                  <SectionCard label="Description">
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                      {contentShort.description}
+                    </p>
+                  </SectionCard>
+                )}
+              </>
+            )}
+
+            {/* ── Clips / Editing stages ── */}
+            {(isClipsStage || isEditingStage) && (
+              <>
+                {/* ── Download dependencies (compact strip) ── */}
+                {((isClipsStage && (scriptPdf || audioFile)) ||
+                  (isEditingStage && (scriptPdf || audioFile || clipsZip))) && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                      {isClipsStage ? 'Downloads · Script & Audio' : 'Downloads · Script, Audio & Clips'}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {scriptPdf && (
+                        <CompactDownloadPill
+                          label="Script PDF"
+                          file={scriptPdf}
+                          downloading={downloading}
+                          downloadProgress={downloadProgress}
+                          onDownload={onDownloadFile}
+                        />
+                      )}
+                      {audioFile && (
+                        <CompactDownloadPill
+                          label="Audio MP3"
+                          file={audioFile}
+                          downloading={downloading}
+                          downloadProgress={downloadProgress}
+                          onDownload={onDownloadFile}
+                        />
+                      )}
+                      {isEditingStage && clipsZip && (
+                        <CompactDownloadPill
+                          label="Flashback Clips"
+                          file={clipsZip}
+                          downloading={downloading}
+                          downloadProgress={downloadProgress}
+                          onDownload={onDownloadFile}
+                        />
+                      )}
+                    </div>
+                    {isClipsStage && (
+                      <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                        Read the <a href="/guide" target="_blank" style={{ color: 'var(--gold)' }}>Guide</a> &amp; <a href="/flashback-reference" target="_blank" style={{ color: 'var(--gold)' }}>Flashback Reference</a> first.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Current file row ── */}
+                {currentFile && (
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px',
+                    gap: '10px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-default)',
+                    background: 'var(--bg-elevated)',
+                    marginBottom: '10px',
+                  }}>
+                    {/* File icon */}
+                    <div style={{ flexShrink: 0, color: 'var(--gold)', opacity: 0.7 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                    </div>
+                    {/* Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {currentFile.file_name}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>
+                        {currentFile.file_size ? `${(currentFile.file_size / (1024 * 1024)).toFixed(1)} MB` : 'Uploaded'}
+                        {' · '}
+                        <span style={{ color: 'var(--green)' }}>✓ {isClipsStage ? 'Clips ZIP' : 'Final Video'}</span>
+                      </div>
+                    </div>
+                    {/* Actions */}
+                    {canEditClipsOrVideo && (
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        <button
+                          type="button"
+                          onClick={() => onDownloadFile(currentFile)}
+                          disabled={downloading === currentFile.id}
+                          title="Download"
+                          style={{
+                            width: '30px', height: '30px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'var(--gold-dim)', color: 'var(--gold)',
+                            border: '1px solid var(--gold-border)', borderRadius: '6px',
+                            cursor: downloading === currentFile.id ? 'not-allowed' : 'pointer',
+                            opacity: downloading === currentFile.id ? 0.6 : 1,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {downloading === currentFile.id ? (
+                            <svg style={{ width: '12px', height: '12px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteFile(currentFile.id)}
+                          title="Delete"
+                          style={{
+                            width: '30px', height: '30px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'transparent', color: 'var(--red)',
+                            border: '1px solid color-mix(in srgb, var(--red) 28%, transparent)',
+                            borderRadius: '6px', cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {/* View-only download button */}
+                    {!canEditClipsOrVideo && (
+                      <button
+                        type="button"
+                        onClick={() => onDownloadFile(currentFile)}
+                        disabled={downloading === currentFile.id}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '5px',
+                          padding: '5px 12px', background: 'var(--gold-dim)', color: 'var(--gold)',
+                          border: '1px solid var(--gold-border)', borderRadius: '6px',
+                          fontSize: '11px', fontWeight: '600',
+                          cursor: downloading === currentFile.id ? 'not-allowed' : 'pointer',
+                          opacity: downloading === currentFile.id ? 0.6 : 1, flexShrink: 0,
+                        }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                        {downloading === currentFile.id && downloadProgress !== null ? `${downloadProgress}%` : 'Download'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* ── No file yet ── */}
+                {!currentFile && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 0', marginBottom: '6px' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {isClipsStage ? 'No Clips ZIP uploaded yet' : 'No Final Video uploaded yet'}
+                    </span>
+                  </div>
+                )}
+
+                {/* ── Upload / Replace input (if user can edit) ── */}
+                {canEditClipsOrVideo ? (
+                  <FileInput
+                    label={currentFile ? (isClipsStage ? 'Replace Clips ZIP' : 'Replace Final Video') : (isClipsStage ? 'Upload Clips ZIP' : 'Upload Final Video')}
+                    accept={isClipsStage ? '.zip,application/zip' : 'video/*'}
+                    disabled={uploading}
+                    onChange={(f) => onFormChange({ ...contentForm, file: f })}
+                  />
+                ) : (
+                  !currentFile && <PermissionNotice role={isClipsStage ? 'clipper' : 'editor'} />
+                )}
+
+                {/* ── Admin: mark complete (compact inline) ── */}
+                {isAdmin && (
+                  <div style={{
+                    marginTop: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-subtle)',
+                    background: 'var(--bg-elevated)',
+                    gap: '10px',
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
+                        {isClipsStage ? 'Mark Clips Complete' : 'Mark Editing Complete'}
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', lineHeight: '1.4' }}>
+                        {isClipsStage
+                          ? "Marks clips done · moves to editing queue."
+                          : "Marks editing done · moves to completed."}
+                        {isClipsStage && contentShort.clips_completed_at && (
+                          <span style={{ color: 'var(--green)', marginLeft: '6px' }}>
+                            ✓ Done {new Date(contentShort.clips_completed_at).toLocaleDateString()}
+                          </span>
+                        )}
+                        {isEditingStage && contentShort.editing_completed_at && (
+                          <span style={{ color: 'var(--green)', marginLeft: '6px' }}>
+                            ✓ Done {new Date(contentShort.editing_completed_at).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleMarkComplete}
+                      disabled={uploading || !hasMarkCompleteFile}
+                      style={{
+                        padding: '7px 14px',
+                        background: hasMarkCompleteFile && !uploading ? 'var(--gold)' : 'var(--bg-raised)',
+                        color: hasMarkCompleteFile && !uploading ? 'var(--bg-base)' : 'var(--text-muted)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: !hasMarkCompleteFile || uploading ? 'not-allowed' : 'pointer',
+                        letterSpacing: '-0.01em',
+                        flexShrink: 0,
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      {isClipsStage ? 'Complete' : 'Complete'}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* ── Upload progress ── */}
+            {uploading && uploadProgress !== null && (
+              <ProgressBar label="Uploading" progress={uploadProgress} color="var(--gold)" />
+            )}
+
+            {/* ── Download progress ── */}
+            {downloading !== null && (
+              <ProgressBar
+                label="Downloading"
+                progress={downloadProgress ?? null}
+                color="var(--green)"
+                indeterminate={downloadProgress === null}
+              />
+            )}
+
+            {/* ── Footer buttons ── */}
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              justifyContent: 'flex-end',
+              marginTop: '20px',
+              paddingTop: '16px',
+              borderTop: '1px solid var(--border-default)',
+            }}>
+              <button
+                type="button"
+                onClick={() => { if (!uploading) onClose(); }}
+                disabled={uploading}
+                style={{
+                  padding: '9px 20px',
+                  background: 'var(--bg-elevated)',
+                  color: 'var(--text-secondary)',
+                  border: '1px solid var(--border-default)',
+                  borderRadius: '7px',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  letterSpacing: '-0.01em',
+                }}
+              >
+                Cancel
+              </button>
+
+              {showSubmitButton && (
+                <button
+                  type="submit"
+                  disabled={uploading || !canSubmit}
+                  style={{
+                    padding: '9px 20px',
+                    background: uploading || !canSubmit ? 'var(--bg-raised)' : 'var(--gold)',
+                    color: uploading || !canSubmit ? 'var(--text-muted)' : 'var(--bg-base)',
+                    border: 'none',
+                    borderRadius: '7px',
+                    cursor: uploading || !canSubmit ? 'not-allowed' : 'pointer',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    letterSpacing: '-0.01em',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    transition: 'all 0.15s',
                   }}
                 >
                   {uploading && (
-                    <svg style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg style={{ width: '14px', height: '14px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                   )}
-                  {uploading 
-                    ? (uploadProgress !== null ? `Uploading... ${uploadProgress}%` : 'Uploading...')
-                    : (() => {
-                        if (contentColumn === 'script') {
-                          const hasScript = contentShort.files?.some(f => f.file_type === 'script');
-                          const hasAudio = contentShort.files?.some(f => f.file_type === 'audio');
-                          return (hasScript || hasAudio) ? 'Replace' : 'Upload';
-                        } else if (contentColumn === 'clips' || contentColumn === 'clip_changes') {
-                          const hasClipsZip = contentShort.files?.some(f => f.file_type === 'clips_zip');
-                          return hasClipsZip ? 'Replace' : 'Upload';
-                        } else if (contentColumn === 'editing' || contentColumn === 'editing_changes') {
-                          const hasFinalVideo = contentShort.files?.some(f => f.file_type === 'final_video');
-                          return hasFinalVideo ? 'Replace' : 'Upload';
-                        }
-                        return 'Upload';
-                      })()}
+                  {uploading
+                    ? uploadProgress !== null ? `Uploading… ${uploadProgress}%` : 'Uploading…'
+                    : currentFile || scriptPdf || audioFile ? 'Replace' : 'Upload'}
                 </button>
-              );
-            })()}
-          </div>
-        </form>
+              )}
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
     </>
   );
 }
 
+// ── Small helper components ───────────────────────────────────────────
+
+function StatusRow({ ok, label }: { ok: boolean; label: string }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '12px',
+      color: ok ? 'var(--green)' : 'var(--text-muted)',
+      padding: '2px 0',
+    }}>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        {ok
+          ? <><polyline points="20 6 9 17 4 12" /></>
+          : <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>}
+      </svg>
+      {label}
+    </div>
+  );
+}
+
+function PermissionNotice({ role }: { role: string }) {
+  return (
+    <div style={{
+      padding: '12px 14px',
+      borderRadius: '8px',
+      border: '1px solid var(--border-default)',
+      background: 'var(--bg-elevated)',
+      fontSize: '12px',
+      color: 'var(--text-muted)',
+      lineHeight: '1.5',
+    }}>
+      Only the assigned {role} or an admin can manage files for this short.
+    </div>
+  );
+}
+
+function ProgressBar({
+  label,
+  progress,
+  color,
+  indeterminate = false,
+}: {
+  label: string;
+  progress: number | null;
+  color: string;
+  indeterminate?: boolean;
+}) {
+  return (
+    <div style={{
+      marginTop: '16px',
+      padding: '14px 16px',
+      borderRadius: '8px',
+      border: '1px solid var(--border-default)',
+      background: 'var(--bg-elevated)',
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        marginBottom: '8px',
+        fontSize: '12px',
+        fontWeight: '600',
+        color: 'var(--text-secondary)',
+      }}>
+        <span>{label}…</span>
+        {progress !== null && <span>{progress}%</span>}
+      </div>
+      <div style={{
+        width: '100%',
+        height: '4px',
+        background: 'var(--bg-raised)',
+        borderRadius: '2px',
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          width: progress !== null ? `${progress}%` : '100%',
+          height: '100%',
+          background: color,
+          borderRadius: '2px',
+          transition: 'width 0.3s ease',
+          animation: indeterminate ? 'pulse 2s cubic-bezier(0.4,0,0.6,1) infinite' : 'none',
+        }} />
+      </div>
+    </div>
+  );
+}

@@ -311,21 +311,28 @@ export default function YouTubeStats() {
   }, [stats, filteredAndSortedVideos, allVideos, timeFilter]);
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#1E293B', marginBottom: '24px' }}>
-        YouTube Channel Stats
-      </h1>
+    <div style={{ padding: '0 4px', maxWidth: '1200px', margin: '0 auto' }}>
+
+      {/* ── Page header ── */}
+      <div style={{ marginBottom: '20px' }}>
+        <p style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>
+          Channel
+        </p>
+        <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
+          YouTube Stats
+        </h1>
+      </div>
 
       {loading && (
         <div style={{ textAlign: 'center', padding: '60px' }}>
-          <div style={{ fontSize: '16px', color: '#64748B' }}>Loading channel statistics...</div>
+          <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading channel statistics…</div>
         </div>
       )}
 
       {error && (
-        <div style={{ padding: '24px', background: '#FEF2F2', borderRadius: '8px', border: '1px solid #FECACA' }}>
-          <div style={{ fontSize: '16px', color: '#DC2626', marginBottom: '8px', fontWeight: '500' }}>{error}</div>
-          <div style={{ fontSize: '14px', color: '#991B1B' }}>
+        <div style={{ padding: '16px 20px', background: 'var(--bg-surface)', borderRadius: '8px', border: '1px solid var(--border-strong)' }}>
+          <div style={{ fontSize: '14px', color: 'var(--text-primary)', marginBottom: '4px', fontWeight: '600' }}>{error}</div>
+          <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
             Make sure VITE_YOUTUBE_API_KEY is set in your .env file
           </div>
         </div>
@@ -338,26 +345,28 @@ export default function YouTubeStats() {
             display: 'flex', 
             alignItems: 'center', 
             gap: '20px', 
-            marginBottom: '32px',
-            padding: '24px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: '16px',
-            color: 'white',
+            marginBottom: '24px',
+            padding: '20px 24px',
+            background: 'var(--bg-surface)',
+            borderRadius: '10px',
+            border: '1px solid var(--border-default)',
+            borderLeft: '3px solid var(--gold)',
+            boxShadow: 'var(--card-shadow)',
           }}>
             <img
               src={filteredStats.thumbnail}
               alt={filteredStats.title}
               style={{
-                width: '100px',
-                height: '100px',
+                width: '72px',
+                height: '72px',
                 borderRadius: '50%',
                 objectFit: 'cover',
-                border: '3px solid white',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                border: '2px solid var(--border-default)',
+                boxShadow: 'var(--card-shadow)',
               }}
             />
             <div style={{ flex: 1 }}>
-              <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '700', marginBottom: '4px', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
                 {filteredStats.title}
               </h2>
               <a
@@ -365,10 +374,10 @@ export default function YouTubeStats() {
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  fontSize: '14px',
-                  color: 'rgba(255,255,255,0.9)',
+                  fontSize: '12px',
+                  color: 'var(--gold)',
                   textDecoration: 'none',
-                  fontWeight: '500',
+                  fontWeight: '600',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
@@ -381,31 +390,33 @@ export default function YouTubeStats() {
 
           {/* Time Filter */}
           <div style={{ 
-            marginBottom: '24px',
-            padding: '16px',
-            background: 'white',
-            borderRadius: '12px',
-            border: '1px solid #E5E7EB',
+            marginBottom: '20px',
+            padding: '10px 14px',
+            background: 'var(--bg-surface)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-default)',
             display: 'flex',
-            gap: '12px',
+            gap: '8px',
             alignItems: 'center',
             flexWrap: 'wrap',
+            boxShadow: 'var(--card-shadow)',
           }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>Time Period:</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase', marginRight: '4px' }}>Period</span>
             {(['all', 'this_month', 'last_month', 'this_year', 'last_year'] as TimeFilter[]).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setTimeFilter(filter)}
                 style={{
-                  padding: '6px 12px',
-                  background: timeFilter === filter ? '#3B82F6' : '#F3F4F6',
-                  color: timeFilter === filter ? 'white' : '#374151',
-                  border: 'none',
+                  padding: '5px 12px',
+                  background: timeFilter === filter ? 'var(--gold-dim)' : 'transparent',
+                  color: timeFilter === filter ? 'var(--gold)' : 'var(--text-secondary)',
+                  border: timeFilter === filter ? '1px solid var(--gold-border)' : '1px solid var(--border-default)',
                   borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: '500',
+                  fontSize: '12px',
+                  fontWeight: '600',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.18s ease',
+                  letterSpacing: '-0.01em',
                 }}
               >
                 {filter === 'all' ? 'All Time' :
@@ -420,127 +431,62 @@ export default function YouTubeStats() {
           {/* Stats Cards */}
           <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '20px', 
-            marginBottom: '32px' 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', 
+            gap: '12px', 
+            marginBottom: '24px',
           }}>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '24px', 
-              background: 'white', 
-              borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
-                {filteredStats.subscriberCount}
+            {[
+              { label: 'Subscribers', value: filteredStats.subscriberCount },
+              { label: timeFilter === 'all' ? 'Total Views' : 'Filtered Views', value: filteredStats.viewCount },
+              { label: timeFilter === 'all' ? 'Total Videos' : 'Filtered Videos', value: filteredStats.videoCount },
+              { label: timeFilter === 'all' ? 'Total Likes' : 'Filtered Likes', value: filteredStats.likeCount },
+              { label: timeFilter === 'all' ? 'Total Comments' : 'Filtered Comments', value: filteredStats.commentCount },
+              { label: 'Days per Short', value: `1 every ${filteredStats.postingFrequency}` },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ 
+                textAlign: 'center', 
+                padding: '20px 16px', 
+                background: 'var(--bg-surface)', 
+                borderRadius: '8px',
+                border: '1px solid var(--border-default)',
+                boxShadow: 'var(--card-shadow)',
+              }}>
+                <div style={{ fontSize: '26px', fontWeight: '700', color: 'var(--gold)', marginBottom: '6px', letterSpacing: '-0.03em' }}>
+                  {value}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
               </div>
-              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>Subscribers</div>
-            </div>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '24px', 
-              background: 'white', 
-              borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
-                {filteredStats.viewCount}
-              </div>
-              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
-                {timeFilter === 'all' ? 'Total Views' : 'Filtered Views'}
-              </div>
-            </div>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '24px', 
-              background: 'white', 
-              borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
-                {filteredStats.videoCount}
-              </div>
-              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
-                {timeFilter === 'all' ? 'Total Videos' : 'Filtered Videos'}
-              </div>
-            </div>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '24px', 
-              background: 'white', 
-              borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
-                {filteredStats.likeCount}
-              </div>
-              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
-                {timeFilter === 'all' ? 'Total Likes' : 'Filtered Likes'}
-              </div>
-            </div>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '24px', 
-              background: 'white', 
-              borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
-                {filteredStats.commentCount}
-              </div>
-              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
-                {timeFilter === 'all' ? 'Total Comments' : 'Filtered Comments'}
-              </div>
-            </div>
-            <div style={{ 
-              textAlign: 'center', 
-              padding: '24px', 
-              background: 'white', 
-              borderRadius: '12px',
-              border: '1px solid #E5E7EB',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-            }}>
-              <div style={{ fontSize: '32px', fontWeight: '700', color: '#DC2626', marginBottom: '8px' }}>
-                1 every {filteredStats.postingFrequency}
-              </div>
-              <div style={{ fontSize: '14px', color: '#64748B', fontWeight: '500' }}>
-                {timeFilter === 'all' ? 'Days per Short' : 'Days per Short'}
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Videos Section */}
-          <div style={{ marginTop: '32px' }}>
+          <div style={{ marginTop: '24px' }}>
             <div style={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              marginBottom: '20px',
+              marginBottom: '14px',
               flexWrap: 'wrap',
-              gap: '16px',
+              gap: '12px',
             }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#1E293B', margin: 0 }}>
-                Videos ({filteredAndSortedVideos.length})
+              <h2 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
+                Videos <span style={{ color: 'var(--text-muted)', fontWeight: '500' }}>({filteredAndSortedVideos.length})</span>
               </h2>
               
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <div style={{ fontSize: '13px', color: '#64748B', fontWeight: '500' }}>Sort by:</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Sort</span>
                 <select
                   value={sortOption}
                   onChange={(e) => setSortOption(e.target.value as SortOption)}
                   style={{
-                    padding: '6px 12px',
-                    border: '1px solid #D1D5DB',
+                    padding: '5px 10px',
+                    border: '1px solid var(--border-default)',
                     borderRadius: '6px',
-                    fontSize: '13px',
-                    background: 'white',
-                    color: '#374151',
+                    fontSize: '12px',
+                    background: 'var(--bg-surface)',
+                    color: 'var(--text-primary)',
                     cursor: 'pointer',
+                    outline: 'none',
                   }}
                 >
                   <option value="date_desc">Newest First</option>
@@ -559,7 +505,7 @@ export default function YouTubeStats() {
             
             {loadingVideos && (
               <div style={{ textAlign: 'center', padding: '40px' }}>
-                <div style={{ fontSize: '14px', color: '#64748B' }}>Loading video statistics...</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading video statistics…</div>
               </div>
             )}
 
@@ -573,42 +519,45 @@ export default function YouTubeStats() {
                     rel="noopener noreferrer"
                     style={{
                       display: 'flex',
-                      gap: '16px',
-                      padding: '20px',
-                      background: 'white',
-                      borderRadius: '12px',
-                      border: '2px solid #E5E7EB',
+                      gap: '14px',
+                      padding: '16px',
+                      background: 'var(--bg-surface)',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-default)',
                       textDecoration: 'none',
                       transition: 'all 0.2s',
                       position: 'relative',
+                      boxShadow: 'var(--card-shadow)',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = '#DC2626';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(220, 38, 38, 0.15)';
+                      e.currentTarget.style.borderColor = 'var(--gold-border)';
+                      e.currentTarget.style.boxShadow = 'var(--card-hover-shadow)';
                       e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#E5E7EB';
-                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = 'var(--border-default)';
+                      e.currentTarget.style.boxShadow = 'var(--card-shadow)';
                       e.currentTarget.style.transform = 'translateY(0)';
                     }}
                   >
-                    {/* YouTube Icon Indicator */}
+                    {/* Watch badge */}
                     <div style={{
                       position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      background: '#DC2626',
-                      color: 'white',
-                      padding: '4px 8px',
+                      top: '10px',
+                      right: '10px',
+                      background: 'var(--gold-dim)',
+                      color: 'var(--gold)',
+                      padding: '3px 8px',
                       borderRadius: '4px',
-                      fontSize: '11px',
-                      fontWeight: '600',
+                      fontSize: '10px',
+                      fontWeight: '700',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
+                      border: '1px solid var(--gold-border)',
+                      letterSpacing: '0.04em',
                     }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
                       </svg>
                       Watch
@@ -618,21 +567,22 @@ export default function YouTubeStats() {
                       src={video.thumbnail}
                       alt={video.title}
                       style={{
-                        width: '200px',
-                        height: '112px',
-                        borderRadius: '8px',
+                        width: '180px',
+                        height: '101px',
+                        borderRadius: '6px',
                         objectFit: 'cover',
                         flexShrink: 0,
-                        border: '1px solid #E5E7EB',
+                        border: '1px solid var(--border-default)',
                       }}
                     />
-                    <div style={{ flex: 1, minWidth: 0, paddingRight: '80px' }}>
+                    <div style={{ flex: 1, minWidth: 0, paddingRight: '72px' }}>
                       <h3 style={{
                         margin: 0,
-                        fontSize: '16px',
+                        fontSize: '13px',
                         fontWeight: '600',
-                        color: '#1E293B',
-                        marginBottom: '8px',
+                        color: 'var(--text-primary)',
+                        marginBottom: '6px',
+                        letterSpacing: '-0.01em',
                         display: '-webkit-box',
                         WebkitLineClamp: 2,
                         WebkitBoxOrient: 'vertical',
@@ -640,8 +590,8 @@ export default function YouTubeStats() {
                       }}>
                         {video.title}
                       </h3>
-                      <div style={{ fontSize: '12px', color: '#64748B', marginBottom: '12px' }}>
-                        Published: {new Date(video.publishedAt).toLocaleDateString('en-US', { 
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px', fontWeight: '500' }}>
+                        {new Date(video.publishedAt).toLocaleDateString('en-US', { 
                           year: 'numeric', 
                           month: 'short', 
                           day: 'numeric' 
@@ -651,31 +601,31 @@ export default function YouTubeStats() {
                       {/* Stats Grid */}
                       <div style={{ 
                         display: 'grid', 
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', 
-                        gap: '10px',
-                        fontSize: '13px',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', 
+                        gap: '8px',
+                        fontSize: '12px',
                       }}>
-                        <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '6px' }}>
-                          <div style={{ fontWeight: '600', color: '#374151', marginBottom: '2px' }}>
+                        <div style={{ padding: '8px', background: 'var(--bg-elevated)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px', letterSpacing: '-0.01em' }}>
                             {video.viewCount}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>Views</div>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Views</div>
                         </div>
-                        <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '6px' }}>
-                          <div style={{ fontWeight: '600', color: '#374151', marginBottom: '2px' }}>
+                        <div style={{ padding: '8px', background: 'var(--bg-elevated)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px', letterSpacing: '-0.01em' }}>
                             {video.likeCount}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>Likes</div>
-                          <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Likes</div>
+                          <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>
                             {video.likesToViewsRatio.toFixed(2)}% ratio
                           </div>
                         </div>
-                        <div style={{ padding: '10px', background: '#F9FAFB', borderRadius: '6px' }}>
-                          <div style={{ fontWeight: '600', color: '#374151', marginBottom: '2px' }}>
+                        <div style={{ padding: '8px', background: 'var(--bg-elevated)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>
+                          <div style={{ fontWeight: '700', color: 'var(--text-primary)', marginBottom: '2px', letterSpacing: '-0.01em' }}>
                             {video.commentCount}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>Comments</div>
-                          <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: '600' }}>Comments</div>
+                          <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>
                             {video.commentsToViewsRatio.toFixed(2)}% ratio
                           </div>
                         </div>
@@ -687,7 +637,7 @@ export default function YouTubeStats() {
             )}
 
             {!loadingVideos && filteredAndSortedVideos.length === 0 && (
-              <div style={{ padding: '24px', background: '#F9FAFB', borderRadius: '8px', textAlign: 'center', color: '#64748B' }}>
+              <div style={{ padding: '32px', background: 'var(--bg-surface)', borderRadius: '8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic', border: '1px solid var(--border-default)' }}>
                 No videos found for the selected time period
               </div>
             )}

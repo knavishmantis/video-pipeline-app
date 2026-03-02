@@ -27,51 +27,65 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast.id, toast.duration]);
 
-  const typeStyles = {
+  const typeConfig = {
     success: {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      icon: 'text-green-600',
+      iconColor: 'var(--green)',
+      accentBg: 'var(--green-dim, rgba(74,167,74,0.1))',
+      accentBorder: 'var(--green-dim-border, rgba(74,167,74,0.25))',
       iconComponent: IconCircleCheck,
     },
     error: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      icon: 'text-red-600',
+      iconColor: '#e05a4e',
+      accentBg: 'rgba(224,90,78,0.1)',
+      accentBorder: 'rgba(224,90,78,0.25)',
       iconComponent: IconAlertCircle,
     },
     info: {
-      bg: 'bg-blue-50',
-      border: 'border-blue-200',
-      icon: 'text-blue-600',
+      iconColor: 'var(--blue)',
+      accentBg: 'var(--blue-dim, rgba(59,130,246,0.1))',
+      accentBorder: 'var(--blue-dim-border, rgba(59,130,246,0.25))',
       iconComponent: IconInfoCircle,
     },
     warning: {
-      bg: 'bg-amber-50',
-      border: 'border-amber-200',
-      icon: 'text-amber-600',
+      iconColor: 'var(--gold)',
+      accentBg: 'var(--gold-dim)',
+      accentBorder: 'var(--gold-border)',
       iconComponent: IconAlertTriangle,
     },
   };
 
-  const styles = typeStyles[toast.type];
-  const IconComponent = styles.iconComponent;
+  const config = typeConfig[toast.type];
+  const IconComponent = config.iconComponent;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -20, scale: 0.95 }}
+      initial={{ opacity: 0, y: -16, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.2 } }}
-      className={`${styles.bg} ${styles.border} border rounded-lg shadow-lg p-4 min-w-[300px] max-w-md flex items-start gap-3`}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.18 } }}
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border-default)',
+        borderLeft: `3px solid ${config.iconColor}`,
+        borderRadius: '8px',
+        boxShadow: 'var(--shadow-md)',
+        padding: '12px 14px',
+        minWidth: '280px',
+        maxWidth: '380px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '10px',
+      }}
     >
-      <IconComponent className={`h-5 w-5 ${styles.icon} flex-shrink-0 mt-0.5`} />
-      <p className="flex-1 text-sm text-neutral-700">{toast.message}</p>
+      <IconComponent className="h-4 w-4 flex-shrink-0" style={{ color: config.iconColor, marginTop: '1px' }} />
+      <p style={{ flex: 1, fontSize: '13px', color: 'var(--text-primary)', lineHeight: '1.5', margin: 0 }}>{toast.message}</p>
       <button
         onClick={() => onRemove(toast.id)}
-        className="flex-shrink-0 text-neutral-400 hover:text-neutral-600 transition-colors"
+        style={{ flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--text-muted)', borderRadius: '4px', transition: 'color 0.15s ease' }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
         aria-label="Close"
       >
-        <IconX className="h-4 w-4" />
+        <IconX className="h-3.5 w-3.5" />
       </button>
     </motion.div>
   );
@@ -95,4 +109,3 @@ export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
     </div>
   );
 }
-

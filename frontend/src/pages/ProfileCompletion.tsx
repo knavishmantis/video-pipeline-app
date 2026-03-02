@@ -7,30 +7,6 @@ import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 import TimezoneSelect, { type ITimezone } from 'react-timezone-select';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
-import { cn } from '../lib/utils';
-
-const BottomGradient = () => {
-  return (
-    <>
-      <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
-      <span className="absolute inset-x-10 -bottom-px mx-auto block h-px w-1/2 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
-    </>
-  );
-};
-
-const LabelInputContainer = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => {
-  return (
-    <div className={cn("flex w-full flex-col space-y-2", className)}>
-      {children}
-    </div>
-  );
-};
 
 export default function ProfileCompletion() {
   const { user, logout } = useAuth();
@@ -196,71 +172,74 @@ export default function ProfileCompletion() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-neutral-900">
-        <div className="text-neutral-600 dark:text-neutral-400">Loading...</div>
+      <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading…</div>
       </div>
     );
   }
 
-  const currentProfileDisplay = profileImagePreview 
-    ? <img src={profileImagePreview} alt="Profile" className="h-16 w-16 rounded-full object-cover" />
-    : formData.profile_picture 
-    ? <div className="flex h-16 w-16 items-center justify-center text-4xl">{formData.profile_picture}</div>
-    : <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-2xl text-gray-500 dark:bg-neutral-800 dark:text-neutral-600">?</div>;
+  const currentProfileDisplay = profileImagePreview
+    ? <img src={profileImagePreview} alt="Profile" style={{ width: '60px', height: '60px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-default)' }} />
+    : formData.profile_picture
+    ? <div style={{ display: 'flex', width: '60px', height: '60px', alignItems: 'center', justifyContent: 'center', fontSize: '32px', background: 'var(--gold-dim)', borderRadius: '50%', border: '2px solid var(--gold-border)' }}>{formData.profile_picture}</div>
+    : <div style={{ display: 'flex', width: '60px', height: '60px', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', background: 'var(--bg-elevated)', color: 'var(--text-muted)', fontSize: '22px', border: '2px solid var(--border-default)' }}>?</div>;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 dark:bg-neutral-900">
-      <div className="shadow-input mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-8 dark:bg-black">
-        <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">
+    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', padding: '20px' }}>
+      {/* Ambient glow */}
+      <div style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '480px', height: '480px', background: 'radial-gradient(ellipse, var(--gold-dim) 0%, transparent 65%)', pointerEvents: 'none' }} />
+
+      <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '32px', maxWidth: '440px', width: '100%', border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)', position: 'relative' }}>
+        {/* Top accent line */}
+        <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '2px', background: 'linear-gradient(90deg, transparent, var(--gold) 40%, var(--gold) 60%, transparent)', borderRadius: '2px' }} />
+
+        <h2 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '4px', letterSpacing: '-0.02em' }}>
           Complete Your Profile
         </h2>
-        <p className="mt-2 max-w-sm text-sm text-neutral-600 dark:text-neutral-300">
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
           You must complete your profile before using the app. All fields are required.
         </p>
 
         {error && (
-          <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
+          <div style={{ marginBottom: '16px', padding: '10px 12px', borderRadius: '8px', background: 'rgba(224,90,78,0.1)', border: '1px solid rgba(224,90,78,0.3)', fontSize: '12px', color: '#e05a4e' }}>
             {error}
           </div>
         )}
 
-        <form className="my-8" onSubmit={handleSubmit}>
-          {/* Profile Picture Section */}
-          <LabelInputContainer className="mb-4">
-            <Label htmlFor="profile-picture">Profile Picture</Label>
-            <div className="flex items-center gap-4">
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Profile Picture */}
+          <div>
+            <Label>Profile Picture</Label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '6px' }}>
               {currentProfileDisplay}
-              <div className="flex flex-col gap-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 <button
                   type="button"
                   onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="group/btn shadow-input relative flex h-10 w-full items-center justify-center space-x-2 rounded-md bg-gray-50 px-4 text-sm font-medium text-black transition-all hover:bg-gray-100 dark:bg-zinc-900 dark:text-white dark:shadow-[0px_0px_1px_1px_#262626] dark:hover:bg-zinc-800"
+                  style={{ padding: '6px 14px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
                 >
-                  <span>Choose Emoji</span>
-                  <BottomGradient />
+                  Choose Emoji
                 </button>
-                <label className="group/btn shadow-input relative flex h-10 w-full cursor-pointer items-center justify-center space-x-2 rounded-md bg-gray-50 px-4 text-sm font-medium text-black transition-all hover:bg-gray-100 dark:bg-zinc-900 dark:text-white dark:shadow-[0px_0px_1px_1px_#262626] dark:hover:bg-zinc-800">
-                  <span>Upload Image</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                  <BottomGradient />
+                <label
+                  style={{ padding: '6px 14px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s ease' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
+                >
+                  Upload Image
+                  <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                 </label>
               </div>
             </div>
             {showEmojiPicker && (
-              <div className="relative mt-4">
-                <div className="absolute left-1/2 z-50 -translate-x-1/2">
-                  <EmojiPicker onEmojiClick={handleEmojiClick} />
-                </div>
+              <div style={{ marginTop: '10px', position: 'relative', zIndex: 50 }}>
+                <EmojiPicker onEmojiClick={handleEmojiClick} />
               </div>
             )}
-          </LabelInputContainer>
+          </div>
 
-          <LabelInputContainer className="mb-4">
+          <div>
             <Label htmlFor="discord_username">Discord Username</Label>
             <Input
               id="discord_username"
@@ -270,9 +249,9 @@ export default function ProfileCompletion() {
               onChange={(e) => setFormData({ ...formData, discord_username: e.target.value })}
               required
             />
-          </LabelInputContainer>
+          </div>
 
-          <LabelInputContainer className="mb-4">
+          <div>
             <Label htmlFor="paypal_email">PayPal Email</Label>
             <Input
               id="paypal_email"
@@ -282,36 +261,34 @@ export default function ProfileCompletion() {
               onChange={(e) => setFormData({ ...formData, paypal_email: e.target.value })}
               required
             />
-          </LabelInputContainer>
+          </div>
 
-          <LabelInputContainer className="mb-8">
+          <div>
             <Label htmlFor="timezone">Timezone</Label>
-            <div className="[&_.react-select-container]:shadow-input [&_.react-select__control]:border-neutral-200 [&_.react-select__control]:bg-white [&_.react-select__control]:dark:border-neutral-800 [&_.react-select__control]:dark:bg-zinc-900 [&_.react-select__single-value]:text-neutral-900 [&_.react-select__single-value]:dark:text-neutral-100 [&_.react-select__input]:text-neutral-900 [&_.react-select__input]:dark:text-neutral-100">
-              <TimezoneSelect
-                value={formData.timezone}
-                onChange={(tz) => setFormData({ ...formData, timezone: tz })}
-              />
-            </div>
-          </LabelInputContainer>
+            <TimezoneSelect
+              value={formData.timezone}
+              onChange={(tz) => setFormData({ ...formData, timezone: tz })}
+            />
+          </div>
 
           <button
-            className="group/btn relative block h-10 w-full rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
             type="submit"
             disabled={saving}
+            style={{ height: '40px', borderRadius: '8px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', fontSize: '13px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.5 : 1, letterSpacing: '-0.01em', transition: 'all 0.2s ease', marginTop: '4px' }}
           >
-            {saving ? 'Saving...' : 'Complete Profile →'}
-            <BottomGradient />
+            {saving ? 'Saving…' : 'Complete Profile →'}
           </button>
 
-          <div className="my-8 h-[1px] w-full bg-gradient-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
+          <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
 
           <button
-            className="group/btn shadow-input relative flex h-10 w-full items-center justify-center space-x-2 rounded-md bg-gray-50 px-4 font-medium text-black transition-all hover:bg-gray-100 dark:bg-zinc-900 dark:text-white dark:shadow-[0px_0px_1px_1px_#262626] dark:hover:bg-zinc-800"
             type="button"
             onClick={logout}
+            style={{ height: '38px', borderRadius: '8px', background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s ease' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-strong)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
           >
-            <span>Logout</span>
-            <BottomGradient />
+            Logout
           </button>
         </form>
       </div>

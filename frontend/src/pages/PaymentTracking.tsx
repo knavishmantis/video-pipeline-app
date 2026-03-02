@@ -159,80 +159,77 @@ export default function PaymentTracking() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-neutral-600">Loading...</div>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading…</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+    <div style={{ padding: '0 4px' }}>
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-neutral-900 mb-2">
+          <p style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '2px' }}>
+            Finance
+          </p>
+          <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>
             {isAdmin ? 'Payment Tracking' : 'My Payments'}
           </h1>
-          <p className="text-neutral-600">
-            {isAdmin 
-              ? 'Track payments and manage rates for team members'
-              : 'View your payment history and current rates'
-            }
-          </p>
         </div>
 
         {/* Payment Statistics Section */}
         {stats && (
-          <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-neutral-200">
-              <h2 className="text-xl font-semibold text-neutral-900">
+          <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-default)' }}>
+              <h2 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
                 {isAdmin ? 'Payment Statistics' : 'Your Statistics'}
               </h2>
             </div>
-            <div className="px-6 py-4">
+            <div style={{ padding: '16px 20px' }}>
               {isAdmin ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-sm font-medium text-green-700 mb-1">Total Paid</div>
-                    <div className="text-2xl font-bold text-green-900">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Total Paid</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--gold)', letterSpacing: '-0.03em' }}>
                       ${Number(stats.total_paid || 0).toFixed(2)}
                     </div>
                   </div>
-                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <div className="text-sm font-medium text-amber-700 mb-1">Total Pending</div>
-                    <div className="text-2xl font-bold text-amber-900">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Total Pending</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
                       ${Number(stats.total_pending || 0).toFixed(2)}
                     </div>
                   </div>
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="text-sm font-medium text-blue-700 mb-1">Videos Posted</div>
-                    <div className="text-2xl font-bold text-blue-900">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Videos Posted</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
                       {stats.videos_posted || 0}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-sm font-medium text-green-700 mb-1">Total Earned</div>
-                    <div className="text-2xl font-bold text-green-900">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Total Earned</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--gold)', letterSpacing: '-0.03em' }}>
                       ${Number(stats.total_earned || 0).toFixed(2)}
                     </div>
                   </div>
-                  <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
-                    <div className="text-sm font-medium text-amber-700 mb-1">Total Pending</div>
-                    <div className="text-2xl font-bold text-amber-900">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Total Pending</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
                       ${Number(stats.total_pending || 0).toFixed(2)}
                     </div>
                   </div>
-                  <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="text-sm font-medium text-orange-700 mb-1">Clip Sets Completed</div>
-                    <div className="text-2xl font-bold text-orange-900">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Clip Sets Completed</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
                       {stats.clips_completed || 0}
                     </div>
                   </div>
-                  <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <div className="text-sm font-medium text-purple-700 mb-1">Edits Completed</div>
-                    <div className="text-2xl font-bold text-purple-900">
+                  <div style={{ padding: '16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Edits Completed</div>
+                    <div style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
                       {stats.edits_completed || 0}
                     </div>
                   </div>
@@ -244,21 +241,21 @@ export default function PaymentTracking() {
 
         {/* User View - Rates Section */}
         {!isAdmin && userRates.length > 0 && (
-          <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-neutral-200">
-              <h2 className="text-xl font-semibold text-neutral-900">Your Rates</h2>
+          <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-default)' }}>
+              <h2 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>Your Rates</h2>
             </div>
-            <div className="px-6 py-4 space-y-3">
+            <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {userRates.map((rate) => (
-                <div key={rate.role} className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+                <div key={rate.role} style={{ padding: '12px 16px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-neutral-900 capitalize">{rate.role} Rate:</span>
-                        <span className="text-lg font-bold text-green-600">${Number(rate.rate).toFixed(2)}</span>
+                        <span style={{ fontWeight: '600', color: 'var(--text-secondary)', fontSize: '12px', textTransform: 'capitalize' }}>{rate.role} Rate:</span>
+                        <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--gold)', letterSpacing: '-0.02em' }}>${Number(rate.rate).toFixed(2)}</span>
                       </div>
                       {rate.rate_description && (
-                        <p className="text-sm text-neutral-600 mt-1">{rate.rate_description}</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{rate.rate_description}</p>
                       )}
                     </div>
                   </div>
@@ -270,30 +267,30 @@ export default function PaymentTracking() {
 
         {/* Total Owed Section */}
         {totalOwed > 0 && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="mb-6" style={{ padding: '16px 20px', background: 'var(--gold-dim)', border: '1px solid var(--gold-border)', borderRadius: '8px' }}>
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-amber-900">
+                <h3 style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '13px' }}>
                   {isAdmin ? 'Total Pending Payments' : 'Total Owed to You'}
                 </h3>
-                <p className="text-xs text-amber-600 mt-0.5">
-                  This number does not include view or subscriber based incentives if applicable
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  Does not include view or subscriber based incentives
                 </p>
-                <p className="text-2xl font-bold text-amber-700 mt-1">${Number(totalOwed).toFixed(2)}</p>
+                <p style={{ fontSize: '24px', fontWeight: '700', color: 'var(--gold)', marginTop: '6px', letterSpacing: '-0.03em' }}>${Number(totalOwed).toFixed(2)}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Filters */}
-        <div className="mb-6 flex gap-4 items-center flex-wrap">
+        <div className="mb-6 flex gap-4 items-center flex-wrap" style={{ padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '8px', boxShadow: 'var(--card-shadow)' }}>
           {isAdmin && (
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-neutral-700">Filter by User:</label>
+              <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>User</label>
               <select
                 value={filterUserId || ''}
                 onChange={(e) => setFilterUserId(e.target.value ? parseInt(e.target.value) : null)}
-                className="px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                style={{ padding: '5px 10px', border: '1px solid var(--border-default)', borderRadius: '6px', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none' }}
               >
                 <option value="">All Users</option>
                 {users.map(u => (
@@ -305,11 +302,11 @@ export default function PaymentTracking() {
             </div>
           )}
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-neutral-700">Month:</label>
+            <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Month</label>
             <select
               value={statsMonth || ''}
               onChange={(e) => setStatsMonth(e.target.value ? parseInt(e.target.value) : null)}
-              className="px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              style={{ padding: '5px 10px', border: '1px solid var(--border-default)', borderRadius: '6px', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none' }}
             >
               <option value="">All</option>
               {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
@@ -320,11 +317,11 @@ export default function PaymentTracking() {
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-neutral-700">Year:</label>
+            <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Year</label>
             <select
               value={statsYear || ''}
               onChange={(e) => setStatsYear(e.target.value ? parseInt(e.target.value) : null)}
-              className="px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              style={{ padding: '5px 10px', border: '1px solid var(--border-default)', borderRadius: '6px', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none' }}
             >
               <option value="">All</option>
               {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
@@ -338,58 +335,89 @@ export default function PaymentTracking() {
                 type="checkbox"
                 checked={showPendingOnly}
                 onChange={(e) => setShowPendingOnly(e.target.checked)}
-                className="w-4 h-4 text-blue-600 border-neutral-300 rounded focus:ring-blue-500"
+                style={{ accentColor: 'var(--gold)', width: '14px', height: '14px' }}
               />
-              <span className="text-sm font-medium text-neutral-700">Show Pending Only</span>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Pending Only</span>
             </label>
           )}
         </div>
 
         {/* Payments List */}
-        <section className="bg-white rounded-xl border border-neutral-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-neutral-200">
-            <h2 className="text-xl font-semibold text-neutral-900">
+        <section style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-default)' }}>
+            <h2 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>
               {showPendingOnly ? 'Pending Payments' : 'All Payments'}
             </h2>
           </div>
-          <div className="px-6 py-4">
+          <div style={{ padding: '16px 20px' }}>
             {payments.length === 0 ? (
-              <div className="text-center py-12 text-neutral-400">
+              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
                 No payments found
               </div>
             ) : (
-              <div className="space-y-4">
-                {payments.map((payment) => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {payments.map((payment) => {
+                  const isPaid = payment.status === 'paid';
+                  return (
                   <div
                     key={payment.id}
-                    className={`p-4 rounded-lg border ${
-                      payment.status === 'paid'
-                        ? 'bg-green-50 border-green-200'
-                        : 'bg-neutral-50 border-neutral-200'
-                    }`}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '8px',
+                      border: isPaid
+                        ? '1px solid var(--border-subtle)'
+                        : '1px solid color-mix(in srgb, var(--gold) 35%, var(--border-default))',
+                      background: isPaid
+                        ? 'var(--bg-elevated)'
+                        : 'color-mix(in srgb, var(--gold) 5%, var(--bg-surface))',
+                      borderLeft: isPaid
+                        ? '4px solid var(--border-subtle)'
+                        : '4px solid var(--gold)',
+                      opacity: isPaid ? 0.72 : 1,
+                    }}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <span className="text-2xl font-bold text-neutral-900">
+                          <span style={{
+                            fontSize: '20px',
+                            fontWeight: '700',
+                            color: isPaid ? 'var(--text-muted)' : 'var(--text-primary)',
+                            letterSpacing: '-0.02em',
+                            textDecoration: isPaid ? 'line-through' : 'none',
+                          }}>
                             ${Number(payment.amount).toFixed(2)}
                           </span>
                           <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${
-                              payment.status === 'paid'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
+                            style={{
+                              padding: '3px 10px',
+                              borderRadius: '20px',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              letterSpacing: '0.08em',
+                              background: isPaid
+                                ? 'var(--bg-raised)'
+                                : 'var(--gold)',
+                              color: isPaid
+                                ? 'var(--text-muted)'
+                                : 'var(--bg-base)',
+                              border: isPaid ? '1px solid var(--border-default)' : 'none',
+                            }}
                           >
-                            {payment.status.toUpperCase()}
+                            {isPaid ? 'PAID' : 'PENDING'}
                           </span>
                           {payment.role && (
                             <span
-                              className={`px-2 py-1 rounded text-xs font-medium ${
-                                payment.role === 'clipper'
-                                  ? 'bg-orange-100 text-orange-800'
-                                  : 'bg-green-100 text-green-800'
-                              }`}
+                              style={{
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: '600',
+                                background: 'var(--bg-elevated)',
+                                color: 'var(--text-secondary)',
+                                border: '1px solid var(--border-default)',
+                                letterSpacing: '0.02em',
+                              }}
                             >
                               {payment.role === 'clipper' ? 'Clipping' : payment.role === 'editor' ? 'Editing' : 'Incentive'}
                             </span>
@@ -399,54 +427,66 @@ export default function PaymentTracking() {
                         {isAdmin && payment.user && (
                           <div className="flex items-center gap-2 mb-2">
                             {payment.user.profile_picture && !payment.user.profile_picture.startsWith('http') ? (
-                              <span className="text-lg">{payment.user.profile_picture}</span>
+                              <span style={{ fontSize: '14px' }}>{payment.user.profile_picture}</span>
                             ) : (
                               <img
-                                src={payment.user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(payment.user.discord_username || payment.user.name || 'User')}&background=6366f1&color=fff&size=32&bold=true`}
+                                src={payment.user.profile_picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(payment.user.discord_username || payment.user.name || 'User')}&background=B8922E&color=fff&size=32&bold=true`}
                                 alt={payment.user.discord_username || payment.user.name}
-                                className="w-6 h-6 rounded-full"
+                                style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1px solid var(--border-default)' }}
                               />
                             )}
-                            <span className="text-sm font-medium text-neutral-700">
+                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
                               {payment.user.discord_username || payment.user.name || payment.user.email}
                             </span>
                           </div>
                         )}
                         
                         {payment.short && (
-                          <p className="text-sm text-neutral-600 mb-1">
-                            Short: <span className="font-medium">{payment.short.title}</span>
+                          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                            Short: <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>{payment.short.title}</span>
                           </p>
                         )}
                         
                         {payment.rate_description && (
-                          <p className="text-sm text-neutral-600 mb-1 italic">
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px', fontStyle: 'italic' }}>
                             {payment.rate_description}
                           </p>
                         )}
                         
                         {payment.completed_at && (
-                          <p className="text-xs text-neutral-500 mb-1">
+                          <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
                             Completed: {formatTimeAgo(payment.completed_at)} ({new Date(payment.completed_at).toLocaleDateString()})
                           </p>
                         )}
                         
                         {payment.admin_notes && isAdmin && (
-                          <p className="text-sm text-neutral-600 mt-2 italic">
+                          <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px', fontStyle: 'italic' }}>
                             Notes: {payment.admin_notes}
                           </p>
                         )}
                         
-                        <p className="text-xs text-neutral-500 mt-2">
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>
                           Created: {new Date(payment.created_at).toLocaleDateString()}
-                          {payment.paid_at && ` | Paid: ${new Date(payment.paid_at).toLocaleDateString()}`}
+                          {payment.paid_at && ` · Paid: ${new Date(payment.paid_at).toLocaleDateString()}`}
                         </p>
                       </div>
                       
                       {isAdmin && payment.status === 'pending' && (
                         <button
                           onClick={() => setShowMarkPaidModal(payment)}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium ml-4"
+                          style={{
+                            padding: '6px 14px',
+                            background: 'var(--gold)',
+                            color: 'var(--bg-surface)',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            marginLeft: '12px',
+                            flexShrink: 0,
+                            letterSpacing: '-0.01em',
+                          }}
                         >
                           Mark Paid
                         </button>
@@ -462,14 +502,15 @@ export default function PaymentTracking() {
                           })()}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-blue-600 hover:underline ml-2"
+                          style={{ fontSize: '11px', color: 'var(--gold)', marginLeft: '8px', fontWeight: '600', textDecoration: 'none' }}
                         >
-                          View PayPal Transaction
+                          View PayPal ↗
                         </a>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -477,32 +518,32 @@ export default function PaymentTracking() {
 
         {/* Mark Paid Modal */}
         {showMarkPaidModal && isAdmin && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-              <h2 className="text-xl font-bold text-neutral-900 mb-4">Mark Payment as Paid</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--modal-overlay)' }}>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '24px', maxWidth: '400px', width: '100%', boxShadow: 'var(--modal-shadow)', border: '1px solid var(--border-default)' }}>
+              <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', letterSpacing: '-0.02em' }}>Mark Payment as Paid</h2>
               
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <p className="text-sm text-neutral-600 mb-2">
-                    Payment to: {showMarkPaidModal.user?.discord_username || showMarkPaidModal.user?.name || 'Unknown'}
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                    Payment to: <strong style={{ color: 'var(--text-primary)' }}>{showMarkPaidModal.user?.discord_username || showMarkPaidModal.user?.name || 'Unknown'}</strong>
                   </p>
-                  <p className="text-sm text-neutral-600 mb-4">
-                    Amount: ${Number(showMarkPaidModal.amount).toFixed(2)}
+                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    Amount: <strong style={{ color: 'var(--gold)', fontSize: '14px' }}>${Number(showMarkPaidModal.amount).toFixed(2)}</strong>
                   </p>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    PayPal Transaction Link <span className="text-red-500">*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                    PayPal Transaction Link <span style={{ color: 'var(--gold)' }}>*</span>
                   </label>
                   <input
                     type="url"
                     value={paypalLink}
                     onChange={(e) => setPaypalLink(e.target.value)}
                     placeholder="https://www.paypal.com/activity/payment/..."
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                   />
-                  <p className="text-xs text-neutral-500 mt-1">
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                     Required for record keeping
                   </p>
                 </div>
@@ -511,16 +552,13 @@ export default function PaymentTracking() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleMarkPaid}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  style={{ flex: 1, padding: '9px 16px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', letterSpacing: '-0.01em' }}
                 >
                   Mark Paid
                 </button>
                 <button
-                  onClick={() => {
-                    setShowMarkPaidModal(null);
-                    setPaypalLink('');
-                  }}
-                  className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors"
+                  onClick={() => { setShowMarkPaidModal(null); setPaypalLink(''); }}
+                  style={{ padding: '9px 16px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
@@ -531,21 +569,21 @@ export default function PaymentTracking() {
 
         {/* Add Incentive Modal */}
         {showIncentiveModal && isAdmin && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl">
-              <h2 className="text-xl font-bold text-neutral-900 mb-4">Add Incentive Payment</h2>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'var(--modal-overlay)' }}>
+            <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', padding: '24px', maxWidth: '400px', width: '100%', boxShadow: 'var(--modal-shadow)', border: '1px solid var(--border-default)' }}>
+              <h2 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '16px', letterSpacing: '-0.02em' }}>Add Incentive Payment</h2>
               
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    User <span className="text-red-500">*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                    User <span style={{ color: 'var(--gold)' }}>*</span>
                   </label>
                   <select
                     value={incentiveForm.user_id}
                     onChange={(e) => setIncentiveForm({ ...incentiveForm, user_id: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                   >
-                    <option value="">Select user...</option>
+                    <option value="">Select user…</option>
                     {users.map(u => (
                       <option key={u.id} value={u.id}>
                         {u.discord_username || u.name || u.email}
@@ -555,7 +593,7 @@ export default function PaymentTracking() {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                     Short (optional)
                   </label>
                   <input
@@ -563,33 +601,33 @@ export default function PaymentTracking() {
                     value={incentiveForm.short_id}
                     onChange={(e) => setIncentiveForm({ ...incentiveForm, short_id: e.target.value })}
                     placeholder="Short ID"
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
-                    Amount ($) <span className="text-red-500">*</span>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
+                    Amount ($) <span style={{ color: 'var(--gold)' }}>*</span>
                   </label>
                   <input
                     type="number"
                     step="0.01"
                     value={incentiveForm.amount}
                     onChange={(e) => setIncentiveForm({ ...incentiveForm, amount: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>
                     Description (optional)
                   </label>
                   <textarea
                     value={incentiveForm.description}
                     onChange={(e) => setIncentiveForm({ ...incentiveForm, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ width: '100%', padding: '8px 12px', border: '1px solid var(--border-default)', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'vertical' }}
                     rows={3}
-                    placeholder="Incentive description..."
+                    placeholder="Incentive description…"
                   />
                 </div>
               </div>
@@ -597,16 +635,13 @@ export default function PaymentTracking() {
               <div className="flex gap-3 mt-6">
                 <button
                   onClick={handleAddIncentive}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                  style={{ flex: 1, padding: '9px 16px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', letterSpacing: '-0.01em' }}
                 >
                   Add Incentive
                 </button>
                 <button
-                  onClick={() => {
-                    setShowIncentiveModal(false);
-                    setIncentiveForm({ user_id: '', short_id: '', amount: '', description: '' });
-                  }}
-                  className="px-4 py-2 bg-neutral-100 text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors"
+                  onClick={() => { setShowIncentiveModal(false); setIncentiveForm({ user_id: '', short_id: '', amount: '', description: '' }); }}
+                  style={{ padding: '9px 16px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>

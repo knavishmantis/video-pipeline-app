@@ -27,10 +27,6 @@ export function ConfirmDialog({
     onClose();
   };
 
-  const buttonStyles = variant === 'danger'
-    ? 'bg-red-600 hover:bg-red-700 active:bg-red-800'
-    : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800';
-
   return (
     <AnimatePresence>
       {isOpen && (
@@ -39,7 +35,8 @@ export function ConfirmDialog({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-[2000] flex items-center justify-center p-4"
+          style={{ background: 'var(--modal-overlay)' }}
           onClick={onClose}
         >
           <motion.div
@@ -47,46 +44,80 @@ export function ConfirmDialog({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl relative"
+            style={{
+              background: 'var(--bg-surface)',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: 'var(--shadow-lg)',
+              border: '1px solid var(--border-default)',
+              position: 'relative',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start gap-4">
-              <div className={`flex-shrink-0 w-12 h-12 rounded-full ${
-                variant === 'danger' ? 'bg-red-100' : 'bg-blue-100'
-              } flex items-center justify-center`}>
-                <IconAlertTriangle className={`h-6 w-6 ${
-                  variant === 'danger' ? 'text-red-600' : 'text-blue-600'
-                }`} />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <div style={{
+                flexShrink: 0,
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                background: variant === 'danger' ? 'rgba(224,90,78,0.1)' : 'var(--gold-dim)',
+                border: variant === 'danger' ? '1px solid rgba(224,90,78,0.3)' : '1px solid var(--gold-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <IconAlertTriangle
+                  className="h-5 w-5"
+                  style={{ color: variant === 'danger' ? '#e05a4e' : 'var(--gold)' }}
+                />
               </div>
-              
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold mb-2 text-neutral-900">
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.02em' }}>
                   {title}
                 </h3>
-                <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-line">
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', whiteSpace: 'pre-line' }}>
                   {message}
                 </p>
               </div>
-              
+
               <button
                 onClick={onClose}
-                className="flex-shrink-0 text-neutral-400 hover:text-neutral-600 transition-colors p-1 hover:bg-neutral-100 rounded-lg"
+                style={{ flexShrink: 0, background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', color: 'var(--text-muted)', transition: 'all 0.15s ease' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                 aria-label="Close"
               >
-                <IconX className="h-5 w-5" />
+                <IconX className="h-4 w-4" />
               </button>
             </div>
-            
-            <div className="mt-6 flex justify-end gap-3">
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '20px' }}>
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors font-medium text-sm"
+                style={{ padding: '0 16px', height: '36px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.15s ease' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
               >
                 {cancelText}
               </button>
               <button
                 onClick={handleConfirm}
-                className={`px-4 py-2 text-white rounded-lg transition-all font-medium text-sm shadow-sm hover:shadow-md ${buttonStyles} transform hover:scale-[1.02] active:scale-[0.98]`}
+                style={{
+                  padding: '0 16px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: variant === 'danger' ? '#e05a4e' : 'var(--gold)',
+                  color: 'var(--bg-surface)',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  letterSpacing: '-0.01em',
+                  transition: 'all 0.15s ease',
+                }}
               >
                 {confirmText}
               </button>
@@ -97,4 +128,3 @@ export function ConfirmDialog({
     </AnimatePresence>
   );
 }
-

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { useToast } from './hooks/useToast';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -15,8 +16,6 @@ import ScriptReview from './pages/ScriptReview';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
-import { IconBrandYoutube } from '@tabler/icons-react';
-
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen w-full overflow-hidden">
@@ -26,18 +25,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
           className="flex h-full w-full flex-1 flex-col gap-2 p-2 md:p-8 overflow-y-auto relative"
           style={{ background: 'transparent' }}
         >
-          <a
-            href="https://youtube.com/@knavishmantis"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute top-4 right-4 z-10 p-2 rounded transition-all"
-            style={{ color: '#FF5E5E' }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,94,94,0.12)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-            title="Visit YouTube Channel"
-          >
-            <IconBrandYoutube className="h-5 w-5" />
-          </a>
           {children}
         </div>
       </div>
@@ -161,9 +148,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

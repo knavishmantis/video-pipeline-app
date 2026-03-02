@@ -23,18 +23,18 @@ import {
 } from '@tabler/icons-react';
 import { DroppableColumn } from './DroppableColumn';
 import { SortableCard } from './SortableCard';
-import { Column, ColumnType } from '../utils/dashboardUtils';
+import { Column, ColumnType, colDim, colBorder } from '../utils/dashboardUtils';
 import { Short, Assignment, User } from '../../../shared/types';
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
 const COLUMN_ICONS: Record<string, React.ReactNode> = {
-  script:          <IconFileText    size={16} stroke={2} />,
-  clips:           <IconScissors   size={16} stroke={2} />,
-  clip_changes:    <IconAlertCircle size={16} stroke={2} />,
-  editing:         <IconVideo       size={16} stroke={2} />,
-  editing_changes: <IconRefresh     size={16} stroke={2} />,
-  ready_to_upload: <IconCloudUpload size={16} stroke={2} />,
-  uploaded:        <IconCircleCheck size={16} stroke={2} />,
+  script:          <IconFileText    size={15} stroke={2} />,
+  clips:           <IconScissors   size={15} stroke={2} />,
+  clip_changes:    <IconAlertCircle size={15} stroke={2} />,
+  editing:         <IconVideo       size={15} stroke={2} />,
+  editing_changes: <IconRefresh     size={15} stroke={2} />,
+  ready_to_upload: <IconCloudUpload size={15} stroke={2} />,
+  uploaded:        <IconCircleCheck size={15} stroke={2} />,
 };
 
 // ─── Animated counter ─────────────────────────────────────────────────────────
@@ -119,10 +119,10 @@ export function KanbanBoard({
     >
       <style>{`
         div[data-kanban-grid]::-webkit-scrollbar { height: 6px; }
-        div[data-kanban-grid]::-webkit-scrollbar-track { background: #13131A; }
-        div[data-kanban-grid]::-webkit-scrollbar-thumb { background: #2E2E3C; border-radius: 3px; }
-        div[data-kanban-grid]::-webkit-scrollbar-thumb:hover { background: #F5A623; }
-        div[data-kanban-grid] { scrollbar-width: thin; scrollbar-color: #2E2E3C #13131A; transition: grid-template-columns 0.3s ease-in-out; }
+        div[data-kanban-grid]::-webkit-scrollbar-track { background: rgba(0,0,0,0.05); border-radius: 4px; }
+        div[data-kanban-grid]::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 4px; }
+        div[data-kanban-grid]::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
+        div[data-kanban-grid] { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) rgba(0,0,0,0.05); transition: grid-template-columns 0.3s ease-in-out; }
       `}</style>
 
       <div
@@ -130,7 +130,7 @@ export function KanbanBoard({
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${filteredColumns.length}, 1fr)`,
-          gap: '12px',
+          gap: '14px',
           overflowX: filteredColumns.length > 0 ? 'scroll' : 'visible',
           overflowY: 'hidden',
           marginBottom: '24px',
@@ -149,20 +149,20 @@ export function KanbanBoard({
 
                 {/* ── Column header ── */}
                 <div style={{
-                  padding: '14px 16px 12px',
+                  padding: '16px 16px 14px',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '10px',
-                  borderBottom: '1px solid #2E2E3E',
+                  borderBottom: '1px solid var(--border-subtle)',
                   flexShrink: 0,
                 }}>
                   {/* Icon badge */}
                   <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '5px',
-                    background: `${column.color}18`,
-                    border: `1px solid ${column.color}30`,
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '8px',
+                    background: colDim(column.id),
+                    border: `1px solid ${colBorder(column.id)}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -175,10 +175,9 @@ export function KanbanBoard({
                   {/* Column title */}
                   <h3 style={{
                     margin: 0,
-                    fontFamily: 'Syne, sans-serif',
                     fontSize: '13px',
                     fontWeight: '700',
-                    color: '#EEEEF5',
+                    color: 'var(--text-primary)',
                     letterSpacing: '-0.01em',
                     flex: 1,
                     minWidth: 0,
@@ -186,18 +185,17 @@ export function KanbanBoard({
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
                   }}>
-                    {column.title.toUpperCase()}
+                    {column.title}
                   </h3>
 
                   {/* Count badge */}
                   <div style={{
-                    fontFamily: 'DM Mono, monospace',
-                    fontSize: '13px',
-                    fontWeight: '500',
+                    fontSize: '12px',
+                    fontWeight: '700',
                     color: column.color,
-                    background: `${column.color}15`,
-                    border: `1px solid ${column.color}30`,
-                    borderRadius: '4px',
+                    background: colDim(column.id),
+                    border: `1px solid ${colBorder(column.id)}`,
+                    borderRadius: '6px',
                     padding: '2px 8px',
                     flexShrink: 0,
                     minWidth: '28px',
@@ -216,21 +214,13 @@ export function KanbanBoard({
                     minHeight: 0,
                     padding: '12px',
                   }}>
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                    }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {columnShorts.map((short, index) => (
                         <motion.div
                           key={short.id}
-                          initial={{ opacity: 0, y: -10 }}
+                          initial={{ opacity: 0, y: -8 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{
-                            delay: index * 0.04,
-                            duration: 0.22,
-                            ease: [0.4, 0, 0.2, 1],
-                          }}
+                          transition={{ delay: index * 0.04, duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
                         >
                           <SortableCard
                             short={short}
@@ -249,13 +239,13 @@ export function KanbanBoard({
                       {columnShorts.length === 0 && (
                         <div style={{
                           textAlign: 'center',
-                          padding: '24px 12px',
-                          color: '#6E6E90',
+                          padding: '28px 12px',
+                          color: 'var(--text-muted)',
                           fontSize: '12px',
-                          fontFamily: 'DM Mono, monospace',
-                          letterSpacing: '0.04em',
+                          fontStyle: 'italic',
+                          letterSpacing: '0.01em',
                         }}>
-                          — EMPTY —
+                          Empty
                         </div>
                       )}
                     </div>
@@ -263,38 +253,38 @@ export function KanbanBoard({
                 </SortableContext>
 
                 {/* ── Add button (admin only) ── */}
-                {isAdmin && column.canAdd && column.id !== 'script' && (
-                  <div style={{ padding: '8px 12px 12px' }}>
+                {isAdmin && column.canAdd && (
+                  <div style={{ padding: '8px 12px 14px' }}>
                     <button
                       onClick={() => onCreateClick(column.id)}
                       style={{
                         padding: '8px 12px',
                         background: 'transparent',
                         color: column.color,
-                        border: `1px dashed ${column.color}40`,
-                        borderRadius: '4px',
+                        border: `1.5px dashed ${column.color}50`,
+                        borderRadius: '10px',
                         cursor: 'pointer',
-                        fontSize: '11px',
-                        fontFamily: 'DM Mono, monospace',
-                        fontWeight: '500',
-                        letterSpacing: '0.05em',
+                        fontSize: '12px',
+                        fontWeight: '600',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px',
-                        transition: 'all 0.15s ease-out',
+                        transition: 'background 0.18s ease, border-color 0.18s ease',
                         width: '100%',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.background = `${column.color}10`;
-                        e.currentTarget.style.borderStyle = 'solid';
+                        e.currentTarget.style.background = `${column.color}16`;
+                        e.currentTarget.style.borderColor = column.color;
+                        e.currentTarget.style.opacity = '1';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'transparent';
-                        e.currentTarget.style.borderStyle = 'dashed';
+                        e.currentTarget.style.borderColor = `${column.color}50`;
+                        e.currentTarget.style.opacity = '1';
                       }}
                     >
-                      + ADD {column.title.toUpperCase()}
+                      + Add {column.title}
                     </button>
                   </div>
                 )}
@@ -308,14 +298,14 @@ export function KanbanBoard({
       <DragOverlay>
         {activeShort ? (
           <div style={{
-            background: '#1C1C24',
-            border: '1px solid #F5A623',
-            borderRadius: '5px',
+            background: 'var(--card-hover-bg)',
+            border: '1.5px solid var(--gold-border)',
+            borderRadius: '8px',
             padding: '12px 14px',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 16px rgba(245,166,35,0.2)',
-            opacity: 0.95,
+            boxShadow: 'var(--card-hover-shadow)',
+            opacity: 0.96,
           }}>
-            <h4 style={{ margin: 0, fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: '600', color: '#EEEEF5' }}>
+            <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
               {activeShort.title}
             </h4>
           </div>

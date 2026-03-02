@@ -164,17 +164,40 @@ export default function Dashboard() {
 
   const getShortsForColumn = (columnId: ColumnType): Short[] => {
     const filtered = shorts.filter(short => statusToColumn(short.status) === columnId);
-    
-    // Sort 'clips' and 'script' columns by created_at (oldest first)
-    if (columnId === 'clips' || columnId === 'script') {
-      return [...filtered].sort((a, b) => {
-        const dateA = new Date(a.created_at).getTime();
-        const dateB = new Date(b.created_at).getTime();
-        return dateA - dateB; // Oldest first
-      });
-    }
-    
-    return filtered;
+
+    // Resolve the display name of whoever is assigned to a short for this column
+    const getAssigneeName = (short: Short): string | null => {
+      if (columnId === 'script') {
+        const sw = short.script_writer;
+        return sw ? (sw.discord_username || sw.name || '').toLowerCase() : null;
+      }
+      if (columnId === 'clips' || columnId === 'clip_changes') {
+        const asgn = assignments.find(a => a.short_id === short.id && a.role === 'clipper');
+        return asgn?.user ? (asgn.user.discord_username || asgn.user.name || '').toLowerCase() : null;
+      }
+      if (columnId === 'editing' || columnId === 'editing_changes') {
+        const asgn = assignments.find(a => a.short_id === short.id && a.role === 'editor');
+        return asgn?.user ? (asgn.user.discord_username || asgn.user.name || '').toLowerCase() : null;
+      }
+      return null; // uploaded / no assignment concept
+    };
+
+    return [...filtered].sort((a, b) => {
+      const nameA = getAssigneeName(a);
+      const nameB = getAssigneeName(b);
+
+      // 1. Assigned first (null = unassigned → goes to bottom)
+      if (nameA === null && nameB !== null) return 1;
+      if (nameA !== null && nameB === null) return -1;
+
+      // 2. Both assigned — alphabetical by assignee name
+      if (nameA !== null && nameB !== null && nameA !== nameB) {
+        return nameA.localeCompare(nameB);
+      }
+
+      // 3. Same assignee (or both unassigned) — oldest first
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+    });
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -682,9 +705,8 @@ export default function Dashboard() {
           to   { transform: rotate(360deg); }
         }
       `}</style>
-    <div style={{
-      padding: '0 4px',
-    }}>
+    <div style={{ padding: '0 4px' }}>
+
       <DashboardFilters
         showAssignedOnly={showAssignedOnly}
         setShowAssignedOnly={setShowAssignedOnly}
@@ -699,29 +721,30 @@ export default function Dashboard() {
           bottom: '14px',
           right: '14px',
           zIndex: 1000,
-          background: '#1C1C24',
+          background: 'var(--bg-surface)',
           padding: '6px 12px',
-          borderRadius: '4px',
+          borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          border: '1px solid #2E2E3C',
+          border: '1px solid var(--border-default)',
+          boxShadow: 'var(--card-shadow)',
         }}>
           <div style={{
             width: '11px',
             height: '11px',
-            border: '2px solid #2E2E3C',
-            borderTopColor: '#F5A623',
+            border: '2px solid var(--border-default)',
+            borderTopColor: 'var(--gold)',
             borderRadius: '50%',
             animation: 'spin 0.7s linear infinite',
           }} />
           <span style={{
-            fontFamily: 'DM Mono, monospace',
             fontSize: '11px',
-            letterSpacing: '0.04em',
-            color: '#8888A8',
+            fontWeight: '600',
+            color: 'var(--text-secondary)',
+            letterSpacing: '-0.01em',
           }}>
-            LOADING
+            Loading
           </span>
         </div>
       )}
@@ -820,13 +843,13 @@ export default function Dashboard() {
         bottom: '14px',
         right: '14px',
         fontSize: '10px',
-        color: '#2E2E3C',
+        color: 'var(--version-text)',
         zIndex: 10,
-        fontFamily: 'DM Mono, monospace',
-        letterSpacing: '0.06em',
+        fontWeight: '600',
+        letterSpacing: '0.03em',
         pointerEvents: 'none',
       }}>
-        v2.2
+        v3.0
       </div>
     </React.Fragment>
   );

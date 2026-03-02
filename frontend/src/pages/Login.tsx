@@ -54,11 +54,11 @@ export default function Login() {
       const buttonContainer = document.getElementById('google-signin-button');
       if (buttonContainer && buttonContainer.children.length === 0) {
         window.google.accounts.id.renderButton(buttonContainer, {
-          theme: 'filled_black',
+          theme: 'outline',
           size: 'large',
           width: '100%',
           text: 'signin_with',
-          shape: 'rectangular',
+          shape: 'pill',
         });
       }
     }
@@ -67,40 +67,28 @@ export default function Login() {
   return (
     <div
       className="flex min-h-screen items-center justify-center p-4"
-      style={{ background: '#0E0E12', backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+      style={{ background: 'var(--bg-base)' }}
     >
-      {/* Ambient glow behind card */}
-      <div style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '480px',
-        height: '480px',
-        background: 'radial-gradient(ellipse, rgba(245,166,35,0.06) 0%, transparent 65%)',
-        pointerEvents: 'none',
-      }} />
-
       <div
-        className="mx-auto w-full max-w-sm animate-fade-up"
+        className="mx-auto w-full max-w-sm"
         style={{
-          background: '#16161C',
-          border: '1px solid #2E2E3C',
-          borderRadius: '8px',
+          background: 'var(--modal-bg)',
+          borderRadius: '12px',
           padding: '36px',
           position: 'relative',
-          boxShadow: '0 40px 100px rgba(0,0,0,0.5)',
+          border: '1px solid var(--modal-border)',
+          boxShadow: 'var(--modal-shadow)',
         }}
       >
-        {/* Top accent line */}
+        {/* Top accent line — gold */}
         <div style={{
           position: 'absolute',
           top: 0,
-          left: 0,
-          right: 0,
+          left: '10%',
+          right: '10%',
           height: '2px',
-          background: 'linear-gradient(90deg, transparent, #F5A623 40%, #F5A623 60%, transparent)',
-          borderRadius: '8px 8px 0 0',
+          background: 'linear-gradient(90deg, transparent, var(--gold) 40%, var(--gold) 60%, transparent)',
+          borderRadius: '2px',
         }} />
 
         {/* Header */}
@@ -108,29 +96,29 @@ export default function Login() {
           <img
             src="/knavishmantis-profilepic.jpg"
             alt="Logo"
-            className="h-8 w-8 rounded-full object-cover"
-            style={{ border: '1px solid #2E2E3C' }}
+            className="h-9 w-9 rounded-full object-cover"
+            style={{ border: '2px solid var(--border-default)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
           />
           <div>
-            <h1 className="font-display font-bold text-base leading-tight" style={{ color: '#EEEEF5' }}>
-              Knavish <span style={{ color: '#F5A623' }}>Pipeline</span>
+            <h1 className="font-bold text-base leading-tight" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              Knavish <span style={{ color: 'var(--gold)' }}>Pipeline</span>
             </h1>
           </div>
         </div>
 
-        <p className="font-mono text-xs mb-8 mt-2" style={{ color: '#4A4A60', letterSpacing: '0.04em' }}>
-          PRODUCTION MANAGEMENT SYSTEM
+        <p className="text-xs mb-8 mt-2" style={{ color: 'var(--text-muted)', fontWeight: '500', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+          Production management system
         </p>
 
         {/* Info box */}
         <div
-          className="mb-6 p-3 rounded"
-          style={{ background: 'rgba(245, 166, 35, 0.07)', border: '1px solid rgba(245, 166, 35, 0.2)' }}
+          className="mb-6 p-3 rounded-lg"
+          style={{ background: 'var(--gold-dim)', border: '1px solid var(--gold-border)' }}
         >
-          <p className="font-mono text-xs leading-relaxed" style={{ color: '#8888A8' }}>
-            <span style={{ color: '#F5A623' }}>NEW?</span>{' '}
+          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+            <span style={{ color: 'var(--gold)', fontWeight: '700' }}>New?</span>{' '}
             Check out the{' '}
-            <Link to="/guide" className="underline transition-colors" style={{ color: '#F5A623' }}>
+            <Link to="/guide" className="underline font-semibold" style={{ color: 'var(--gold)' }}>
               User Guide
             </Link>{' '}
             after signing in.
@@ -140,8 +128,8 @@ export default function Login() {
         {/* Error */}
         {error && (
           <div
-            className="mb-4 rounded p-3 font-mono text-xs"
-            style={{ background: 'rgba(255, 94, 94, 0.08)', border: '1px solid rgba(255, 94, 94, 0.25)', color: '#FF5E5E' }}
+            className="mb-4 rounded-lg p-3 text-xs font-medium"
+            style={{ background: 'rgba(180, 60, 60, 0.08)', border: '1px solid rgba(180, 60, 60, 0.22)', color: 'var(--text-primary)' }}
           >
             {error}
           </div>
@@ -153,14 +141,14 @@ export default function Login() {
         </div>
 
         {!import.meta.env.VITE_GOOGLE_CLIENT_ID && (
-          <p className="mt-4 font-mono text-xs text-center" style={{ color: '#4A4A60' }}>
+          <p className="mt-4 text-xs text-center" style={{ color: 'var(--text-muted)' }}>
             Google OAuth not configured. Set VITE_GOOGLE_CLIENT_ID in .env
           </p>
         )}
 
         {/* Footer */}
-        <div style={{ borderTop: '1px solid #22222C', marginTop: '24px', paddingTop: '16px' }}>
-          <p className="font-mono text-xs text-center" style={{ color: '#4A4A60', letterSpacing: '0.02em' }}>
+        <div style={{ borderTop: '1px solid var(--border-default)', marginTop: '24px', paddingTop: '16px' }}>
+          <p className="text-xs text-center" style={{ color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
             Access restricted to team members
           </p>
         </div>

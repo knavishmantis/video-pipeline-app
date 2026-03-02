@@ -228,27 +228,27 @@ export default function ShortDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-neutral-600">Loading...</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Loading…</div>
       </div>
     );
   }
-  
+
   if (accessDenied) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-neutral-900 mb-2">Access Denied</h1>
-          <p className="text-lg text-neutral-600">Oops, you don't have access to view this page.</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>Access Denied</h1>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Oops, you don't have access to view this page.</p>
         </div>
       </div>
     );
   }
-  
+
   if (!short) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg text-neutral-600">Short not found</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
+        <div style={{ fontSize: '14px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Short not found</div>
       </div>
     );
   }
@@ -272,13 +272,14 @@ export default function ShortDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-8">
+    <div style={{ padding: '0 4px', maxWidth: '1100px', margin: '0 auto' }}>
+      <div className="px-2 py-0">
         {/* Header */}
         <div className="mb-6">
-          <Link 
-            to="/" 
-            className="inline-flex items-center text-sm text-neutral-600 hover:text-neutral-900 mb-4"
+          <Link
+            to="/"
+            className="inline-flex items-center text-sm mb-4"
+            style={{ color: 'var(--text-secondary)' }}
           >
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -288,15 +289,16 @@ export default function ShortDetail() {
           
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold text-neutral-900 mb-2">{short.title}</h1>
+              <h1 className="text-xl font-bold mb-1" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{short.title}</h1>
               {short.description && (
-                <p className="text-neutral-600">{short.description}</p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{short.description}</p>
               )}
             </div>
             <select
               value={short.status}
               onChange={(e) => handleStatusChange(e.target.value)}
-              className="px-4 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 rounded-lg"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
             >
               <option value="idea">Idea</option>
               <option value="script">Script</option>
@@ -309,13 +311,14 @@ export default function ShortDetail() {
         </div>
 
         {/* Assignments Section */}
-        <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-neutral-900">Assignments</h2>
+        <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Assignments</h2>
             {isAdmin && (
               <button
                 onClick={() => setShowAssignForm(!showAssignForm)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                className="px-4 py-2 rounded-lg text-sm font-semibold transition-all"
+                style={{ background: showAssignForm ? 'var(--bg-elevated)' : 'var(--gold)', color: showAssignForm ? 'var(--text-secondary)' : 'var(--bg-surface)', border: showAssignForm ? '1px solid var(--border-default)' : 'none', cursor: 'pointer' }}
               >
                 {showAssignForm ? 'Cancel' : '+ Assign'}
               </button>
@@ -323,14 +326,14 @@ export default function ShortDetail() {
           </div>
 
           {showAssignForm && (
-            <div className="px-6 py-4 bg-neutral-50 border-b border-neutral-200">
+            <div className="px-6 py-4" style={{ background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border-default)' }}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Role</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Role</label>
                   <select
                     value={assignRole}
                     onChange={(e) => setAssignRole(e.target.value as AssignmentRole)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                   >
                     <option value="script_writer">Script Writer</option>
                     <option value="clipper">Clipper</option>
@@ -338,11 +341,11 @@ export default function ShortDetail() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">User</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>User</label>
                   <select
                     value={assignUserId}
                     onChange={(e) => setAssignUserId(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                   >
                     <option value="">Select user</option>
                     {getUsersForRole(assignRole).map(u => (
@@ -355,23 +358,23 @@ export default function ShortDetail() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-neutral-700 mb-2">Due Date</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Due Date</label>
                   <input
                     type="datetime-local"
                     value={assignDueDate}
                     onChange={(e) => setAssignDueDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                   />
                 </div>
                 {assignRole !== 'script_writer' && (
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">Time Range (hours)</label>
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Time Range (hours)</label>
                     <input
                       type="number"
                       value={assignTimeRange}
                       onChange={(e) => setAssignTimeRange(e.target.value)}
                       min="1"
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                     />
                   </div>
                 )}
@@ -379,7 +382,7 @@ export default function ShortDetail() {
               {assignRole !== 'script_writer' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">Rate ($)</label>
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Rate ($)</label>
                     <input
                       type="text"
                       value={assignRate}
@@ -388,24 +391,24 @@ export default function ShortDetail() {
                         setAssignRate(value);
                       }}
                       placeholder="40"
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-neutral-700 mb-2">Rate Description</label>
+                    <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>Rate Description</label>
                     <input
                       type="text"
                       value={assignRateDescription}
                       onChange={(e) => setAssignRateDescription(e.target.value)}
                       placeholder='e.g., "$25 base + $10 if 200k views"'
-                      className="w-full px-3 py-2 border border-neutral-300 rounded-lg bg-white text-neutral-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
                     />
                   </div>
                 </div>
               )}
               <button
                 onClick={handleAssign}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="px-6 py-2 rounded-lg font-semibold text-sm transition-all" style={{ background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', cursor: 'pointer' }}
               >
                 Assign
               </button>
@@ -414,13 +417,13 @@ export default function ShortDetail() {
 
           <div className="px-6 py-4 space-y-3">
             {/* Script Writer */}
-            <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+            <div className="flex items-center justify-between p-4 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderLeft: '3px solid var(--col-script)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm" style={{ background: 'var(--col-script-dim)', border: '1px solid var(--col-script-border)', color: 'var(--col-script)' }}>
                   S
                 </div>
                 <div>
-                  <div className="font-medium text-neutral-900">Script Writer</div>
+                  <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Script Writer</div>
                   {scriptWriterUser ? (
                     <div className="flex items-center gap-2 mt-1">
                       {scriptWriterUser.profile_picture && !scriptWriterUser.profile_picture.startsWith('http') ? (
@@ -436,19 +439,22 @@ export default function ShortDetail() {
                           }}
                         />
                       )}
-                      <span className="text-sm text-neutral-600">
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {scriptWriterUser.discord_username || scriptWriterUser.name || 'Unknown'}
                       </span>
                     </div>
                   ) : (
-                    <span className="text-sm text-neutral-400">Not assigned</span>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Not assigned</span>
                   )}
                 </div>
               </div>
               {isAdmin && scriptWriterUser && (
                 <button
                   onClick={() => handleDeleteAssignment(0, 'script_writer')}
-                  className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                  className="px-3 py-1 text-sm rounded transition-colors"
+                  style={{ color: 'var(--red)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
                   Remove
                 </button>
@@ -456,13 +462,13 @@ export default function ShortDetail() {
             </div>
 
             {/* Clipper */}
-            <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+            <div className="flex items-center justify-between p-4 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderLeft: '3px solid var(--col-clips)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-semibold">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm" style={{ background: 'var(--col-clips-dim)', border: '1px solid var(--col-clips-border)', color: 'var(--col-clips)' }}>
                   C
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-neutral-900">Clipper</div>
+                  <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Clipper</div>
                   {clipperAssignment?.user ? (
                     <div className="flex items-center gap-2 mt-1">
                       {clipperAssignment.user.profile_picture && !clipperAssignment.user.profile_picture.startsWith('http') ? (
@@ -478,27 +484,30 @@ export default function ShortDetail() {
                           }}
                         />
                       )}
-                      <span className="text-sm text-neutral-600">
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {clipperAssignment.user.discord_username || clipperAssignment.user.name || 'Unknown'}
                       </span>
                       {clipperAssignment.due_date && (
-                        <span className="text-xs text-neutral-500 ml-2">
+                        <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                           Due: {new Date(clipperAssignment.due_date).toLocaleDateString()}
                         </span>
                       )}
                       {clipperAssignment.completed_at && (
-                        <span className="text-xs text-green-600 ml-2">✓ Completed</span>
+                        <span className="text-xs ml-2" style={{ color: 'var(--green)' }}>✓ Completed</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-sm text-neutral-400">Not assigned</span>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Not assigned</span>
                   )}
                 </div>
               </div>
               {isAdmin && clipperAssignment && (
                 <button
                   onClick={() => handleDeleteAssignment(clipperAssignment.id, 'clipper')}
-                  className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                  className="px-3 py-1 text-sm rounded transition-colors"
+                  style={{ color: 'var(--red)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
                   Remove
                 </button>
@@ -506,13 +515,13 @@ export default function ShortDetail() {
             </div>
 
             {/* Editor */}
-            <div className="flex items-center justify-between p-4 bg-neutral-50 rounded-lg border border-neutral-200">
+            <div className="flex items-center justify-between p-4 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderLeft: '3px solid var(--col-editing)' }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-semibold">
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center font-bold text-sm" style={{ background: 'var(--col-editing-dim)', border: '1px solid var(--col-editing-border)', color: 'var(--col-editing)' }}>
                   E
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-neutral-900">Editor</div>
+                  <div className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>Editor</div>
                   {editorAssignment?.user ? (
                     <div className="flex items-center gap-2 mt-1">
                       {editorAssignment.user.profile_picture && !editorAssignment.user.profile_picture.startsWith('http') ? (
@@ -528,27 +537,30 @@ export default function ShortDetail() {
                           }}
                         />
                       )}
-                      <span className="text-sm text-neutral-600">
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                         {editorAssignment.user.discord_username || editorAssignment.user.name || 'Unknown'}
                       </span>
                       {editorAssignment.due_date && (
-                        <span className="text-xs text-neutral-500 ml-2">
+                        <span className="text-xs ml-2" style={{ color: 'var(--text-muted)' }}>
                           Due: {new Date(editorAssignment.due_date).toLocaleDateString()}
                         </span>
                       )}
                       {editorAssignment.completed_at && (
-                        <span className="text-xs text-green-600 ml-2">✓ Completed</span>
+                        <span className="text-xs ml-2" style={{ color: 'var(--green)' }}>✓ Completed</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-sm text-neutral-400">Not assigned</span>
+                    <span className="text-sm" style={{ color: 'var(--text-muted)' }}>Not assigned</span>
                   )}
                 </div>
               </div>
               {isAdmin && editorAssignment && (
                 <button
                   onClick={() => handleDeleteAssignment(editorAssignment.id, 'editor')}
-                  className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                  className="px-3 py-1 text-sm rounded transition-colors"
+                  style={{ color: 'var(--red)', background: 'transparent', border: 'none', cursor: 'pointer' }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.7')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
                 >
                   Remove
                 </button>
@@ -558,15 +570,15 @@ export default function ShortDetail() {
         </section>
 
         {/* Script Section */}
-        <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-neutral-900">Script</h2>
+        <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Script</h2>
             <div className="flex gap-2 items-center">
               {(scriptWriterUser?.id === user?.id || isAdmin || (user?.roles?.includes('script_writer') && !scriptWriterUser) || (short.script_content && (isAdmin || user?.roles?.includes('script_writer')))) && (
                 <>
-                  <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
-                    uploading === 'script' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
-                  }`}>
+                  <label className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-opacity ${
+                    uploading === 'script' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
+                  }`} style={{ background: 'var(--gold)', color: 'var(--bg-base)' }}>
                     {uploading === 'script' ? (
                       <>
                         <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -589,9 +601,9 @@ export default function ShortDetail() {
                       disabled={uploading === 'script'}
                     />
                   </label>
-                  <label className={`px-4 py-2 bg-green-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
-                    uploading === 'audio' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-green-700'
-                  }`}>
+                  <label className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-opacity ${
+                    uploading === 'audio' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
+                  }`} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
                     {uploading === 'audio' ? (
                       <>
                         <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -619,7 +631,8 @@ export default function ShortDetail() {
               {scriptPdf && (
                 <button
                   onClick={() => handleDownload(scriptPdf)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-2"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-opacity hover:opacity-80"
+                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer' }}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -632,33 +645,34 @@ export default function ShortDetail() {
           <div className="px-6 py-4">
             {short.idea && (
               <div className="mb-4">
-                <h3 className="text-sm font-medium text-neutral-700 mb-2">Idea</h3>
-                <p className="text-neutral-600 whitespace-pre-wrap">{short.idea}</p>
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Idea</h3>
+                <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{short.idea}</p>
               </div>
             )}
             {short.script_content && (
               <div className="mb-4">
-                <h3 className="text-sm font-medium text-neutral-700 mb-2">Script Content</h3>
-                <div className="p-4 bg-neutral-50 rounded-lg border border-neutral-200">
-                  <pre className="text-neutral-700 whitespace-pre-wrap font-mono text-sm leading-relaxed">{short.script_content}</pre>
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Script Content</h3>
+                <div className="p-4 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                  <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>{short.script_content}</pre>
                 </div>
               </div>
             )}
             {scriptPdf && (
               <div className="mt-4">
-                <h3 className="text-sm font-medium text-neutral-700 mb-2">Script PDF</h3>
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Script PDF</h3>
+                <div className="p-3 rounded-lg" style={{ background: 'var(--col-script-dim)', border: '1px solid var(--col-script-border)' }}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5" style={{ color: 'var(--col-script)' }} fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-blue-700 font-medium">{scriptPdf.file_name}</span>
+                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{scriptPdf.file_name}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleDownload(scriptPdf)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1"
+                        className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                        style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
                         title="Download file"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -669,7 +683,8 @@ export default function ShortDetail() {
                       {(isAdmin || scriptWriterUser?.id === user?.id) && (
                         <button
                           onClick={() => handleDeleteFile(scriptPdf.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                          style={{ background: 'var(--red)', color: '#fff', border: 'none', cursor: 'pointer' }}
                           title="Delete file"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -678,7 +693,7 @@ export default function ShortDetail() {
                           Delete
                         </button>
                       )}
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         {new Date(scriptPdf.uploaded_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -688,20 +703,21 @@ export default function ShortDetail() {
             )}
             {audioFiles.length > 0 && (
               <div className="mt-4">
-                <h3 className="text-sm font-medium text-neutral-700 mb-2">Audio Files ({audioFiles.length})</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Audio Files ({audioFiles.length})</h3>
                 <div className="space-y-2">
                   {audioFiles.map((audio) => (
-                    <div key={audio.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div key={audio.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
                       <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-5 h-5" style={{ color: 'var(--green)' }} fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.793L4.617 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.617l3.766-3.793a1 1 0 011.617.793zM14.657 2.929a1 1 0 011.414 0A9.972 9.972 0 0119 10a9.972 9.972 0 01-2.929 7.071 1 1 0 01-1.414-1.414A7.971 7.971 0 0017 10c0-2.21-.894-4.208-2.343-5.657a1 1 0 010-1.414zm-2.829 2.828a1 1 0 011.415 0A5.983 5.983 0 0115 10a5.984 5.984 0 01-1.757 4.243 1 1 0 01-1.415-1.415A3.984 3.984 0 0013 10a3.983 3.983 0 00-1.172-2.828 1 1 0 010-1.415z" clipRule="evenodd" />
                         </svg>
-                        <span className="text-green-700 font-medium">{audio.file_name}</span>
+                        <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{audio.file_name}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => handleDownload(audio)}
-                          className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                          style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
                           title="Download file"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -712,7 +728,8 @@ export default function ShortDetail() {
                         {(isAdmin || scriptWriterUser?.id === user?.id) && (
                           <button
                             onClick={() => handleDeleteFile(audio.id)}
-                            className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                            className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                            style={{ background: 'var(--red)', color: '#fff', border: 'none', cursor: 'pointer' }}
                             title="Delete file"
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -721,7 +738,7 @@ export default function ShortDetail() {
                             Delete
                           </button>
                         )}
-                        <span className="text-xs text-neutral-500">
+                        <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                           {new Date(audio.uploaded_at).toLocaleDateString()}
                         </span>
                       </div>
@@ -731,19 +748,19 @@ export default function ShortDetail() {
               </div>
             )}
             {!scriptPdf && !audioFiles.length && (
-              <p className="text-sm text-neutral-400">No script or audio uploaded yet</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No script or audio uploaded yet</p>
             )}
           </div>
         </section>
 
         {/* Clips Section */}
-        <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-neutral-900">Clips ({clipsZip.length})</h2>
+        <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Clips ({clipsZip.length})</h2>
             {(clipperAssignment?.user_id === user?.id || isAdmin) && (
-              <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
-                uploading === 'clips_zip' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
-              }`}>
+              <label className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-opacity ${
+                uploading === 'clips_zip' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
+              }`} style={{ background: 'var(--gold)', color: 'var(--bg-base)' }}>
                 {uploading === 'clips_zip' ? (
                   <>
                     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -772,17 +789,18 @@ export default function ShortDetail() {
             {clipsZip.length > 0 ? (
               <div className="space-y-2">
                 {clipsZip.map((clip) => (
-                  <div key={clip.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <div key={clip.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
                     <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5" style={{ color: 'var(--col-clips)' }} fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-blue-700 font-medium">{clip.file_name}</span>
+                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{clip.file_name}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleDownload(clip)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1"
+                        className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                        style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
                         title="Download file"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -793,7 +811,8 @@ export default function ShortDetail() {
                       {(isAdmin || clipperAssignment?.user_id === user?.id) && (
                         <button
                           onClick={() => handleDeleteFile(clip.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                          style={{ background: 'var(--red)', color: '#fff', border: 'none', cursor: 'pointer' }}
                           title="Delete file"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -802,7 +821,7 @@ export default function ShortDetail() {
                           Delete
                         </button>
                       )}
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         {new Date(clip.uploaded_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -810,28 +829,28 @@ export default function ShortDetail() {
                 ))}
               </div>
             ) : uploading === 'clips_zip' ? (
-              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                <svg className="animate-spin h-5 w-5" style={{ color: 'var(--gold)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span className="text-blue-700 font-medium">Uploading clips zip file...</span>
+                <span className="font-medium text-sm" style={{ color: 'var(--text-secondary)' }}>Uploading clips zip file...</span>
               </div>
             ) : (
-              <p className="text-neutral-400">No clips uploaded yet</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No clips uploaded yet</p>
             )}
           </div>
         </section>
 
         {/* Final Video Section */}
-        <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-          <div className="px-6 py-4 border-b border-neutral-200 flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-neutral-900">Final Video ({finalVideos.length})</h2>
+        <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Final Video ({finalVideos.length})</h2>
             <div className="flex gap-2">
               {(editorAssignment?.user_id === user?.id || isAdmin) && (
-                <label className={`px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer flex items-center gap-2 ${
-                  uploading === 'final_video' ? 'opacity-75 cursor-not-allowed' : 'hover:bg-blue-700'
-                }`}>
+                <label className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-opacity ${
+                  uploading === 'final_video' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
+                }`} style={{ background: 'var(--gold)', color: 'var(--bg-base)' }}>
                   {uploading === 'final_video' ? (
                     <>
                       <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -873,7 +892,8 @@ export default function ShortDetail() {
                       }
                     }
                   }}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: 'var(--green)', color: '#fff', border: 'none', cursor: 'pointer' }}
                 >
                   Mark Editing Complete
                 </button>
@@ -884,17 +904,18 @@ export default function ShortDetail() {
             {finalVideos.length > 0 ? (
               <div className="space-y-2">
                 {finalVideos.map((video) => (
-                  <div key={video.id} className="flex items-center justify-between p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+                  <div key={video.id} className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
                     <div className="flex items-center gap-2">
-                      <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-5 h-5" style={{ color: 'var(--col-editing)' }} fill="currentColor" viewBox="0 0 20 20">
                         <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
                       </svg>
-                      <span className="text-blue-700 font-medium">{video.file_name}</span>
+                      <span className="font-medium text-sm" style={{ color: 'var(--text-primary)' }}>{video.file_name}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         onClick={() => handleDownload(video)}
-                        className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-xs font-medium flex items-center gap-1"
+                        className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                        style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
                         title="Download file"
                       >
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -905,7 +926,8 @@ export default function ShortDetail() {
                       {(isAdmin || editorAssignment?.user_id === user?.id) && (
                         <button
                           onClick={() => handleDeleteFile(video.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-xs font-medium flex items-center gap-1"
+                          className="px-3 py-1 rounded text-xs font-medium flex items-center gap-1 transition-opacity hover:opacity-80"
+                          style={{ background: 'var(--red)', color: '#fff', border: 'none', cursor: 'pointer' }}
                           title="Delete file"
                         >
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -914,7 +936,7 @@ export default function ShortDetail() {
                           Delete
                         </button>
                       )}
-                      <span className="text-xs text-neutral-500">
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
                         {new Date(video.uploaded_at).toLocaleDateString()}
                       </span>
                     </div>
@@ -922,29 +944,29 @@ export default function ShortDetail() {
                 ))}
               </div>
             ) : uploading === 'final_video' ? (
-              <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
+                <svg className="animate-spin h-5 w-5" style={{ color: 'var(--gold)' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <span className="text-blue-700 font-medium">Uploading final video...</span>
+                <span className="font-medium text-sm" style={{ color: 'var(--text-secondary)' }}>Uploading final video...</span>
               </div>
             ) : (
-              <p className="text-neutral-400">No final video uploaded yet</p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>No final video uploaded yet</p>
             )}
           </div>
         </section>
 
         {/* Settings Section (Admin only) */}
         {isAdmin && (
-          <section className="mb-8 bg-white rounded-xl border border-neutral-200 shadow-sm">
-            <div className="px-6 py-4 border-b border-neutral-200">
-              <h2 className="text-xl font-semibold text-neutral-900">Settings</h2>
+          <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+            <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
+              <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Settings</h2>
             </div>
             <div className="px-6 py-4">
-              <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-                <h3 className="text-lg font-semibold text-red-900 mb-2">Danger Zone</h3>
-                <p className="text-sm text-red-700 mb-4">
+              <div className="p-4 rounded-lg" style={{ background: 'color-mix(in srgb, var(--red) 8%, var(--bg-elevated))', border: '1px solid color-mix(in srgb, var(--red) 30%, var(--border-default))' }}>
+                <h3 className="text-base font-bold mb-2" style={{ color: 'var(--red)' }}>Danger Zone</h3>
+                <p className="text-sm mb-4" style={{ color: 'var(--text-secondary)' }}>
                   Deleting this short will permanently remove it and all associated files, assignments, and payments. This action cannot be undone.
                 </p>
                 <button
@@ -966,7 +988,8 @@ export default function ShortDetail() {
                       }
                     }
                   }}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: 'var(--red)', color: '#fff', border: 'none', cursor: 'pointer' }}
                 >
                   Delete Short
                 </button>

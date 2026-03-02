@@ -35,94 +35,76 @@ export default function EditingReference() {
 
   if (!isEditor && !isAdmin) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-neutral-900 mb-2">Access Restricted</h1>
-          <p className="text-neutral-600">This reference guide is only available to editors.</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>Access Restricted</h1>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>This reference guide is only available to editors.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-              <IconEdit className="h-6 w-6 text-purple-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-neutral-900 mb-2">Editing Reference</h1>
-              <p className="text-neutral-600">
-                Complete guide on how videos should be edited and formatted
-              </p>
-            </div>
+    <div style={{ padding: '0 4px', maxWidth: '860px', margin: '0 auto' }}>
+      {/* Page Header */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--col-editing-dim)', border: '1px solid var(--col-editing-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <IconEdit className="h-5 w-5" style={{ color: 'var(--col-editing)' }} />
           </div>
-          
-          <div className="p-4 bg-purple-50 border-2 border-purple-300 rounded-lg">
-            <p className="text-sm text-purple-900 font-semibold">
-              ⚠️ This is your primary reference document for video editing and formatting. 
-              Refer to this guide regularly when editing videos to ensure consistency and quality.
-            </p>
+          <div>
+            <p style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1px' }}>Reference</p>
+            <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>Editing Reference</h1>
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-lg text-neutral-600">Loading guide...</div>
-          </div>
-        ) : content ? (
-          <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-6 md:p-8">
-            <div className="prose prose-sm md:prose-base max-w-none 
-              prose-headings:text-neutral-900 prose-headings:font-bold
-              prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-6
-              prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-5
-              prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-4
-              prose-p:text-neutral-700 prose-p:mb-4 prose-p:leading-relaxed
-              prose-strong:text-neutral-900 prose-strong:font-semibold
-              prose-ul:text-neutral-700 prose-ul:mb-4 prose-ul:pl-6
-              prose-ol:text-neutral-700 prose-ol:mb-4 prose-ol:pl-6
-              prose-li:text-neutral-700 prose-li:mb-2
-              prose-code:text-neutral-900 prose-code:bg-neutral-200 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:font-mono
-              prose-pre:bg-neutral-900 prose-pre:text-neutral-100 prose-pre:p-4 prose-pre:rounded-lg prose-pre:overflow-x-auto
-              prose-a:text-blue-600 prose-a:underline hover:prose-a:text-blue-700
-              prose-img:rounded-lg prose-img:shadow-md prose-img:my-4 prose-img:max-w-full prose-img:h-auto
-              prose-blockquote:border-l-4 prose-blockquote:border-neutral-300 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-neutral-600">
-              <ReactMarkdown 
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeRaw]}
-                components={{
-                  img: ({ node, ...props }: any) => (
-                    <img 
-                      {...props} 
-                      className="rounded-lg shadow-md my-4 max-w-full h-auto"
-                      loading="lazy"
-                      alt={props.alt || 'Image'}
-                      style={{ maxWidth: '100%', height: 'auto' }}
-                    />
-                  ),
-                  a: ({ node, ...props }: any) => (
-                    <a 
-                      {...props} 
-                      className="text-blue-600 underline hover:text-blue-700"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    />
-                  ),
-                }}
-              >
-                {content}
-              </ReactMarkdown>
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-12 text-neutral-400">
-            Failed to load guide content
-          </div>
-        )}
+        <div style={{ padding: '12px 16px', background: 'var(--col-editing-dim)', border: '1px solid var(--col-editing-border)', borderRadius: '8px' }}>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.55', margin: 0 }}>
+            <span style={{ color: 'var(--col-editing)', fontWeight: '700' }}>⚠️ Primary Reference</span>{' '}
+            This is your primary reference document for video editing and formatting.
+            Refer to this guide regularly when editing videos to ensure consistency and quality.
+          </p>
+        </div>
       </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+          Loading guide…
+        </div>
+      ) : content ? (
+        <div style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', padding: '28px 32px', boxShadow: 'var(--card-shadow)' }}>
+          <div className="prose-theme">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeRaw]}
+              components={{
+                img: ({ node, ...props }: any) => (
+                  <img
+                    {...props}
+                    style={{ borderRadius: '8px', boxShadow: 'var(--shadow-md)', margin: '16px 0', maxWidth: '100%', height: 'auto' }}
+                    loading="lazy"
+                    alt={props.alt || 'Image'}
+                  />
+                ),
+                a: ({ node, ...props }: any) => (
+                  <a
+                    {...props}
+                    style={{ color: 'var(--gold)', textDecoration: 'underline' }}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  />
+                ),
+              }}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+          Failed to load guide content
+        </div>
+      )}
     </div>
   );
 }
-

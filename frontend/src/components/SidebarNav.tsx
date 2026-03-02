@@ -1,19 +1,20 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget, IconSun, IconMoon } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
+import { useTheme } from "../contexts/ThemeContext";
 import { usersApi, filesApi } from "../services/api";
 import { useToast } from "../hooks/useToast";
 import { useAlert } from "../hooks/useAlert";
 import { getErrorMessage } from "../utils/errorHandler";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 
-const ICON_COLOR = '#AAAACC';
-const ICON_ACTIVE = '#F5A623';
+const ICON_COLOR = 'var(--text-secondary)';
 
 export function SidebarNav() {
   const { user, logout, isAuthenticated, refreshUser } = useAuth();
+  const { effectiveTheme, toggle: toggleTheme } = useTheme();
   const { showToast, ToastComponent } = useToast();
   const { showAlert, AlertComponent } = useAlert();
   const [open, setOpen] = useState(false);
@@ -55,7 +56,7 @@ export function SidebarNav() {
       if (user.profile_picture.startsWith('http')) return user.profile_picture;
       return user.profile_picture;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=2E2E3C&color=F5A623&size=128&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=F0EBE0&color=B8922E&size=128&bold=true`;
   };
 
   const handleProfileClick = (e: React.MouseEvent) => {
@@ -177,36 +178,38 @@ export function SidebarNav() {
       <SidebarBody className="justify-between gap-10">
         <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <SidebarLogo />
-          {/* Divider */}
-          <div style={{ height: '1px', background: '#30303E', margin: '16px 0' }} />
-          <div className="flex flex-col gap-1">
+          <div style={{ height: '1px', background: 'var(--border-default)', margin: '16px 0' }} />
+          <div className="flex flex-col gap-0.5">
             {links.map((link, idx) => (
               <SidebarLink key={idx} link={link} />
             ))}
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          {/* Divider */}
-          <div style={{ height: '1px', background: '#30303E', marginBottom: '8px' }} />
+        <div className="flex flex-col gap-0.5">
+          <div style={{ height: '1px', background: 'var(--border-default)', marginBottom: '8px' }} />
+
+          {/* Theme toggle */}
+          <ThemeToggleRow effectiveTheme={effectiveTheme} toggleTheme={toggleTheme} />
+
           <SidebarLink
             link={{
               label: user?.discord_username || user?.name || "User",
               href: "#",
               icon: (
                 user?.profile_picture && !user.profile_picture.startsWith('http') ? (
-                  <div className="h-6 w-6 shrink-0 rounded-full flex items-center justify-center text-sm" style={{ background: '#22222C' }}>
+                  <div className="h-5 w-5 shrink-0 rounded-full flex items-center justify-center text-xs" style={{ background: 'var(--gold-dim)' }}>
                     {user.profile_picture}
                   </div>
                 ) : (
                   <img
                     src={getProfilePicture()}
-                    className="h-6 w-6 shrink-0 rounded-full object-cover"
-                    width={24} height={24}
+                    className="h-5 w-5 shrink-0 rounded-full object-cover"
+                    width={20} height={20}
                     alt="Avatar"
-                    style={{ border: '1px solid #2E2E3C' }}
+                    style={{ border: '1.5px solid var(--border-default)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.discord_username || user?.name || 'User')}&background=2E2E3C&color=F5A623&size=128`;
+                      (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.discord_username || user?.name || 'User')}&background=F0EBE0&color=B8922E&size=128`;
                     }}
                   />
                 )
@@ -219,9 +222,9 @@ export function SidebarNav() {
             link={{
               label: "Logout",
               href: "#",
-              icon: <IconLogout className="h-5 w-5 shrink-0" style={{ color: '#FF5E5E' }} />,
+              icon: <IconLogout className="h-5 w-5 shrink-0" style={{ color: 'var(--text-muted)' }} />,
             }}
-            className="!text-[#FF5E5E] hover:!text-red-400"
+            className="opacity-60 hover:opacity-100"
             onClick={(e) => { e.preventDefault(); logout(); }}
           />
         </div>
@@ -231,25 +234,25 @@ export function SidebarNav() {
       {showProfileModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ background: 'rgba(0,0,0,0.7)' }}
+          style={{ background: 'var(--modal-overlay)' }}
           onClick={() => setShowProfileModal(false)}
         >
           <div
-            className="max-w-md w-full mx-4 p-6 rounded-lg"
+            className="max-w-md w-full mx-4 p-6 rounded-2xl"
             style={{
-              background: '#1F1F28',
-              border: '1px solid #3E3E54',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.6)',
+              background: 'var(--modal-bg)',
+              border: '1px solid var(--modal-border)',
+              boxShadow: 'var(--modal-shadow)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-display font-semibold" style={{ color: '#EEEEF5', letterSpacing: '-0.01em' }}>Edit Profile</h2>
+              <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Edit Profile</h2>
               <button
                 onClick={() => setShowProfileModal(false)}
-                style={{ color: '#4A4A60', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '6px', padding: '4px' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#EEEEF5'; (e.currentTarget as HTMLElement).style.background = '#22222C'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#4A4A60'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+                style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '8px', padding: '4px' }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; (e.currentTarget as HTMLElement).style.background = 'var(--border-subtle)'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -259,31 +262,31 @@ export function SidebarNav() {
 
             <form onSubmit={handleProfileSubmit}>
               <div className="mb-4">
-                <label className="block text-xs font-mono mb-2" style={{ color: '#8888A8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Profile Picture</label>
+                <label className="block text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Profile Picture</label>
                 <div className="flex items-center gap-4">
                   {profileImagePreview ? (
-                    <img src={profileImagePreview} alt="Profile" className="h-14 w-14 rounded-full object-cover" style={{ border: '2px solid #2E2E3C' }} />
+                    <img src={profileImagePreview} alt="Profile" className="h-14 w-14 rounded-full object-cover" style={{ border: '2px solid var(--border-default)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
                   ) : profileForm.profile_picture ? (
-                    <div className="flex h-14 w-14 items-center justify-center text-3xl rounded-full" style={{ background: '#22222C' }}>
+                    <div className="flex h-14 w-14 items-center justify-center text-3xl rounded-full" style={{ background: 'var(--gold-dim)', border: '2px solid var(--gold-border)' }}>
                       {profileForm.profile_picture}
                     </div>
                   ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full text-xl" style={{ background: '#22222C', color: '#4A4A60' }}>?</div>
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full text-xl" style={{ background: 'var(--border-subtle)', color: 'var(--text-muted)' }}>?</div>
                   )}
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                      className="px-3 py-1.5 text-xs font-mono rounded transition-all"
-                      style={{ background: '#22222C', color: '#EEEEF5', border: '1px solid #2E2E3C' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#F5A623'; (e.currentTarget as HTMLElement).style.color = '#F5A623'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = '#2E2E3C'; (e.currentTarget as HTMLElement).style.color = '#EEEEF5'; }}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all"
+                      style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--border-subtle)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; }}
                     >
                       Choose Emoji
                     </button>
                     <label
-                      className="px-3 py-1.5 text-xs font-mono rounded transition-all cursor-pointer text-center"
-                      style={{ background: '#22222C', color: '#EEEEF5', border: '1px solid #2E2E3C' }}
+                      className="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer text-center"
+                      style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
                     >
                       Upload Image
                       <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
@@ -294,7 +297,7 @@ export function SidebarNav() {
               </div>
 
               <div className="mb-5">
-                <label htmlFor="discord_username" className="block text-xs font-mono mb-2" style={{ color: '#8888A8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <label htmlFor="discord_username" className="block text-xs font-semibold mb-2" style={{ color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Discord Username
                 </label>
                 <input
@@ -302,14 +305,14 @@ export function SidebarNav() {
                   id="discord_username"
                   value={profileForm.discord_username}
                   onChange={(e) => setProfileForm({ ...profileForm, discord_username: e.target.value })}
-                  className="w-full px-3 py-2 rounded text-sm font-mono focus:outline-none transition-all"
+                  className="w-full px-3 py-2 rounded-xl text-sm focus:outline-none transition-all"
                   style={{
-                    background: '#13131A',
-                    border: '1px solid #2E2E3C',
-                    color: '#EEEEF5',
+                    background: 'var(--input-bg)',
+                    border: '1px solid var(--input-border)',
+                    color: 'var(--text-primary)',
                   }}
-                  onFocus={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = '#F5A623'; }}
-                  onBlur={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = '#2E2E3C'; }}
+                  onFocus={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--gold-border)'; (e.currentTarget as HTMLInputElement).style.boxShadow = '0 0 0 3px var(--gold-dim)'; }}
+                  onBlur={(e) => { (e.currentTarget as HTMLInputElement).style.borderColor = 'var(--input-border)'; (e.currentTarget as HTMLInputElement).style.boxShadow = 'none'; }}
                   placeholder="Your Discord username"
                 />
               </div>
@@ -318,20 +321,20 @@ export function SidebarNav() {
                 <button
                   type="button"
                   onClick={() => setShowProfileModal(false)}
-                  className="px-4 py-2 text-xs font-mono rounded transition-all"
-                  style={{ background: '#22222C', color: '#8888A8', border: '1px solid #2E2E3C' }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#EEEEF5'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = '#8888A8'; }}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl transition-all"
+                  style={{ background: 'var(--border-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)' }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--border-subtle)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; }}
                   disabled={saving}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-xs font-mono rounded transition-all disabled:opacity-40"
-                  style={{ background: '#F5A623', color: '#0E0E12', fontWeight: 600 }}
-                  onMouseEnter={(e) => { if (!saving) (e.currentTarget as HTMLElement).style.background = '#FFB830'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = '#F5A623'; }}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
+                  style={{ background: 'var(--gold)', color: 'var(--bg-base)', boxShadow: 'none' }}
+                  onMouseEnter={(e) => { if (!saving) { (e.currentTarget as HTMLElement).style.opacity = '0.88'; } }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
                   disabled={saving}
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
@@ -352,25 +355,22 @@ const SidebarLogo = () => {
   const { isExpanded } = useSidebar();
 
   return (
-    <a
-      href="/"
-      className="relative z-20 flex items-center gap-3 py-1"
-    >
+    <a href="/" className="relative z-20 flex items-center gap-3 py-1">
       <img
         src="/knavishmantis-profilepic.jpg"
         alt="Logo"
-        className="h-8 w-8 shrink-0 rounded-full object-cover"
-        style={{ border: '1px solid #2E2E3C' }}
+        className="h-7 w-7 shrink-0 rounded-full object-cover"
+        style={{ border: '1.5px solid var(--border-default)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)', flexShrink: 0 }}
       />
       <motion.div
-        animate={{ opacity: isExpanded ? 1 : 0, width: isExpanded ? 'auto' : 0 }}
-        transition={{ duration: 0.2 }}
-        className="overflow-hidden whitespace-nowrap"
+        animate={{ opacity: isExpanded ? 1 : 0, width: isExpanded ? 150 : 0 }}
+        transition={{ duration: 0.22, ease: 'easeInOut' }}
+        style={{ overflow: 'hidden', whiteSpace: 'nowrap', flexShrink: 0 }}
       >
-        <span className="font-display text-sm font-semibold" style={{ color: '#EEEEF5', letterSpacing: '-0.01em' }}>
+        <span className="text-sm font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
           Knavish
         </span>
-        <span className="font-display text-sm font-semibold ml-1" style={{ color: '#F5A623' }}>
+        <span className="text-sm font-bold ml-1" style={{ color: 'var(--gold)' }}>
           Pipeline
         </span>
       </motion.div>
@@ -380,8 +380,8 @@ const SidebarLogo = () => {
 
 export const Logo = () => (
   <a href="/" className="relative z-20 flex items-center gap-2 py-1">
-    <div className="h-5 w-6 shrink-0 rounded-sm" style={{ background: '#F5A623' }} />
-    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-display font-semibold text-sm" style={{ color: '#EEEEF5' }}>
+    <div className="h-5 w-6 shrink-0 rounded-sm" style={{ background: 'var(--gold)' }} />
+    <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
       Knavish Pipeline
     </motion.span>
   </a>
@@ -389,6 +389,65 @@ export const Logo = () => (
 
 export const LogoIcon = () => (
   <a href="/" className="relative z-20 flex items-center justify-center py-1">
-    <div className="h-5 w-6 shrink-0 rounded-sm" style={{ background: '#F5A623' }} />
+    <div className="h-5 w-6 shrink-0 rounded-sm" style={{ background: 'var(--gold)' }} />
   </a>
 );
+
+/* ── Theme Toggle Row ── */
+function ThemeToggleRow({
+  effectiveTheme,
+  toggleTheme,
+}: {
+  effectiveTheme: 'light' | 'dark';
+  toggleTheme: () => void;
+}) {
+  const { isExpanded } = useSidebar();
+  const isDark = effectiveTheme === 'dark';
+
+  return (
+    <button
+      onClick={toggleTheme}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 12px',
+        borderRadius: '8px',
+        border: 'none',
+        background: 'transparent',
+        cursor: 'pointer',
+        width: '100%',
+        transition: 'background 0.15s',
+        color: 'var(--text-secondary)',
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)';
+        (e.currentTarget as HTMLElement).style.color = 'var(--gold)';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.background = 'transparent';
+        (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+      }}
+    >
+      {isDark ? (
+        <IconSun className="h-5 w-5 shrink-0" style={{ color: 'inherit' }} />
+      ) : (
+        <IconMoon className="h-5 w-5 shrink-0" style={{ color: 'inherit' }} />
+      )}
+      <motion.span
+        animate={{ opacity: isExpanded ? 1 : 0, width: isExpanded ? 'auto' : 0 }}
+        transition={{ duration: 0.2 }}
+        style={{
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+          fontSize: '14px',
+          fontWeight: 500,
+          color: 'inherit',
+        }}
+      >
+        {isDark ? 'Light Mode' : 'Dark Mode'}
+      </motion.span>
+    </button>
+  );
+}

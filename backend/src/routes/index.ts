@@ -6,7 +6,6 @@ import { filesRouter } from './files';
 import { paymentsRouter } from './payments';
 import { authRouter } from './auth';
 import analyzedShortsRouter from './analyzedShorts';
-import { youtubeUploadRouter } from './youtubeUpload';
 import { getCacheStats, clearCache } from '../db';
 
 export function setupRoutes(app: Express): void {
@@ -17,8 +16,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/files', filesRouter);
   app.use('/api/payments', paymentsRouter);
   app.use('/api/analyzed-shorts', analyzedShortsRouter);
-  app.use('/api/youtube', youtubeUploadRouter);
-  
+
   // Debug endpoint for cache stats (only in non-production or with debug flag)
   if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ENDPOINTS === 'true') {
     app.get('/api/debug/cache/stats', (_req: Request, res: Response) => {

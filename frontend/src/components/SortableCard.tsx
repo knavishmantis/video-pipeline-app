@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -47,12 +47,51 @@ export function SortableCard({
 
   const defaultRole = getDefaultRole();
 
+  // ── Card state computation ────────────────────────────────────────────────────
+  const hasScript     = short.files?.some(f => f.file_type === 'script');
+  const hasAudio      = short.files?.some(f => f.file_type === 'audio');
+  const hasClipsZip   = short.files?.some(f => f.file_type === 'clips_zip');
+  const hasFinalVideo = short.files?.some(f => f.file_type === 'final_video');
+
+  type CardState = 'unassigned' | 'in_progress' | 'complete' | 'changes' | 'done';
+  const getCardState = (): CardState => {
+    if (column.id === 'clip_changes' || column.id === 'editing_changes') return 'changes';
+    if (column.id === 'uploaded') return 'done';
+    if (column.id === 'script') {
+      if (!scripter) return 'unassigned';
+      if (!hasScript || !hasAudio) return 'in_progress';
+      return 'complete';
+    }
+    if (column.id === 'clips') {
+      if (!clipper) return 'unassigned';
+      if (!hasClipsZip) return 'in_progress';
+      return 'complete';
+    }
+    if (column.id === 'editing') {
+      if (!editor) return 'unassigned';
+      if (!hasFinalVideo) return 'in_progress';
+      return 'complete';
+    }
+    return 'in_progress';
+  };
+  const cardState = getCardState();
+  const isMyCard = !!defaultRole && defaultRole.user.id === currentUserId;
+
+  const stateConfig: Record<CardState, { label: string; color: string; dotSize: number; glow: boolean }> = {
+    unassigned:  { label: 'Unassigned',  color: 'var(--text-muted)',  dotSize: 10, glow: false },
+    in_progress: { label: 'In Progress', color: 'var(--gold)',         dotSize: 10, glow: true  },
+    complete:    { label: 'Ready',       color: 'var(--green)',         dotSize: 10, glow: false },
+    changes:     { label: 'Changes',     color: 'var(--gold)',          dotSize: 10, glow: true  },
+    done:        { label: 'Done',        color: 'var(--green)',         dotSize: 10, glow: false },
+  };
+  const cfg = stateConfig[cardState];
+
   const getProfilePicture = (user: User) => {
     if (user.profile_picture) {
       if (user.profile_picture.startsWith('http')) return user.profile_picture;
       return user.profile_picture;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=2E2E3C&color=F5A623&size=32&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=F0EBE0&color=B8922E&size=32&bold=true`;
   };
 
   const {
@@ -70,101 +109,55 @@ export function SortableCard({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.35 : 1,
   };
 
-  // ── Status dot ──────────────────────────────────────────────────────────────
-  const renderStatusDot = () => {
-    const hasScript    = short.files?.some(f => f.file_type === 'script');
-    const hasAudio     = short.files?.some(f => f.file_type === 'audio');
-    const hasClipsZip  = short.files?.some(f => f.file_type === 'clips_zip');
-    const hasFinalVideo= short.files?.some(f => f.file_type === 'final_video');
-
-    const scriptUploaded  = column.id === 'script'  && hasScript && hasAudio;
-    const scriptInProgress= column.id === 'script'  && scripter  && (!hasScript || !hasAudio);
-    const scriptUnassigned= column.id === 'script'  && !scripter;
-
-    let clipsUploaded = false;
-    if (column.id === 'clips') { clipsUploaded = !!hasClipsZip; }
-    else if (column.id === 'clip_changes' && hasClipsZip && short.entered_clip_changes_at) {
-      const clipsFile = short.files?.find(f => f.file_type === 'clips_zip');
-      if (clipsFile?.uploaded_at) {
-        clipsUploaded = new Date(clipsFile.uploaded_at).getTime() >= new Date(short.entered_clip_changes_at).getTime();
-      }
-    }
-    const clipsInProgress  = (column.id === 'clips' || column.id === 'clip_changes') && clipper && !clipsUploaded;
-    const clipsUnassigned  = column.id === 'clips' && !clipper && !hasClipsZip;
-
-    let editingUploaded = false;
-    if (column.id === 'editing') { editingUploaded = !!hasFinalVideo; }
-    else if (column.id === 'editing_changes' && hasFinalVideo && short.entered_editing_changes_at) {
-      const finalFile = short.files?.find(f => f.file_type === 'final_video');
-      if (finalFile?.uploaded_at) {
-        editingUploaded = new Date(finalFile.uploaded_at).getTime() >= new Date(short.entered_editing_changes_at).getTime();
-      }
-    }
-    const editingInProgress = (column.id === 'editing' || column.id === 'editing_changes') && editor && !editingUploaded;
-    const editingUnassigned = column.id === 'editing' && !editor && !hasFinalVideo;
-
-    // Determine color + title
-    let dotColor = '#4A4A60';
-    let title = '';
-
-    if (column.id === 'clip_changes' || column.id === 'editing_changes') { dotColor = '#B39DFF'; title = 'Changes requested'; }
-    else if (column.id === 'uploaded') { dotColor = '#A3E635'; title = 'Uploaded/Scheduled'; }
-    else if (scriptUploaded || clipsUploaded || editingUploaded) { dotColor = '#22D3A0'; title = 'Uploaded'; }
-    else if (scriptInProgress || clipsInProgress || editingInProgress) { dotColor = '#F5A623'; title = 'In progress'; }
-    else if (scriptUnassigned || clipsUnassigned || editingUnassigned) { dotColor = '#4A4A60'; title = 'Not assigned'; }
-    else return null;
-
-    return (
-      <div
-        title={title}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          left: '10px',
-          width: '7px',
-          height: '7px',
-          borderRadius: '50%',
-          background: dotColor,
-          flexShrink: 0,
-          ...(dotColor === '#F5A623' ? {
-            boxShadow: '0 0 6px rgba(245,166,35,0.6)',
-          } : {}),
-        }}
-      />
-    );
-  };
+  // ── Status dot ───────────────────────────────────────────────────────────────
+  const renderStatusDot = () => (
+    <div
+      title={cfg.label}
+      style={{
+        position: 'absolute',
+        top: '13px',
+        left: '12px',
+        width: `${cfg.dotSize}px`,
+        height: `${cfg.dotSize}px`,
+        borderRadius: '50%',
+        background: cfg.color,
+        flexShrink: 0,
+        transition: 'box-shadow 0.2s',
+        ...(cfg.glow ? { boxShadow: `0 0 0 3px ${cfg.color}22, 0 0 8px ${cfg.color}55` } : {}),
+      }}
+    />
+  );
 
   return (
     <div
       ref={setNodeRef}
       style={{
         ...style,
-        background: '#1F1F28',
-        border: '1px solid #32323E',
-        borderLeft: `3px solid ${column.color}`,
-        borderRadius: '5px',
-        padding: '12px 12px 10px',
+        background: isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)',
+        border: '1px solid var(--border-default)',
+        borderLeft: `4px solid ${cfg.color}`,
+        borderRadius: '8px',
+        padding: '11px 12px 34px',
         cursor: onClick ? 'pointer' : 'default',
-        transition: isDragging ? 'none' : 'all 0.15s ease-out',
+        transition: isDragging ? 'none' : 'background 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.15s ease-out',
         position: 'relative',
+        boxShadow: 'var(--card-shadow)',
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.background = '#262632';
-          e.currentTarget.style.borderColor = '#44445A';
-          e.currentTarget.style.borderLeftColor = column.color;
-          e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.4), inset 0 0 0 0 transparent`;
+          e.currentTarget.style.background = 'var(--card-hover-bg)';
+          e.currentTarget.style.boxShadow = 'var(--card-hover-shadow)';
+          e.currentTarget.style.transform = 'translateY(-1px)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.background = '#1F1F28';
-          e.currentTarget.style.borderColor = '#32323E';
-          e.currentTarget.style.borderLeftColor = column.color;
-          e.currentTarget.style.boxShadow = 'none';
+          e.currentTarget.style.background = isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)';
+          e.currentTarget.style.boxShadow = 'var(--card-shadow)';
+          e.currentTarget.style.transform = 'translateY(0)';
           setShowAssignMenu(false);
           setMenuPosition(null);
         }
@@ -185,24 +178,24 @@ export function SortableCard({
             position: 'absolute',
             top: '8px',
             right: '8px',
-            width: '24px',
-            height: '24px',
+            width: '22px',
+            height: '22px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: 'transparent',
             border: 'none',
-            borderRadius: '4px',
-            transition: 'all 0.15s ease-out',
+            borderRadius: '6px',
+            transition: 'all 0.15s ease',
             zIndex: 2,
-            color: '#4A4A60',
+            color: 'var(--text-muted)',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#2E2E3C'; e.currentTarget.style.color = '#8888A8'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4A4A60'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
           title="Edit settings"
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
             <circle cx="12" cy="12" r="3"/>
           </svg>
@@ -218,29 +211,29 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: !isDragging ? '36px' : '8px',
-            width: '24px',
-            height: '24px',
+            right: !isDragging ? '34px' : '8px',
+            width: '22px',
+            height: '22px',
             cursor: isDragging ? 'grabbing' : 'grab',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             opacity: isDragging ? 1 : 0.25,
-            borderRadius: '4px',
-            transition: isDragging ? 'none' : 'all 0.15s ease-out',
-            color: isDragging ? '#F5A623' : '#8888A8',
+            borderRadius: '6px',
+            transition: isDragging ? 'none' : 'all 0.15s ease',
+            color: isDragging ? 'var(--gold)' : 'var(--text-secondary)',
           }}
-          onMouseEnter={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#2E2E3C'; } }}
+          onMouseEnter={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--border-subtle)'; } }}
           onMouseLeave={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '0.25'; e.currentTarget.style.background = 'transparent'; } }}
           onClick={(e) => e.stopPropagation()}
         >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-            <circle cx="4"  cy="3"  r="1.2" fill="currentColor"/>
-            <circle cx="12" cy="3"  r="1.2" fill="currentColor"/>
-            <circle cx="4"  cy="8"  r="1.2" fill="currentColor"/>
-            <circle cx="12" cy="8"  r="1.2" fill="currentColor"/>
-            <circle cx="4"  cy="13" r="1.2" fill="currentColor"/>
-            <circle cx="12" cy="13" r="1.2" fill="currentColor"/>
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
+            <circle cx="4"  cy="3"  r="1.3" fill="currentColor"/>
+            <circle cx="12" cy="3"  r="1.3" fill="currentColor"/>
+            <circle cx="4"  cy="8"  r="1.3" fill="currentColor"/>
+            <circle cx="12" cy="8"  r="1.3" fill="currentColor"/>
+            <circle cx="4"  cy="13" r="1.3" fill="currentColor"/>
+            <circle cx="12" cy="13" r="1.3" fill="currentColor"/>
           </svg>
         </div>
       )}
@@ -265,25 +258,25 @@ export function SortableCard({
             style={{
               position: 'absolute',
               top: '8px',
-              right: !isDragging ? '64px' : '36px',
-              width: '24px',
-              height: '24px',
+              right: !isDragging ? '60px' : '36px',
+              width: '22px',
+              height: '22px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: 'transparent',
               border: 'none',
-              borderRadius: '4px',
-              transition: 'all 0.15s ease-out',
+              borderRadius: '6px',
+              transition: 'all 0.15s ease',
               zIndex: 3,
-              color: '#4A4A60',
+              color: 'var(--text-muted)',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#2E2E3C'; e.currentTarget.style.color = '#8888A8'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4A4A60'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
             title={column.id === 'script' ? (scripter ? 'Reassign Script Writer' : 'Assign Script Writer') : column.id === 'clips' ? (clipper ? 'Reassign Clipper' : 'Assign Clipper') : (editor ? 'Reassign Editor' : 'Assign Editor')}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="8.5" cy="7" r="4"/>
               <line x1="20" y1="8" x2="20" y2="14"/>
@@ -298,32 +291,32 @@ export function SortableCard({
                 position: 'fixed',
                 top: `${menuPosition.top}px`,
                 left: `${menuPosition.left}px`,
-                background: '#1F1F28',
-                border: '1px solid #3E3E54',
-                borderRadius: '6px',
+                background: 'var(--modal-bg)',
+                border: '1px solid var(--modal-border)',
+                borderRadius: '8px',
                 padding: '10px',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
+                boxShadow: 'var(--modal-shadow)',
                 zIndex: 10000,
-                minWidth: '240px',
-                maxWidth: '300px',
+                minWidth: '220px',
+                maxWidth: '280px',
               }}
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{
                 fontSize: '10px',
-                fontFamily: 'DM Mono, monospace',
-                fontWeight: '500',
-                letterSpacing: '0.08em',
+                fontWeight: '700',
+                letterSpacing: '0.06em',
                 marginBottom: '8px',
-                color: '#8888A8',
+                color: 'var(--text-secondary)',
                 textTransform: 'uppercase',
+                paddingLeft: '4px',
               }}>
                 {(column.id === 'script' && scripter) || (column.id === 'clips' && clipper) || (column.id === 'editing' && editor)
                   ? `Reassign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
                   : `Assign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
                 }
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {users
                   .filter(u => {
                     if (column.id === 'script') return u.roles?.includes('script_writer') || u.role === 'script_writer';
@@ -341,19 +334,19 @@ export function SortableCard({
                         setMenuPosition(null);
                       }}
                       style={{
-                        padding: '7px 9px',
+                        padding: '7px 8px',
                         cursor: 'pointer',
-                        borderRadius: '4px',
+                        borderRadius: '8px',
                         fontSize: '12px',
-                        fontFamily: 'DM Mono, monospace',
+                        fontWeight: '500',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        transition: 'background 0.1s ease-out',
-                        color: '#8888A8',
+                        transition: 'background 0.15s ease',
+                        color: 'var(--text-primary)',
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#2A2A38'; e.currentTarget.style.color = '#F0F0F8'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#AAAACC'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
                       {u.profile_picture && !u.profile_picture.startsWith('http') ? (
                         <span style={{ fontSize: '14px' }}>{u.profile_picture}</span>
@@ -361,7 +354,7 @@ export function SortableCard({
                         <img
                           src={getProfilePicture(u)}
                           alt={u.name}
-                          style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                          style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }}
                         />
                       )}
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -381,26 +374,25 @@ export function SortableCard({
       {/* Title */}
       <h4 style={{
         margin: 0,
-        marginBottom: '6px',
-        fontFamily: 'Syne, sans-serif',
+        marginBottom: '5px',
         fontSize: '13px',
         fontWeight: '600',
-        color: '#EEEEF5',
-        lineHeight: '1.4',
+        color: 'var(--text-primary)',
+        lineHeight: '1.45',
         letterSpacing: '-0.01em',
-        paddingRight: isAdmin ? '96px' : '24px',
+        paddingRight: isAdmin ? '90px' : '20px',
         paddingLeft: '18px',
+        paddingBottom: '2px',
       }}>
         {short.title}
       </h4>
 
       {short.description && (
         <p style={{
-          margin: '0 0 6px 0',
-          fontFamily: 'DM Mono, monospace',
+          margin: '0 0 4px 0',
           fontSize: '11px',
-          color: '#8888A8',
-          lineHeight: '1.6',
+          color: 'var(--text-secondary)',
+          lineHeight: '1.55',
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
@@ -412,10 +404,9 @@ export function SortableCard({
 
       {short.idea && (
         <p style={{
-          margin: '4px 0 0 0',
-          fontFamily: 'DM Mono, monospace',
-          fontSize: '10px',
-          color: '#4A4A60',
+          margin: '3px 0 0 0',
+          fontSize: '11px',
+          color: 'var(--text-secondary)',
           fontStyle: 'italic',
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -426,60 +417,68 @@ export function SortableCard({
         </p>
       )}
 
-      {short.files?.some(f => f.file_type === 'script') && column.id === 'script' && (
-        <p style={{
-          margin: '4px 0 0 0',
-          fontFamily: 'DM Mono, monospace',
-          fontSize: '10px',
-          color: '#22D3A0',
-        }}>
-          ✓ Script PDF uploaded
-        </p>
-      )}
-
-      {/* Assignment */}
-      {defaultRole && (
-        <div style={{
-          marginTop: '8px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          fontFamily: 'DM Mono, monospace',
-          fontSize: '10px',
-          color: '#4A4A60',
-        }}>
-          {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
-            <span style={{ fontSize: '12px' }}>{defaultRole.user.profile_picture}</span>
-          ) : (
-            <img
-              src={getProfilePicture(defaultRole.user)}
-              alt={defaultRole.user.name}
-              style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }}
-            />
-          )}
-          <span style={{ color: '#8888A8' }}>
-            {defaultRole.type === 'scripter' ? 'SCRIPTER' : defaultRole.type === 'clipper' ? 'CLIPPER' : 'EDITOR'}:
-          </span>
-          <span style={{ color: '#EEEEF5' }}>
-            {defaultRole.user.discord_username || defaultRole.user.name}
-          </span>
-          <div style={{ position: 'relative', zIndex: 1001 }}>
-            <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
-          </div>
-        </div>
-      )}
-
-      {/* Timestamp */}
+      {/* ── Bottom row: assignment (left) + state+date (right) ── */}
       <div style={{
         position: 'absolute',
         bottom: '8px',
+        left: '12px',
         right: '10px',
-        fontFamily: 'DM Mono, monospace',
-        fontSize: '9px',
-        color: '#6E6E90',
-        letterSpacing: '0.03em',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        gap: '4px',
+        minWidth: 0,
       }}>
-        {new Date(short.created_at).toLocaleDateString()}
+        {/* Assignment */}
+        {defaultRole ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '10px',
+            color: 'var(--text-secondary)',
+            fontWeight: '500',
+            minWidth: 0,
+            overflow: 'hidden',
+          }}>
+            {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
+              <span style={{ fontSize: '12px', flexShrink: 0 }}>{defaultRole.user.profile_picture}</span>
+            ) : (
+              <img
+                src={getProfilePicture(defaultRole.user)}
+                alt={defaultRole.user.name}
+                style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover', border: `1px solid ${isMyCard ? column.color : 'var(--border-default)'}`, flexShrink: 0 }}
+              />
+            )}
+            <span style={{ color: isMyCard ? column.color : 'var(--text-primary)', fontWeight: isMyCard ? '700' : '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {defaultRole.user.discord_username || defaultRole.user.name}
+            </span>
+            {isMyCard && (
+              <span style={{ fontSize: '9px', fontWeight: '700', color: column.color, background: `color-mix(in srgb, ${column.color} 15%, transparent)`, padding: '1px 4px', borderRadius: '3px', flexShrink: 0, letterSpacing: '0.04em' }}>
+                YOU
+              </span>
+            )}
+            <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
+          </div>
+        ) : (
+          <div />
+        )}
+
+        {/* State + Date stacked right */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
+          <span style={{
+            fontSize: '9px',
+            fontWeight: '700',
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color: cfg.color,
+          }}>
+            {cfg.label}
+          </span>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '500', letterSpacing: '0.01em' }}>
+            {new Date(short.created_at).toLocaleDateString()}
+          </span>
+        </div>
       </div>
     </div>
   );
