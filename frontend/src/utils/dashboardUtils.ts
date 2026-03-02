@@ -1,6 +1,6 @@
 import { Short } from '../../../shared/types';
 
-export type ColumnType = 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'ready_to_upload' | 'uploaded';
+export type ColumnType = 'script' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'uploaded';
 
 export interface Column {
   id: ColumnType;
@@ -11,13 +11,12 @@ export interface Column {
 }
 
 export const columns: Column[] = [
-  { id: 'script', title: 'Script', color: '#3B82F6', canAdd: true, order: 0 },
-  { id: 'clips', title: 'Clips', color: '#F59E0B', order: 1 },
-  { id: 'clip_changes', title: 'Clip Changes', color: '#EF4444', order: 2 },
-  { id: 'editing', title: 'Editing', color: '#10B981', order: 3 },
-  { id: 'editing_changes', title: 'Editing Changes', color: '#06B6D4', order: 4 },
-  { id: 'ready_to_upload', title: 'Ready to Upload', color: '#F59E0B', order: 5 },
-  { id: 'uploaded', title: 'Uploaded/Scheduled', color: '#84CC16', order: 6 },
+  { id: 'script',          title: 'Script',             color: '#5C8EFF', canAdd: true, order: 0 },
+  { id: 'clips',           title: 'Clips',              color: '#F5A623', order: 1 },
+  { id: 'clip_changes',    title: 'Clip Changes',       color: '#FF5E5E', order: 2 },
+  { id: 'editing',         title: 'Editing',            color: '#22D3A0', order: 3 },
+  { id: 'editing_changes', title: 'Editing Changes',    color: '#B39DFF', order: 4 },
+  { id: 'uploaded',        title: 'Uploaded/Scheduled', color: '#A3E635', order: 5 },
 ];
 
 // Map database status to column
@@ -30,8 +29,7 @@ export const statusToColumn = (status: string): ColumnType => {
     'clip_changes': 'clip_changes',
     'editing': 'editing',
     'editing_changes': 'editing_changes',
-    'completed': 'ready_to_upload',
-    'ready_to_upload': 'ready_to_upload',
+    'completed': 'uploaded',
     'uploaded': 'uploaded',
   };
   return map[status] || 'script';
@@ -45,7 +43,6 @@ export const columnToStatus = (column: ColumnType): string => {
     'clip_changes': 'clip_changes',
     'editing': 'editing',
     'editing_changes': 'editing_changes',
-    'ready_to_upload': 'ready_to_upload',
     'uploaded': 'uploaded',
   };
   return map[column];
@@ -56,7 +53,7 @@ export const columnToStatus = (column: ColumnType): string => {
 export const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = false, short?: Short): ColumnType[] => {
   const current = columns.find(c => c.id === currentColumn);
   if (!current) return [];
-  
+
   const valid: ColumnType[] = [];
   // Can move to previous column
   const prev = columns.find(c => c.order === current.order - 1);
@@ -64,7 +61,7 @@ export const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = fa
   // Can move to next column
   const next = columns.find(c => c.order === current.order + 1);
   if (next) valid.push(next.id);
-  
+
   // Admin can also move to clip_changes or editing_changes from clips/editing
   if (isAdmin) {
     if (currentColumn === 'clips') {
@@ -73,7 +70,7 @@ export const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = fa
       valid.push('editing_changes');
     }
   }
-  
+
   // Allow clips->editing if clips are marked complete
   if (currentColumn === 'clips' || currentColumn === 'clip_changes') {
     if (short?.clips_completed_at) {
@@ -81,21 +78,14 @@ export const getValidColumns = (currentColumn: ColumnType, isAdmin: boolean = fa
       if (editingColumn) valid.push('editing');
     }
   }
-  
-  // Allow editing->ready_to_upload if editing is marked complete
+
+  // Allow editing->uploaded if editing is marked complete
   if (currentColumn === 'editing' || currentColumn === 'editing_changes') {
     if (short?.editing_completed_at) {
-      const readyToUploadColumn = columns.find(c => c.id === 'ready_to_upload');
-      if (readyToUploadColumn) valid.push('ready_to_upload');
+      const uploadedColumn = columns.find(c => c.id === 'uploaded');
+      if (uploadedColumn) valid.push('uploaded');
     }
   }
-  
-  // Allow ready_to_upload->uploaded (can always move forward)
-  if (currentColumn === 'ready_to_upload') {
-    const uploadedColumn = columns.find(c => c.id === 'uploaded');
-    if (uploadedColumn) valid.push('uploaded');
-  }
-  
+
   return valid;
 };
-

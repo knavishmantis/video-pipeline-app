@@ -11,9 +11,6 @@ import Guide from './pages/Guide';
 import FlashbackReference from './pages/FlashbackReference';
 import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
-import ScriptGrading from './pages/ScriptGrading';
-import ScriptPipeline from './pages/ScriptPipeline';
-import ScriptPipelineEdit from './pages/ScriptPipelineEdit';
 import ScriptReview from './pages/ScriptReview';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
@@ -22,19 +19,24 @@ import { IconBrandYoutube } from '@tabler/icons-react';
 
 function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-gray-100">
+    <div className="flex h-screen w-full overflow-hidden">
       <SidebarNav />
       <div className="flex flex-1 overflow-hidden relative">
-        <div className="flex h-full w-full flex-1 flex-col gap-2 rounded-tl-2xl border border-neutral-200 bg-white p-2 md:p-10 overflow-y-auto relative">
-          {/* YouTube icon in top right */}
+        <div
+          className="flex h-full w-full flex-1 flex-col gap-2 p-2 md:p-8 overflow-y-auto relative"
+          style={{ background: 'transparent' }}
+        >
           <a
             href="https://youtube.com/@knavishmantis"
             target="_blank"
             rel="noopener noreferrer"
-            className="absolute top-4 right-4 z-10 p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+            className="absolute top-4 right-4 z-10 p-2 rounded transition-all"
+            style={{ color: '#FF5E5E' }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,94,94,0.12)'; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             title="Visit YouTube Channel"
           >
-            <IconBrandYoutube className="h-6 w-6" />
+            <IconBrandYoutube className="h-5 w-5" />
           </a>
           {children}
         </div>
@@ -140,36 +142,6 @@ function AppContent() {
             }
           />
           <Route
-            path="/script-grading"
-            element={
-              <ProfileCheckRoute requiredRole="admin">
-                <AppLayout>
-                  <ScriptGrading />
-                </AppLayout>
-              </ProfileCheckRoute>
-            }
-          />
-          <Route
-            path="/script-pipeline"
-            element={
-              <ProfileCheckRoute>
-                <AppLayout>
-                  <ScriptPipeline />
-                </AppLayout>
-              </ProfileCheckRoute>
-            }
-          />
-          <Route
-            path="/script-pipeline/:id"
-            element={
-              <ProfileCheckRoute>
-                <AppLayout>
-                  <ScriptPipelineEdit />
-                </AppLayout>
-              </ProfileCheckRoute>
-            }
-          />
-          <Route
             path="/script-review"
             element={
               <ProfileCheckRoute requiredRole="admin">
@@ -196,4 +168,3 @@ function App() {
 }
 
 export default App;
-

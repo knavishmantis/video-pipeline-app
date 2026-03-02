@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS shorts (
   script_content TEXT,
   script_writer_id INTEGER REFERENCES users(id),
   status VARCHAR(50) NOT NULL DEFAULT 'idea' CHECK (status IN ('idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'uploaded')),
+  youtube_video_id VARCHAR(20),
   entered_clip_changes_at TIMESTAMP,
   entered_editing_changes_at TIMESTAMP,
   clips_completed_at TIMESTAMP,
@@ -146,14 +147,16 @@ export async function migrate(): Promise<void> {
         }
       }
       
-      // Update shorts table status constraint to include clips, clip_changes, and editing_changes
+      // Update shorts table status constraint (without ready_to_upload)
       try {
         await query('ALTER TABLE shorts DROP CONSTRAINT IF EXISTS shorts_status_check');
         await query(`
-          ALTER TABLE shorts 
-          ADD CONSTRAINT shorts_status_check 
-          CHECK (status IN ('idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'ready_to_upload', 'uploaded'))
+          ALTER TABLE shorts
+          ADD CONSTRAINT shorts_status_check
+          CHECK (status IN ('idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'uploaded'))
         `);
+        // Migrate any legacy ready_to_upload rows to completed
+        await query("UPDATE shorts SET status = 'completed' WHERE status = 'ready_to_upload'");
         console.log('Updated shorts_status_check constraint');
       } catch (error: any) {
         // Constraint might not exist or already be updated
@@ -161,16 +164,17 @@ export async function migrate(): Promise<void> {
           console.warn('Could not update shorts_status_check constraint:', error.message);
         }
       }
-      
-      // Add timestamp columns for tracking when shorts entered clip_changes/editing_changes and completion
+
+      // Add timestamp and youtube columns
       try {
         await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS entered_clip_changes_at TIMESTAMP');
         await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS entered_editing_changes_at TIMESTAMP');
         await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS clips_completed_at TIMESTAMP');
         await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS editing_completed_at TIMESTAMP');
-        console.log('Added timestamp columns for clip/editing changes and completion');
+        await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS youtube_video_id VARCHAR(20)');
+        console.log('Added timestamp and youtube_video_id columns');
       } catch (error: any) {
-        console.warn('Could not add timestamp columns (may already exist):', error.message);
+        console.warn('Could not add columns (may already exist):', error.message);
       }
     }
     

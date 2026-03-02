@@ -81,6 +81,21 @@ export function useCardClick({
         setContentForm({ script_content: '', file: null, scriptFile: null, audioFile: null });
         setShowContentModal(true);
       }
+    } else if (column.id === 'uploaded') {
+      // Load full short data and open content modal for YouTube upload
+      try {
+        const fullShort = await shortsApi.getById(short.id);
+        setContentShort(fullShort);
+        setContentColumn('uploaded');
+        setContentForm({ script_content: '', file: null, scriptFile: null, audioFile: null });
+        setShowContentModal(true);
+      } catch (error) {
+        console.error('Failed to load short:', error);
+        setContentShort(short);
+        setContentColumn('uploaded');
+        setContentForm({ script_content: '', file: null, scriptFile: null, audioFile: null });
+        setShowContentModal(true);
+      }
     } else {
       // Navigate to detail page
       navigate(`/shorts/${short.id}`);

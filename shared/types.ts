@@ -1,12 +1,11 @@
 // Shared types between frontend and backend
 
 export type UserRole = 'admin' | 'script_writer' | 'clipper' | 'editor';
-export type ShortStatus = 'idea' | 'script' | 'clipping' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'completed' | 'ready_to_upload' | 'uploaded';
+export type ShortStatus = 'idea' | 'script' | 'clipping' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'completed' | 'uploaded';
 export type FileType = 'script' | 'clip' | 'audio' | 'final_video' | 'clips_zip';
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentRole = 'script_writer' | 'clipper' | 'editor';
 export type AssignmentRole = 'script_writer' | 'clipper' | 'editor';
-export type ScriptDraftStage = 'first_draft' | 'second_draft' | 'final_draft' | null;
 
 export interface User {
   id: number;
@@ -31,20 +30,11 @@ export interface Short {
   script_content?: string;
   script_writer_id?: number;
   status: ShortStatus;
-  script_rating?: number | null; // 0.0 to 10.0 rating from AI grading
+  youtube_video_id?: string | null;
   entered_clip_changes_at?: string | null;
   entered_editing_changes_at?: string | null;
   clips_completed_at?: string | null;
   editing_completed_at?: string | null;
-  // Script pipeline fields
-  script_first_draft?: string;
-  script_second_draft?: string;
-  script_final_draft?: string;
-  script_draft_stage?: ScriptDraftStage;
-  script_pipeline_notes?: string;
-  first_draft_completed_at?: string | null;
-  second_draft_completed_at?: string | null;
-  final_draft_completed_at?: string | null;
   created_at: string;
   updated_at: string;
   // Populated fields
@@ -120,7 +110,6 @@ export interface UpdateShortInput {
   script_content?: string;
   status?: ShortStatus;
   script_writer_id?: number | null;
-  script_rating?: number; // 0.0 to 10.0
 }
 
 export interface CreateAssignmentInput {
@@ -147,19 +136,4 @@ export interface AuthResponse {
   token: string;
 }
 
-export interface CreateScriptPipelineInput {
-  title: string;
-  description?: string;
-  idea?: string;
-}
-
-export interface UpdateScriptDraftInput {
-  draft_text?: string;
-  stage: 'first_draft' | 'second_draft' | 'final_draft';
-  notes?: string;
-}
-
-export interface AdvanceStageInput {
-  validated_rules: string[];
-}
 

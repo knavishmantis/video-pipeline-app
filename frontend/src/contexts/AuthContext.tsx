@@ -24,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
-      // Verify token is still valid
       authApi.getMe()
         .then((userData) => {
           setUser(userData);
@@ -96,4 +95,3 @@ export function useAuth() {
   }
   return context;
 }
-

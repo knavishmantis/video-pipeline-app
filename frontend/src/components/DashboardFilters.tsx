@@ -9,231 +9,158 @@ interface DashboardFiltersProps {
   isAdmin: boolean;
 }
 
+// Column brand colors (matching dashboardUtils)
+const VIEW_COLORS = {
+  script:  '#5C8EFF',
+  clipper: '#F5A623',
+  editing: '#22D3A0',
+  uploaded:'#A3E635',
+};
+
+function ViewTab({
+  label,
+  active,
+  color,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  color: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        padding: '5px 14px',
+        background: active ? `${color}18` : 'transparent',
+        color: active ? color : '#8888A8',
+        border: active ? `1px solid ${color}35` : '1px solid transparent',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontFamily: 'DM Mono, monospace',
+        fontSize: '11px',
+        fontWeight: '500',
+        letterSpacing: '0.05em',
+        transition: 'all 0.15s ease-out',
+        textTransform: 'uppercase' as const,
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.color = '#AAAACC';
+          (e.currentTarget as HTMLElement).style.background = '#26263A';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) {
+          (e.currentTarget as HTMLElement).style.color = '#4A4A60';
+          (e.currentTarget as HTMLElement).style.background = 'transparent';
+        }
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 export function DashboardFilters({
   showAssignedOnly,
   setShowAssignedOnly,
   visibleColumns,
   toggleColumnView,
-  isAdmin,
 }: DashboardFiltersProps) {
+  const scriptActive   = visibleColumns.has('script');
+  const clipperActive  = visibleColumns.has('clips') || visibleColumns.has('clip_changes');
+  const editingActive  = visibleColumns.has('editing') || visibleColumns.has('editing_changes');
+  const uploadedActive = visibleColumns.has('uploaded');
+
   return (
-    <div style={{ 
-      marginBottom: '24px',
+    <div style={{
+      marginBottom: '16px',
       display: 'flex',
       alignItems: 'center',
-      gap: '16px',
-      flexWrap: 'wrap',
+      gap: '8px',
+      flexWrap: 'wrap' as const,
+      padding: '8px 12px',
+      background: '#18181F',
+      border: '1px solid #32323E',
+      borderRadius: '6px',
     }}>
-      {/* Toggle Switch for Assigned/Show All */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <span style={{ fontSize: '14px', color: '#475569', fontWeight: '600', letterSpacing: '-0.01em' }}>
-          Show All
-        </span>
-        <label style={{
-          position: 'relative',
-          display: 'inline-block',
-          width: '52px',
-          height: '28px',
-        }}>
-          <input
-            type="checkbox"
-            checked={showAssignedOnly}
-            onChange={(e) => setShowAssignedOnly(e.target.checked)}
-            style={{
-              opacity: 0,
-              width: 0,
-              height: 0,
-            }}
-          />
-          <span style={{
-            position: 'absolute',
+      {/* Assigned toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '4px' }}>
+        <button
+          onClick={() => setShowAssignedOnly(!showAssignedOnly)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            background: 'transparent',
+            border: 'none',
             cursor: 'pointer',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: showAssignedOnly 
-              ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' 
-              : 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            borderRadius: '28px',
-            boxShadow: showAssignedOnly 
-              ? '0 2px 4px rgba(59, 130, 246, 0.3)' 
-              : '0 1px 2px rgba(0, 0, 0, 0.1)',
+            padding: '4px 6px',
+            borderRadius: '4px',
+          }}
+        >
+          {/* Toggle track */}
+          <div style={{
+            width: '32px',
+            height: '18px',
+            borderRadius: '9px',
+            background: showAssignedOnly ? 'rgba(245,166,35,0.25)' : '#22222C',
+            border: showAssignedOnly ? '1px solid rgba(245,166,35,0.4)' : '1px solid #2E2E3C',
+            position: 'relative',
+            transition: 'all 0.2s ease-out',
+            flexShrink: 0,
           }}>
-            <span style={{
+            <div style={{
               position: 'absolute',
-              content: '""',
-              height: '22px',
-              width: '22px',
-              left: '3px',
-              bottom: '3px',
-              backgroundColor: 'white',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              top: '2px',
+              left: showAssignedOnly ? '14px' : '2px',
+              width: '12px',
+              height: '12px',
               borderRadius: '50%',
-              transform: showAssignedOnly ? 'translateX(24px)' : 'translateX(0)',
-              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+              background: showAssignedOnly ? '#F5A623' : '#4A4A60',
+              transition: 'all 0.2s ease-out',
+              boxShadow: showAssignedOnly ? '0 0 6px rgba(245,166,35,0.5)' : 'none',
             }} />
+          </div>
+          <span style={{
+            fontFamily: 'DM Mono, monospace',
+            fontSize: '11px',
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+      color: showAssignedOnly ? '#F5A623' : '#8888A8',
+          transition: 'color 0.15s ease-out',
+          }}>
+            {showAssignedOnly ? 'My Cards' : 'All Cards'}
           </span>
-        </label>
-        <span style={{ fontSize: '14px', color: '#475569', fontWeight: '600', letterSpacing: '-0.01em' }}>
-          Assigned to Me
-        </span>
+        </button>
       </div>
 
-      {/* View Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
-        <button
-          onClick={() => toggleColumnView('script')}
-          style={{
-            padding: '8px 16px',
-            background: visibleColumns.has('script') 
-              ? 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)' 
-              : 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
-            color: visibleColumns.has('script') ? '#FFFFFF' : '#475569',
-            border: visibleColumns.has('script') ? 'none' : '1px solid #E2E8F0',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            transition: 'all 0.2s ease-in-out',
-            boxShadow: visibleColumns.has('script') 
-              ? '0 2px 4px rgba(59, 130, 246, 0.3)' 
-              : '0 1px 2px rgba(0, 0, 0, 0.05)',
-          }}
-          onMouseEnter={(e) => {
-            if (!visibleColumns.has('script')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!visibleColumns.has('script')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-            }
-          }}
-        >
-          Script View
-        </button>
-        <button
-          onClick={() => toggleColumnView('clipper')}
-          style={{
-            padding: '8px 16px',
-            background: (visibleColumns.has('clips') || visibleColumns.has('clip_changes')) 
-              ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)' 
-              : 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
-            color: (visibleColumns.has('clips') || visibleColumns.has('clip_changes')) ? '#FFFFFF' : '#475569',
-            border: (visibleColumns.has('clips') || visibleColumns.has('clip_changes')) ? 'none' : '1px solid #E2E8F0',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            transition: 'all 0.2s ease-in-out',
-            boxShadow: (visibleColumns.has('clips') || visibleColumns.has('clip_changes')) 
-              ? '0 2px 4px rgba(245, 158, 11, 0.3)' 
-              : '0 1px 2px rgba(0, 0, 0, 0.05)',
-          }}
-          onMouseEnter={(e) => {
-            if (!visibleColumns.has('clips') && !visibleColumns.has('clip_changes')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!visibleColumns.has('clips') && !visibleColumns.has('clip_changes')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-            }
-          }}
-        >
-          Clipper View
-        </button>
-        <button
-          onClick={() => toggleColumnView('editing')}
-          style={{
-            padding: '8px 16px',
-            background: (visibleColumns.has('editing') || visibleColumns.has('editing_changes')) 
-              ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)' 
-              : 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
-            color: (visibleColumns.has('editing') || visibleColumns.has('editing_changes')) ? '#FFFFFF' : '#475569',
-            border: (visibleColumns.has('editing') || visibleColumns.has('editing_changes')) ? 'none' : '1px solid #E2E8F0',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            transition: 'all 0.2s ease-in-out',
-            boxShadow: (visibleColumns.has('editing') || visibleColumns.has('editing_changes')) 
-              ? '0 2px 4px rgba(16, 185, 129, 0.3)' 
-              : '0 1px 2px rgba(0, 0, 0, 0.05)',
-          }}
-          onMouseEnter={(e) => {
-            if (!visibleColumns.has('editing') && !visibleColumns.has('editing_changes')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!visibleColumns.has('editing') && !visibleColumns.has('editing_changes')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-            }
-          }}
-        >
-          Editing View
-        </button>
-        <button
-          onClick={() => toggleColumnView('uploaded')}
-          style={{
-            padding: '8px 16px',
-            background: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) 
-              ? 'linear-gradient(135deg, #84CC16 0%, #65A30D 100%)' 
-              : 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
-            color: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) ? '#FFFFFF' : '#475569',
-            border: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) ? 'none' : '1px solid #E2E8F0',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: '600',
-            transition: 'all 0.2s ease-in-out',
-            boxShadow: (visibleColumns.has('ready_to_upload') || visibleColumns.has('uploaded')) 
-              ? '0 2px 4px rgba(132, 204, 22, 0.3)' 
-              : '0 1px 2px rgba(0, 0, 0, 0.05)',
-          }}
-          onMouseEnter={(e) => {
-            if (!visibleColumns.has('ready_to_upload') && !visibleColumns.has('uploaded')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 100%)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!visibleColumns.has('ready_to_upload') && !visibleColumns.has('uploaded')) {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 1px 2px rgba(0, 0, 0, 0.05)';
-            }
-          }}
-        >
-          Uploaded/Scheduled
-        </button>
+      {/* Vertical divider */}
+      <div style={{ width: '1px', height: '20px', background: '#22222C', flexShrink: 0 }} />
+
+      {/* View tabs */}
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+        <span style={{ fontFamily: 'DM Mono, monospace', fontSize: '10px', color: '#8888A8', letterSpacing: '0.06em', marginRight: '4px' }}>VIEW</span>
+        <ViewTab label="Script"   active={scriptActive}   color={VIEW_COLORS.script}   onClick={() => toggleColumnView('script')} />
+        <ViewTab label="Clips"    active={clipperActive}  color={VIEW_COLORS.clipper}  onClick={() => toggleColumnView('clipper')} />
+        <ViewTab label="Editing"  active={editingActive}  color={VIEW_COLORS.editing}  onClick={() => toggleColumnView('editing')} />
+        <ViewTab label="Uploaded" active={uploadedActive} color={VIEW_COLORS.uploaded} onClick={() => toggleColumnView('uploaded')} />
       </div>
-      
-      {/* Note about processing order */}
+
+      {/* Vertical divider */}
+      <div style={{ width: '1px', height: '20px', background: '#22222C', flexShrink: 0 }} />
+
+      {/* Hint */}
       <span style={{
-        fontSize: '12px',
-        color: '#64748B',
-        marginLeft: '8px',
+        fontFamily: 'DM Mono, monospace',
+        fontSize: '10px',
+        color: '#7070A0',
+        letterSpacing: '0.02em',
       }}>
-        Please work on shorts from top to bottom (oldest first) when possible <span style={{ fontSize: '16px' }}>😊</span>
+        Work oldest first ↑
       </span>
     </div>
   );
 }
-

@@ -18,7 +18,6 @@ export default function ProfileCheckRoute({ children, requiredRole }: ProfileChe
     if (user && !loading) {
       checkProfile();
     } else if (!user && !loading) {
-      // No user, stop checking
       setChecking(false);
     }
   }, [user, loading]);
@@ -28,7 +27,6 @@ export default function ProfileCheckRoute({ children, requiredRole }: ProfileChe
       const response = await authApi.checkProfileComplete();
       setProfileComplete(response.complete);
     } catch (error: unknown) {
-      // If 403, profile is incomplete
       if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'status' in error.response && error.response.status === 403) {
         setProfileComplete(false);
       } else {
@@ -61,4 +59,3 @@ export default function ProfileCheckRoute({ children, requiredRole }: ProfileChe
 
   return <>{children}</>;
 }
-

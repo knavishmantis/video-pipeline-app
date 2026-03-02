@@ -11,7 +11,7 @@ export const updateShortSchema = z.object({
   description: z.string().max(1000).optional(),
   idea: z.string().max(5000).optional(),
   script_content: z.string().max(50000).optional(),
-  status: z.enum(['idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'ready_to_upload', 'uploaded']).optional(),
+  status: z.enum(['idea', 'script', 'clipping', 'clips', 'clip_changes', 'editing', 'editing_changes', 'completed', 'uploaded']).optional(),
   script_writer_id: z.number().int().positive().nullable().optional(),
 });
 

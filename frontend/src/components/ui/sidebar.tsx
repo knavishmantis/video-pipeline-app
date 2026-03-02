@@ -98,12 +98,13 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
         {/* Sidebar - always visible, just collapsed/expanded */}
         <motion.div
           animate={{
-            width: isExpanded ? 280 : 80,
+            width: isExpanded ? 240 : 80,
           }}
-          transition={{ duration: animate ? 0.3 : 0, ease: "easeInOut" }}
+          transition={{ duration: animate ? 0.25 : 0, ease: "easeInOut" }}
           className="relative h-full flex-shrink-0 overflow-hidden"
           style={{
-            background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 50%, #E9ECF1 100%)',
+            background: '#13131A',
+            borderRight: '1px solid #30303E',
           }}
         >
           {children}
@@ -113,7 +114,8 @@ export const Sidebar = ({ children, open: openProp, setOpen: setOpenProp, animat
         {!open && isMobile && (
           <button
             onClick={() => setOpen(true)}
-            className="fixed left-4 top-4 z-50 rounded-lg bg-white p-2 shadow-lg"
+            className="fixed left-4 top-4 z-50 rounded-md p-2"
+            style={{ background: '#1C1C24', border: '1px solid #2E2E3C', color: '#EEEEF5' }}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
@@ -191,12 +193,18 @@ export const SidebarLink = ({ link, className, onClick }: SidebarLinkProps) => {
       href={link.href}
       onClick={handleClick}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-pointer relative",
+        "flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-all cursor-pointer relative",
         isActive
-          ? "bg-neutral-100 text-neutral-900"
-          : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
+          ? "text-[#F5A623]"
+          : "text-[#AAAACC] hover:text-[#F0F0F8]",
         className
       )}
+      style={isActive ? {
+        background: 'rgba(245, 166, 35, 0.1)',
+        borderLeft: '2px solid #F5A623',
+      } : {
+        borderLeft: '2px solid transparent',
+      }}
       title={!isExpanded ? link.label : undefined}
     >
       <span className="flex-shrink-0">{link.icon}</span>

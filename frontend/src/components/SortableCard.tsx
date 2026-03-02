@@ -32,41 +32,29 @@ export function SortableCard({
   const [showAssignMenu, setShowAssignMenu] = useState(false);
   const assignButtonRef = useRef<HTMLButtonElement>(null);
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
-  
+
   const shortAssignments = assignments.filter(a => a.short_id === short.id);
   const scripter = short.script_writer;
   const clipper = shortAssignments.find(a => a.role === 'clipper')?.user;
   const editor = shortAssignments.find(a => a.role === 'editor')?.user;
-  
-  // Determine which role to show by default based on column
+
   const getDefaultRole = () => {
     if (column.id === 'script' && scripter) return { type: 'scripter', user: scripter };
     if ((column.id === 'clips' || column.id === 'clip_changes') && clipper) return { type: 'clipper', user: clipper };
     if ((column.id === 'editing' || column.id === 'editing_changes') && editor) return { type: 'editor', user: editor };
     return null;
   };
-  
+
   const defaultRole = getDefaultRole();
-  
-  
+
   const getProfilePicture = (user: User) => {
     if (user.profile_picture) {
-      if (user.profile_picture.startsWith('http')) {
-        return user.profile_picture;
-      }
-      return user.profile_picture; // emoji
+      if (user.profile_picture.startsWith('http')) return user.profile_picture;
+      return user.profile_picture;
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=6366f1&color=fff&size=32&bold=true`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || 'User')}&background=2E2E3C&color=F5A623&size=32&bold=true`;
   };
-  
-  const canEdit = isAdmin || (
-    (column.id === 'clips' || column.id === 'clip_changes') && clipper?.id === currentUserId
-  ) || (
-    (column.id === 'editing' || column.id === 'editing_changes') && editor?.id === currentUserId
-  );
-  
-  // Cards are no longer grayed out - users can always view them
-  const isDisabled = false;
+
   const {
     attributes,
     listeners,
@@ -74,131 +62,79 @@ export function SortableCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ 
+  } = useSortable({
     id: `short-${short.id}`,
-    disabled: !isAdmin, // Only admins can drag cards
+    disabled: !isAdmin,
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.4 : 1,
   };
 
-  // Upload status icon logic
-  const renderUploadStatusIcon = () => {
-    const hasScript = short.files?.some(f => f.file_type === 'script');
-    const hasAudio = short.files?.some(f => f.file_type === 'audio');
-    const hasClipsZip = short.files?.some(f => f.file_type === 'clips_zip');
-    const hasFinalVideo = short.files?.some(f => f.file_type === 'final_video');
-    
-    // Check if assigned (in progress)
-    const scriptInProgress = column.id === 'script' && scripter && (!hasScript || !hasAudio);
-    const clipsInProgress = (column.id === 'clips' || column.id === 'clip_changes') && clipper && !hasClipsZip;
-    const editingInProgress = (column.id === 'editing' || column.id === 'editing_changes') && editor && !hasFinalVideo;
-    
-    // Check if uploaded
-    const scriptUploaded = column.id === 'script' && hasScript && hasAudio;
-    
+  // ── Status dot ──────────────────────────────────────────────────────────────
+  const renderStatusDot = () => {
+    const hasScript    = short.files?.some(f => f.file_type === 'script');
+    const hasAudio     = short.files?.some(f => f.file_type === 'audio');
+    const hasClipsZip  = short.files?.some(f => f.file_type === 'clips_zip');
+    const hasFinalVideo= short.files?.some(f => f.file_type === 'final_video');
+
+    const scriptUploaded  = column.id === 'script'  && hasScript && hasAudio;
+    const scriptInProgress= column.id === 'script'  && scripter  && (!hasScript || !hasAudio);
+    const scriptUnassigned= column.id === 'script'  && !scripter;
+
     let clipsUploaded = false;
-    if (column.id === 'clips') {
-      clipsUploaded = hasClipsZip ?? false;
-    } else if (column.id === 'clip_changes') {
-      if (hasClipsZip && short.entered_clip_changes_at) {
-        const clipsFile = short.files?.find(f => f.file_type === 'clips_zip');
-        if (clipsFile && clipsFile.uploaded_at) {
-          const fileUploadTime = new Date(clipsFile.uploaded_at).getTime();
-          const enteredTime = new Date(short.entered_clip_changes_at).getTime();
-          clipsUploaded = fileUploadTime >= enteredTime;
-        }
+    if (column.id === 'clips') { clipsUploaded = !!hasClipsZip; }
+    else if (column.id === 'clip_changes' && hasClipsZip && short.entered_clip_changes_at) {
+      const clipsFile = short.files?.find(f => f.file_type === 'clips_zip');
+      if (clipsFile?.uploaded_at) {
+        clipsUploaded = new Date(clipsFile.uploaded_at).getTime() >= new Date(short.entered_clip_changes_at).getTime();
       }
     }
-    
+    const clipsInProgress  = (column.id === 'clips' || column.id === 'clip_changes') && clipper && !clipsUploaded;
+    const clipsUnassigned  = column.id === 'clips' && !clipper && !hasClipsZip;
+
     let editingUploaded = false;
-    if (column.id === 'editing') {
-      editingUploaded = hasFinalVideo ?? false;
-    } else if (column.id === 'editing_changes') {
-      if (hasFinalVideo && short.entered_editing_changes_at) {
-        const finalVideoFile = short.files?.find(f => f.file_type === 'final_video');
-        if (finalVideoFile && finalVideoFile.uploaded_at) {
-          const fileUploadTime = new Date(finalVideoFile.uploaded_at).getTime();
-          const enteredTime = new Date(short.entered_editing_changes_at).getTime();
-          editingUploaded = fileUploadTime >= enteredTime;
-        }
+    if (column.id === 'editing') { editingUploaded = !!hasFinalVideo; }
+    else if (column.id === 'editing_changes' && hasFinalVideo && short.entered_editing_changes_at) {
+      const finalFile = short.files?.find(f => f.file_type === 'final_video');
+      if (finalFile?.uploaded_at) {
+        editingUploaded = new Date(finalFile.uploaded_at).getTime() >= new Date(short.entered_editing_changes_at).getTime();
       }
     }
-    
-    const StatusIcon = ({ color, title, isCheckmark, isUnassigned, isChanges }: { color: string; title: string; isCheckmark: boolean; isUnassigned?: boolean; isChanges?: boolean }) => (
-      <div style={{
-        position: 'absolute',
-        top: '8px',
-        left: '8px',
-        width: '20px',
-        height: '20px',
-        borderRadius: '50%',
-        background: color,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '2px solid white',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-      }} title={title}>
-        {isCheckmark ? (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-        ) : isUnassigned ? (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="16"></line>
-          </svg>
-        ) : isChanges ? (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-        ) : (
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-        )}
-      </div>
-    );
-    
-    // Check for changes columns first (these should always show an icon)
-    if (column.id === 'clip_changes') {
-      return <StatusIcon color="#9333EA" title="Changes requested" isCheckmark={false} isChanges />;
-    }
-    if (column.id === 'editing_changes') {
-      return <StatusIcon color="#9333EA" title="Changes requested" isCheckmark={false} isChanges />;
-    }
-    // Check for ready_to_upload column (should always show an icon)
-    if (column.id === 'ready_to_upload') {
-      return <StatusIcon color="#F59E0B" title="Ready to Upload" isCheckmark />;
-    }
-    // Check for uploaded column (should always show an icon)
-    if (column.id === 'uploaded') {
-      return <StatusIcon color="#84CC16" title="Uploaded/Scheduled" isCheckmark />;
-    }
-    
-    // Check for incomplete and unassigned
-    const scriptUnassigned = column.id === 'script' && !scripter && (!hasScript || !hasAudio);
-    const clipsUnassigned = column.id === 'clips' && !clipper && !hasClipsZip;
+    const editingInProgress = (column.id === 'editing' || column.id === 'editing_changes') && editor && !editingUploaded;
     const editingUnassigned = column.id === 'editing' && !editor && !hasFinalVideo;
-    
-    if (scriptUploaded) return <StatusIcon color="#10B981" title="Script & Audio uploaded" isCheckmark />;
-    if (scriptInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
-    if (scriptUnassigned) return <StatusIcon color="#9CA3AF" title="Not assigned" isCheckmark={false} isUnassigned />;
-    if (clipsUploaded) return <StatusIcon color="#10B981" title="Clips ZIP uploaded" isCheckmark />;
-    if (clipsInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
-    if (clipsUnassigned) return <StatusIcon color="#9CA3AF" title="Not assigned" isCheckmark={false} isUnassigned />;
-    if (editingUploaded) return <StatusIcon color="#10B981" title="Final video uploaded" isCheckmark />;
-    if (editingInProgress) return <StatusIcon color="#F59E0B" title="In progress" isCheckmark={false} />;
-    if (editingUnassigned) return <StatusIcon color="#9CA3AF" title="Not assigned" isCheckmark={false} isUnassigned />;
-    
-    return null;
+
+    // Determine color + title
+    let dotColor = '#4A4A60';
+    let title = '';
+
+    if (column.id === 'clip_changes' || column.id === 'editing_changes') { dotColor = '#B39DFF'; title = 'Changes requested'; }
+    else if (column.id === 'uploaded') { dotColor = '#A3E635'; title = 'Uploaded/Scheduled'; }
+    else if (scriptUploaded || clipsUploaded || editingUploaded) { dotColor = '#22D3A0'; title = 'Uploaded'; }
+    else if (scriptInProgress || clipsInProgress || editingInProgress) { dotColor = '#F5A623'; title = 'In progress'; }
+    else if (scriptUnassigned || clipsUnassigned || editingUnassigned) { dotColor = '#4A4A60'; title = 'Not assigned'; }
+    else return null;
+
+    return (
+      <div
+        title={title}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          width: '7px',
+          height: '7px',
+          borderRadius: '50%',
+          background: dotColor,
+          flexShrink: 0,
+          ...(dotColor === '#F5A623' ? {
+            boxShadow: '0 0 6px rgba(245,166,35,0.6)',
+          } : {}),
+        }}
+      />
+    );
   };
 
   return (
@@ -206,84 +142,74 @@ export function SortableCard({
       ref={setNodeRef}
       style={{
         ...style,
-        background: isDisabled ? '#F8FAFC' : '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: '12px',
-        padding: '14px',
-        cursor: isDisabled ? 'not-allowed' : (onClick ? 'pointer' : 'default'),
-        transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+        background: '#1F1F28',
+        border: '1px solid #32323E',
+        borderLeft: `3px solid ${column.color}`,
+        borderRadius: '5px',
+        padding: '12px 12px 10px',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: isDragging ? 'none' : 'all 0.15s ease-out',
         position: 'relative',
-        opacity: isDisabled ? 0.6 : 1,
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.borderColor = column.color;
-          e.currentTarget.style.boxShadow = `0 8px 16px ${column.color}30, 0 4px 8px rgba(0, 0, 0, 0.12)`;
-          e.currentTarget.style.transform = 'translateY(-3px)';
+          e.currentTarget.style.background = '#262632';
+          e.currentTarget.style.borderColor = '#44445A';
+          e.currentTarget.style.borderLeftColor = column.color;
+          e.currentTarget.style.boxShadow = `0 4px 16px rgba(0,0,0,0.4), inset 0 0 0 0 transparent`;
         }
       }}
       onMouseLeave={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.borderColor = '#E2E8F0';
-          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)';
-          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.background = '#1F1F28';
+          e.currentTarget.style.borderColor = '#32323E';
+          e.currentTarget.style.borderLeftColor = column.color;
+          e.currentTarget.style.boxShadow = 'none';
           setShowAssignMenu(false);
           setMenuPosition(null);
         }
       }}
       onClick={(e) => {
-        if (!(e.target as HTMLElement).closest('.drag-handle') && 
+        if (!(e.target as HTMLElement).closest('.drag-handle') &&
             !(e.target as HTMLElement).closest('.assign-menu') &&
             !(e.target as HTMLElement).closest('.assign-button')) {
           onClick?.();
         }
       }}
     >
-      {/* Admin Settings Gear Icon */}
+      {/* Admin settings button */}
       {isAdmin && !isDragging && (
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/shorts/${short.id}`);
-          }}
+          onClick={(e) => { e.stopPropagation(); navigate(`/shorts/${short.id}`); }}
           style={{
             position: 'absolute',
             top: '8px',
             right: '8px',
-            width: '28px',
-            height: '28px',
+            width: '24px',
+            height: '24px',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: 'transparent',
             border: 'none',
-            borderRadius: '8px',
-            transition: 'all 0.2s ease-in-out',
+            borderRadius: '4px',
+            transition: 'all 0.15s ease-out',
             zIndex: 2,
-            opacity: 0.6,
+            color: '#4A4A60',
           }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-            e.currentTarget.style.opacity = '1';
-            e.currentTarget.style.transform = 'scale(1.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.opacity = '0.6';
-            e.currentTarget.style.transform = 'scale(1)';
-          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#2E2E3C'; e.currentTarget.style.color = '#8888A8'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4A4A60'; }}
           title="Edit settings"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
             <circle cx="12" cy="12" r="3"/>
           </svg>
         </button>
       )}
-      
-      {/* Drag handle area - only visible and functional for admins */}
+
+      {/* Drag handle */}
       {isAdmin && (
         <div
           {...attributes}
@@ -292,50 +218,34 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: !isDragging ? '40px' : '8px',
-            width: '28px',
-            height: '28px',
+            right: !isDragging ? '36px' : '8px',
+            width: '24px',
+            height: '24px',
             cursor: isDragging ? 'grabbing' : 'grab',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            opacity: isDragging ? 1 : 0.3,
-            borderRadius: '8px',
-            transition: isDragging ? 'none' : 'all 0.2s ease-in-out',
-            background: isDragging ? '#E2E8F0' : 'transparent',
+            opacity: isDragging ? 1 : 0.25,
+            borderRadius: '4px',
+            transition: isDragging ? 'none' : 'all 0.15s ease-out',
+            color: isDragging ? '#F5A623' : '#8888A8',
           }}
-          onMouseEnter={(e) => {
-            if (!isDragging) {
-              e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-              e.currentTarget.style.transform = 'scale(1.1)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isDragging) {
-              e.currentTarget.style.opacity = '0.3';
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.transform = 'scale(1)';
-            }
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
+          onMouseEnter={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = '#2E2E3C'; } }}
+          onMouseLeave={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '0.25'; e.currentTarget.style.background = 'transparent'; } }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="4" cy="4" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="12" cy="4" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="4" cy="8" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="12" cy="8" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="4" cy="12" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
-            <circle cx="12" cy="12" r="1.5" fill={isDragging ? "#3B82F6" : "#64748B"}/>
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+            <circle cx="4"  cy="3"  r="1.2" fill="currentColor"/>
+            <circle cx="12" cy="3"  r="1.2" fill="currentColor"/>
+            <circle cx="4"  cy="8"  r="1.2" fill="currentColor"/>
+            <circle cx="12" cy="8"  r="1.2" fill="currentColor"/>
+            <circle cx="4"  cy="13" r="1.2" fill="currentColor"/>
+            <circle cx="12" cy="13" r="1.2" fill="currentColor"/>
           </svg>
         </div>
       )}
-      
-      {renderUploadStatusIcon()}
-      
-      {/* Assign/Reassign Icon (Admin only, top right, to the left of gear and move icons) */}
+
+      {/* Assign button */}
       {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && !isDragging && (
         <>
           <button
@@ -345,10 +255,7 @@ export function SortableCard({
               e.stopPropagation();
               if (!showAssignMenu && assignButtonRef.current) {
                 const rect = assignButtonRef.current.getBoundingClientRect();
-                setMenuPosition({
-                  top: rect.bottom + 4,
-                  left: rect.left,
-                });
+                setMenuPosition({ top: rect.bottom + 4, left: rect.left });
                 setShowAssignMenu(true);
               } else {
                 setShowAssignMenu(false);
@@ -358,48 +265,32 @@ export function SortableCard({
             style={{
               position: 'absolute',
               top: '8px',
-              right: !isDragging ? '76px' : '40px',
-              width: '28px',
-              height: '28px',
+              right: !isDragging ? '64px' : '36px',
+              width: '24px',
+              height: '24px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               background: 'transparent',
               border: 'none',
-              borderRadius: '8px',
-              transition: 'all 0.2s ease-in-out',
+              borderRadius: '4px',
+              transition: 'all 0.15s ease-out',
               zIndex: 3,
-              opacity: 0.6,
+              color: '#4A4A60',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)';
-              e.currentTarget.style.opacity = '1';
-              e.currentTarget.style.transform = 'scale(1.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.opacity = '0.6';
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-            title={(() => {
-              if (column.id === 'script') {
-                return scripter ? 'Reassign Script Writer' : 'Assign Script Writer';
-              } else if (column.id === 'clips') {
-                return clipper ? 'Reassign Clipper' : 'Assign Clipper';
-              } else {
-                return editor ? 'Reassign Editor' : 'Assign Editor';
-              }
-            })()}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#2E2E3C'; e.currentTarget.style.color = '#8888A8'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#4A4A60'; }}
+            title={column.id === 'script' ? (scripter ? 'Reassign Script Writer' : 'Assign Script Writer') : column.id === 'clips' ? (clipper ? 'Reassign Clipper' : 'Assign Clipper') : (editor ? 'Reassign Editor' : 'Assign Editor')}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="8.5" cy="7" r="4"/>
               <line x1="20" y1="8" x2="20" y2="14"/>
               <line x1="23" y1="11" x2="17" y2="11"/>
             </svg>
           </button>
-          
+
           {showAssignMenu && menuPosition && createPortal(
             <div
               className="assign-menu"
@@ -407,45 +298,37 @@ export function SortableCard({
                 position: 'fixed',
                 top: `${menuPosition.top}px`,
                 left: `${menuPosition.left}px`,
-                background: 'white',
-                border: '1px solid #E2E8F0',
-                borderRadius: '12px',
-                padding: '12px',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                background: '#1F1F28',
+                border: '1px solid #3E3E54',
+                borderRadius: '6px',
+                padding: '10px',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
                 zIndex: 10000,
-                minWidth: '280px',
-                maxWidth: '320px',
+                minWidth: '240px',
+                maxWidth: '300px',
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ 
-                fontSize: '13px', 
-                fontWeight: '700', 
-                marginBottom: '12px', 
-                color: '#0F172A',
-                letterSpacing: '-0.01em',
+              <div style={{
+                fontSize: '10px',
+                fontFamily: 'DM Mono, monospace',
+                fontWeight: '500',
+                letterSpacing: '0.08em',
+                marginBottom: '8px',
+                color: '#8888A8',
+                textTransform: 'uppercase',
               }}>
-                {(column.id === 'script' && scripter) || 
-                 (column.id === 'clips' && clipper) || 
-                 (column.id === 'editing' && editor)
+                {(column.id === 'script' && scripter) || (column.id === 'clips' && clipper) || (column.id === 'editing' && editor)
                   ? `Reassign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
                   : `Assign ${column.id === 'script' ? 'Script Writer' : column.id === 'clips' ? 'Clipper' : 'Editor'}`
                 }
               </div>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-              }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {users
                   .filter(u => {
-                    if (column.id === 'script') {
-                      return u.roles?.includes('script_writer') || u.role === 'script_writer';
-                    } else if (column.id === 'clips') {
-                      return u.roles?.includes('clipper') || u.role === 'clipper';
-                    } else {
-                      return u.roles?.includes('editor') || u.role === 'editor';
-                    }
+                    if (column.id === 'script') return u.roles?.includes('script_writer') || u.role === 'script_writer';
+                    if (column.id === 'clips') return u.roles?.includes('clipper') || u.role === 'clipper';
+                    return u.roles?.includes('editor') || u.role === 'editor';
                   })
                   .map(u => (
                     <div
@@ -455,36 +338,33 @@ export function SortableCard({
                         const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
                         onAssign(short.id, role, u.id);
                         setShowAssignMenu(false);
-          setMenuPosition(null);
                         setMenuPosition(null);
                       }}
                       style={{
-                        padding: '8px 10px',
+                        padding: '7px 9px',
                         cursor: 'pointer',
-                        borderRadius: '8px',
+                        borderRadius: '4px',
                         fontSize: '12px',
+                        fontFamily: 'DM Mono, monospace',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
-                        transition: 'all 0.2s ease-in-out',
+                        transition: 'background 0.1s ease-out',
+                        color: '#8888A8',
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = '#F1F5F9';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'transparent';
-                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#2A2A38'; e.currentTarget.style.color = '#F0F0F8'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#AAAACC'; }}
                     >
                       {u.profile_picture && !u.profile_picture.startsWith('http') ? (
-                        <span style={{ fontSize: '16px', lineHeight: '1' }}>{u.profile_picture}</span>
+                        <span style={{ fontSize: '14px' }}>{u.profile_picture}</span>
                       ) : (
                         <img
                           src={getProfilePicture(u)}
                           alt={u.name}
-                          style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                          style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
                         />
                       )}
-                      <span style={{ color: '#1E293B', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {u.discord_username || u.name}
                       </span>
                     </div>
@@ -495,27 +375,31 @@ export function SortableCard({
           )}
         </>
       )}
-      
+
+      {renderStatusDot()}
+
+      {/* Title */}
       <h4 style={{
         margin: 0,
-        marginBottom: '8px',
-        fontSize: '15px',
+        marginBottom: '6px',
+        fontFamily: 'Syne, sans-serif',
+        fontSize: '13px',
         fontWeight: '600',
-        color: '#0F172A',
-        lineHeight: '1.5',
+        color: '#EEEEF5',
+        lineHeight: '1.4',
         letterSpacing: '-0.01em',
-        paddingRight: isAdmin ? '108px' : '32px',
-        paddingLeft: '32px',
+        paddingRight: isAdmin ? '96px' : '24px',
+        paddingLeft: '18px',
       }}>
         {short.title}
       </h4>
-      
+
       {short.description && (
         <p style={{
-          margin: 0,
-          marginBottom: '8px',
-          fontSize: '13px',
-          color: '#64748B',
+          margin: '0 0 6px 0',
+          fontFamily: 'DM Mono, monospace',
+          fontSize: '11px',
+          color: '#8888A8',
           lineHeight: '1.6',
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -525,12 +409,13 @@ export function SortableCard({
           {short.description}
         </p>
       )}
-      
+
       {short.idea && (
         <p style={{
-          margin: '6px 0 0 0',
-          fontSize: '11px',
-          color: '#94A3B8',
+          margin: '4px 0 0 0',
+          fontFamily: 'DM Mono, monospace',
+          fontSize: '10px',
+          color: '#4A4A60',
           fontStyle: 'italic',
           display: '-webkit-box',
           WebkitLineClamp: 2,
@@ -540,92 +425,62 @@ export function SortableCard({
           💡 {short.idea}
         </p>
       )}
-      
+
       {short.files?.some(f => f.file_type === 'script') && column.id === 'script' && (
         <p style={{
-          margin: '6px 0 0 0',
-          fontSize: '11px',
-          color: '#94A3B8',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
+          margin: '4px 0 0 0',
+          fontFamily: 'DM Mono, monospace',
+          fontSize: '10px',
+          color: '#22D3A0',
         }}>
-          📄 Script PDF uploaded
+          ✓ Script PDF uploaded
         </p>
       )}
-      
-      {/* Assignments Section - Show default role by column, all on card hover (hover expansion temporarily disabled) */}
-      {defaultRole ? (
-        <div 
-          style={{
-            marginTop: '10px',
-            padding: '6px 8px',
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: '#64748B',
-            backgroundColor: 'transparent',
-            position: 'relative',
-            zIndex: 1,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
-              <span style={{ fontSize: '14px' }}>{defaultRole.user.profile_picture}</span>
-            ) : (
-              <img 
-                src={getProfilePicture(defaultRole.user)} 
-                alt={defaultRole.user.name}
-                style={{ width: '16px', height: '16px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-            )}
-            <span>
-              {defaultRole.type === 'scripter' ? 'Scripter' : defaultRole.type === 'clipper' ? 'Clipper' : 'Editor'}: 
-              {' '}{defaultRole.user.discord_username || defaultRole.user.name}
-            </span>
-            <div style={{ position: 'relative', zIndex: 1001 }}>
-              <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
-            </div>
+
+      {/* Assignment */}
+      {defaultRole && (
+        <div style={{
+          marginTop: '8px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          fontFamily: 'DM Mono, monospace',
+          fontSize: '10px',
+          color: '#4A4A60',
+        }}>
+          {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
+            <span style={{ fontSize: '12px' }}>{defaultRole.user.profile_picture}</span>
+          ) : (
+            <img
+              src={getProfilePicture(defaultRole.user)}
+              alt={defaultRole.user.name}
+              style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover' }}
+            />
+          )}
+          <span style={{ color: '#8888A8' }}>
+            {defaultRole.type === 'scripter' ? 'SCRIPTER' : defaultRole.type === 'clipper' ? 'CLIPPER' : 'EDITOR'}:
+          </span>
+          <span style={{ color: '#EEEEF5' }}>
+            {defaultRole.user.discord_username || defaultRole.user.name}
+          </span>
+          <div style={{ position: 'relative', zIndex: 1001 }}>
+            <TimezoneDisplay timezone={defaultRole.user.timezone} size="small" showTime={false} />
           </div>
         </div>
-      ) : null}
-      
-      {/* Created timestamp and script rating in bottom right */}
+      )}
+
+      {/* Timestamp */}
       <div style={{
         position: 'absolute',
-        bottom: '10px',
+        bottom: '8px',
         right: '10px',
-        fontSize: '10px',
-        color: '#94A3B8',
-        whiteSpace: 'nowrap',
-        fontWeight: '500',
-        letterSpacing: '0.01em',
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: '8px',
+        fontFamily: 'DM Mono, monospace',
+        fontSize: '9px',
+        color: '#6E6E90',
+        letterSpacing: '0.03em',
       }}>
-        {short.script_rating !== null && short.script_rating !== undefined && (() => {
-          const rating = Number(short.script_rating);
-          let color = '#64748B'; // default gray
-          if (rating >= 8) {
-            color = '#10B981'; // green
-          } else if (rating >= 6) {
-            color = '#F59E0B'; // yellow/orange
-          } else if (rating >= 4) {
-            color = '#EF4444'; // red
-          } else {
-            color = '#DC2626'; // dark red
-          }
-          return (
-            <span style={{ color }}>
-              Script Rating: {rating.toFixed(1)}
-            </span>
-          );
-        })()}
-        <span>{new Date(short.created_at).toLocaleDateString()}</span>
+        {new Date(short.created_at).toLocaleDateString()}
       </div>
     </div>
   );
 }
-

@@ -19,26 +19,27 @@ export function DroppableColumn({ column, children, shorts }: DroppableColumnPro
       ref={setNodeRef}
       style={{
         minWidth: '280px',
-        background: isOver 
-          ? `linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)` 
-          : `linear-gradient(135deg, #FFFFFF 0%, #FAFBFC 100%)`,
-        borderRadius: '16px',
-        padding: '24px',
-        paddingBottom: '24px', // Extra bottom padding to account for scrollbar
-        boxShadow: isOver 
-          ? `0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)` 
-          : `0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04)`,
-        border: isOver ? `2px solid ${column.color}40` : `1px solid #E8ECF1`,
+        background: isOver ? '#1F1F28' : '#18181F',
+        borderRadius: '6px',
+        border: isOver
+          ? `1px solid ${column.color}66`
+          : '1px solid #32323E',
         display: 'flex',
         flexDirection: 'column',
-        height: 'calc(100vh - 220px)', // Column height
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        height: 'calc(100vh - 220px)',
+        transition: 'all 0.2s ease-out',
         boxSizing: 'border-box',
         overflow: 'visible',
+        /* Top accent line in the column's color */
+        borderTop: isOver
+          ? `2px solid ${column.color}`
+          : `2px solid ${column.color}`,
+        boxShadow: isOver
+          ? `0 0 0 1px ${column.color}22, inset 0 0 32px ${column.color}08`
+          : 'none',
       }}
     >
       {children}
     </div>
   );
 }
-

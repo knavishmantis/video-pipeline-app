@@ -646,7 +646,7 @@ export default function Dashboard() {
       } else if (viewType === 'editing') {
         columnsToToggle = ['editing', 'editing_changes'];
       } else if (viewType === 'uploaded') {
-        columnsToToggle = ['ready_to_upload', 'uploaded'];
+        columnsToToggle = ['uploaded'];
       }
       
       const allVisible = columnsToToggle.every(col => newSet.has(col));
@@ -679,27 +679,7 @@ export default function Dashboard() {
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        /* Always show horizontal scrollbar to reserve space and prevent overlap */
-        div[data-kanban-grid]::-webkit-scrollbar {
-          height: 24px;
-        }
-        div[data-kanban-grid]::-webkit-scrollbar-track {
-          background: #F1F5F9;
-          border-radius: 8px;
-        }
-        div[data-kanban-grid]::-webkit-scrollbar-thumb {
-          background: #CBD5E1;
-          border-radius: 8px;
-        }
-        div[data-kanban-grid]::-webkit-scrollbar-thumb:hover {
-          background: #94A3B8;
-        }
-        div[data-kanban-grid] {
-          scrollbar-width: auto; /* Firefox - make it thicker */
-          scrollbar-color: #CBD5E1 #F1F5F9; /* Firefox */
-          transition: grid-template-columns 0.3s ease-in-out;
+          to   { transform: rotate(360deg); }
         }
       `}</style>
     <div style={{
@@ -716,32 +696,32 @@ export default function Dashboard() {
       {loading && (
         <div style={{
           position: 'fixed',
-          bottom: '16px',
-          right: '16px',
+          bottom: '14px',
+          right: '14px',
           zIndex: 1000,
-          background: 'white',
-          padding: '8px 12px',
-          borderRadius: '6px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+          background: '#1C1C24',
+          padding: '6px 12px',
+          borderRadius: '4px',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          border: '1px solid #E5E7EB',
+          border: '1px solid #2E2E3C',
         }}>
           <div style={{
-            width: '16px',
-            height: '16px',
-            border: '2px solid #E5E7EB',
-            borderTopColor: '#3B82F6',
+            width: '11px',
+            height: '11px',
+            border: '2px solid #2E2E3C',
+            borderTopColor: '#F5A623',
             borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
+            animation: 'spin 0.7s linear infinite',
           }} />
           <span style={{
-            fontSize: '13px',
-            fontWeight: '500',
-            color: '#64748B',
+            fontFamily: 'DM Mono, monospace',
+            fontSize: '11px',
+            letterSpacing: '0.04em',
+            color: '#8888A8',
           }}>
-            Loading...
+            LOADING
           </span>
         </div>
       )}
@@ -837,12 +817,14 @@ export default function Dashboard() {
       {/* Version number in bottom right */}
       <div style={{
         position: 'fixed',
-        bottom: '16px',
-        right: '16px',
-        fontSize: '12px',
-        color: '#9CA3AF',
+        bottom: '14px',
+        right: '14px',
+        fontSize: '10px',
+        color: '#2E2E3C',
         zIndex: 10,
-        fontFamily: 'monospace',
+        fontFamily: 'DM Mono, monospace',
+        letterSpacing: '0.06em',
+        pointerEvents: 'none',
       }}>
         v2.2
       </div>

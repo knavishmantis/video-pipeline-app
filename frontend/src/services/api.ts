@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, CreateScriptPipelineInput, UpdateScriptDraftInput, AdvanceStageInput } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -371,56 +371,9 @@ export const paymentsApi = {
   },
 };
 
-export interface GradingResponse {
-  total_score: number;
-  rating: number;
-  categories: Array<{
-    name: string;
-    score: number;
-    max_score: number;
-    reason: string;
-  }>;
-  overall_feedback: string;
-  priority_fixes: string[];
-  error?: boolean;
-  message?: string;
-  suggestion?: string;
-}
-
-export const scriptGradingApi = {
-  gradeScript: async (scriptText: string, shortId?: number): Promise<GradingResponse> => {
-    const response = await api.post('/script-grading/grade', { scriptText, shortId });
-    return response.data;
-  },
-};
-
-export interface ScriptDraftWithRules extends Short {
-  validation_rules?: string[];
-}
-
-export const scriptPipelineApi = {
-  getAll: async (params?: { stage?: string }): Promise<Short[]> => {
-    const response = await api.get('/shorts/script-pipeline', { params });
-    return response.data;
-  },
-  getDraft: async (id: number): Promise<ScriptDraftWithRules> => {
-    const response = await api.get(`/shorts/script-pipeline/${id}/draft`);
-    return response.data;
-  },
-  create: async (input: CreateScriptPipelineInput): Promise<Short> => {
-    const response = await api.post('/shorts/script-pipeline', input);
-    return response.data;
-  },
-  updateDraft: async (id: number, input: UpdateScriptDraftInput): Promise<Short> => {
-    const response = await api.patch(`/shorts/script-pipeline/${id}/draft`, input);
-    return response.data;
-  },
-  updateDescription: async (id: number, description: string): Promise<Short> => {
-    const response = await api.patch(`/shorts/script-pipeline/${id}/description`, { description });
-    return response.data;
-  },
-  advanceStage: async (id: number, input: AdvanceStageInput): Promise<Short & { message?: string }> => {
-    const response = await api.post(`/shorts/script-pipeline/${id}/advance-stage`, input);
+export const youtubeApi = {
+  uploadToYoutube: async (shortId: number): Promise<{ youtube_video_id: string; youtube_url: string }> => {
+    const response = await api.post(`/youtube/shorts/${shortId}/upload`, {}, { timeout: 300000 }); // 5 min timeout
     return response.data;
   },
 };

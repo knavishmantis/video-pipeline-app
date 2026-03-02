@@ -1,8 +1,7 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import { Short, Assignment, User, File as FileInterface } from '../../../shared/types';
 import { ColumnType, columns } from '../utils/dashboardUtils';
-import { filesApi, shortsApi } from '../services/api';
+import { filesApi, shortsApi, youtubeApi } from '../services/api';
 import { TimezoneDisplay } from './TimezoneDisplay';
 
 interface ContentModalProps {
@@ -60,9 +59,27 @@ export function ContentModal({
   loadData,
   setContentShort,
 }: ContentModalProps) {
-  const navigate = useNavigate();
-  
+  const [ytUploading, setYtUploading] = useState(false);
+
   if (!isOpen || !contentShort || !contentColumn) return null;
+
+  const handleYouTubeUpload = async () => {
+    if (!contentShort || ytUploading) return;
+    setYtUploading(true);
+    try {
+      const result = await youtubeApi.uploadToYoutube(contentShort.id);
+      // Reload the short to reflect new status/youtube_video_id
+      const updated = await shortsApi.getById(contentShort.id);
+      setContentShort(updated);
+      await loadData();
+      showAlert(`Uploaded! YouTube URL: ${result.youtube_url}`, { type: 'success' });
+    } catch (error: any) {
+      const msg = error?.response?.data?.error || error?.message || 'YouTube upload failed';
+      showAlert(msg, { type: 'error' });
+    } finally {
+      setYtUploading(false);
+    }
+  };
 
   // Helper function to render download button with progress
   const renderDownloadButton = (file: FileInterface, label?: string) => {
@@ -215,6 +232,9 @@ export function ContentModal({
           {(contentColumn === 'editing' || contentColumn === 'editing_changes') && (
             contentShort.files?.some(f => f.file_type === 'final_video') ? 'Replace Final Video' : 'Upload Final Video'
           )}
+          {contentColumn === 'uploaded' && (
+            contentShort.youtube_video_id ? 'Uploaded to YouTube' : 'Upload to YouTube'
+          )}
         </h2>
         <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
           {contentShort.title}
@@ -235,57 +255,6 @@ export function ContentModal({
                 
                 return (
                   <>
-                    {/* Grade Script Button (Admin only, when PDF exists) */}
-                    {isAdmin && scriptPdf && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        borderRadius: '10px',
-                        border: '1px solid #6366f1',
-                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                      }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
-                          Script Grading:
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#E0E7FF', marginBottom: '12px' }}>
-                          {contentShort.script_rating !== null && contentShort.script_rating !== undefined
-                            ? `Current Rating: ${Number(contentShort.script_rating).toFixed(1)}/10`
-                            : 'Script has not been graded yet'}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigate(`/script-grading?shortId=${contentShort.id}`);
-                            onClose();
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '10px 16px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            color: '#6366f1',
-                            background: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease-in-out',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                          }}
-                        >
-                          ⭐ {contentShort.script_rating !== null && contentShort.script_rating !== undefined ? 'Re-grade Script' : 'Grade Script'}
-                        </button>
-                      </div>
-                    )}
-
                     {/* Assignments Section - Always show */}
                     {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{
@@ -463,6 +432,111 @@ export function ContentModal({
                 );
               })()}
             </>
+          ) : contentColumn === 'uploaded' ? (
+            <>
+              {/* YouTube Upload Section */}
+              {isAdmin && contentShort.status === 'completed' && !contentShort.youtube_video_id && (
+                <div style={{
+                  marginBottom: '16px',
+                  padding: '20px',
+                  background: 'linear-gradient(135deg, #FF0000 0%, #CC0000 100%)',
+                  borderRadius: '12px',
+                  border: '1px solid #FF0000',
+                  boxShadow: '0 4px 16px rgba(255, 0, 0, 0.25)',
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
+                    Ready to Upload
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.85)', marginBottom: '16px' }}>
+                    Editing is complete. Click below to upload this short directly to YouTube.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleYouTubeUpload}
+                    disabled={ytUploading}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      fontSize: '15px',
+                      fontWeight: '700',
+                      color: '#CC0000',
+                      background: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: ytUploading ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px',
+                      opacity: ytUploading ? 0.7 : 1,
+                    }}
+                    onMouseEnter={(e) => { if (!ytUploading) e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+                  >
+                    {ytUploading ? (
+                      <>
+                        <svg style={{ width: '18px', height: '18px', animation: 'spin 1s linear infinite' }} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Uploading to YouTube... (this may take 1-2 minutes)
+                      </>
+                    ) : (
+                      <>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                        Upload to YouTube
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* YouTube link if already uploaded */}
+              {contentShort.youtube_video_id && (
+                <div style={{
+                  marginBottom: '16px',
+                  padding: '16px',
+                  background: '#F0FDF4',
+                  borderRadius: '10px',
+                  border: '1px solid #86EFAC',
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#166534', marginBottom: '8px' }}>
+                    ✓ Uploaded to YouTube
+                  </div>
+                  <a
+                    href={`https://youtube.com/shorts/${contentShort.youtube_video_id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      fontSize: '13px',
+                      color: '#0369A1',
+                      textDecoration: 'underline',
+                      wordBreak: 'break-all',
+                    }}
+                  >
+                    https://youtube.com/shorts/{contentShort.youtube_video_id}
+                  </a>
+                </div>
+              )}
+
+              {/* Show short info */}
+              {contentShort.description && (
+                <div style={{
+                  padding: '14px',
+                  background: '#F9FAFB',
+                  borderRadius: '10px',
+                  border: '1px solid #E5E7EB',
+                  marginBottom: '16px',
+                }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Description:</div>
+                  <div style={{ fontSize: '13px', color: '#6B7280' }}>{contentShort.description}</div>
+                </div>
+              )}
+            </>
           ) : (
             <>
               {/* Show existing files for clips/editing */}
@@ -599,57 +673,6 @@ export function ContentModal({
                       </div>
                     )}
                     
-                    {/* Grade Script Button (Admin only, when PDF exists) - For clips/editing stages */}
-                    {isAdmin && scriptPdf && (
-                      <div style={{
-                        marginBottom: '16px',
-                        padding: '14px',
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        borderRadius: '10px',
-                        border: '1px solid #6366f1',
-                        boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
-                      }}>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#FFFFFF', marginBottom: '8px' }}>
-                          Script Grading:
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#E0E7FF', marginBottom: '12px' }}>
-                          {contentShort.script_rating !== null && contentShort.script_rating !== undefined
-                            ? `Current Rating: ${Number(contentShort.script_rating).toFixed(1)}/10`
-                            : 'Script has not been graded yet'}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigate(`/script-grading?shortId=${contentShort.id}`);
-                            onClose();
-                          }}
-                          style={{
-                            width: '100%',
-                            padding: '10px 16px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            color: '#6366f1',
-                            background: '#FFFFFF',
-                            border: 'none',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease-in-out',
-                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.15)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
-                          }}
-                        >
-                          ⭐ {contentShort.script_rating !== null && contentShort.script_rating !== undefined ? 'Re-grade Script' : 'Grade Script'}
-                        </button>
-                      </div>
-                    )}
-
                     {/* Assignments Section - Always show */}
                     {(shortAssignments.length > 0 || contentShort.script_writer) && (
                       <div style={{
@@ -888,7 +911,7 @@ export function ContentModal({
               <div style={{ fontSize: '12px', color: '#15803D', marginBottom: '12px' }}>
                 {contentColumn === 'clips' || contentColumn === 'clip_changes' 
                   ? 'Mark this short\'s clips as complete. This will create a payment for the assigned clipper and allow moving to editing.'
-                  : 'Mark this short\'s editing as complete. This will create a payment for the assigned editor and allow moving to ready to upload.'}
+                  : 'Mark this short\'s editing as complete. This will create a payment for the assigned editor and enable YouTube upload.'}
               </div>
               <button
                 type="button"
