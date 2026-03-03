@@ -156,23 +156,22 @@ export function SidebarNav() {
       icon: <IconHelp className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
     {
-      label: "Reflections",
-      href: "/reflections",
-      icon: (
-        <div style={{ position: 'relative', display: 'inline-flex' }}>
-          <IconPencil className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />
-          {isAdmin && overdueCount > 0 && (
-            <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#e05a4e', display: 'block' }} />
-          )}
-        </div>
-      ),
-    },
-    {
       label: "YouTube Stats",
       href: "/youtube-stats",
       icon: <IconBrandYoutube className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
     ...(isAdmin ? [{
+      label: "Reflections",
+      href: "/reflections",
+      icon: (
+        <div style={{ position: 'relative', display: 'inline-flex' }}>
+          <IconPencil className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />
+          {overdueCount > 0 && (
+            <span style={{ position: 'absolute', top: '-4px', right: '-4px', width: '8px', height: '8px', borderRadius: '50%', background: '#e05a4e', display: 'block' }} />
+          )}
+        </div>
+      ),
+    }, {
       label: "Script Review",
       href: "/script-review",
       icon: <IconTarget className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,

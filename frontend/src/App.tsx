@@ -142,7 +142,7 @@ function AppContent() {
           <Route
             path="/reflections"
             element={
-              <ProfileCheckRoute>
+              <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <Reflections />
                 </AppLayout>
