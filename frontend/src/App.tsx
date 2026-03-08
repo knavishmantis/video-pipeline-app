@@ -14,6 +14,7 @@ import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
 import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
+import SceneEditorPage from './pages/SceneEditorPage';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -65,6 +66,16 @@ function AppContent() {
               <ProfileCheckRoute>
                 <AppLayout>
                   <ShortDetail />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/shorts/:id/scenes"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <SceneEditorPage />
                 </AppLayout>
               </ProfileCheckRoute>
             }

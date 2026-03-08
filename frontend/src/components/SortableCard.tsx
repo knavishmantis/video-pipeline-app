@@ -59,7 +59,8 @@ export function SortableCard({
     if (column.id === 'uploaded') return 'done';
     if (column.id === 'script') {
       if (!scripter) return 'unassigned';
-      if (!hasScript || !hasAudio) return 'in_progress';
+      const scriptDone = short.status === 'script' || !!hasScript || !!short.script_content;
+      if (!scriptDone || !hasAudio) return 'in_progress';
       return 'complete';
     }
     if (column.id === 'clips') {

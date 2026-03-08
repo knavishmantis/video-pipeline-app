@@ -577,31 +577,13 @@ export default function ShortDetail() {
             <div className="flex gap-2 items-center">
               {(scriptWriterUser?.id === user?.id || isAdmin || (user?.roles?.includes('script_writer') && !scriptWriterUser) || (short.script_content && (isAdmin || user?.roles?.includes('script_writer')))) && (
                 <>
-                  <label className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-opacity ${
-                    uploading === 'script' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
-                  }`} style={{ background: 'var(--gold)', color: 'var(--bg-base)' }}>
-                    {uploading === 'script' ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Uploading...
-                      </>
-                    ) : (
-                      scriptPdf ? 'Replace Script PDF' : 'Upload Script PDF'
-                    )}
-                    <input
-                      type="file"
-                      accept=".pdf"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileUpload('script', file);
-                      }}
-                      className="hidden"
-                      disabled={uploading === 'script'}
-                    />
-                  </label>
+                  <Link
+                    to={`/shorts/${short.id}/scenes`}
+                    className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-opacity hover:opacity-80"
+                    style={{ background: 'var(--gold)', color: 'var(--bg-base)', textDecoration: 'none' }}
+                  >
+                    Write Script
+                  </Link>
                   <label className={`px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer flex items-center gap-2 transition-opacity ${
                     uploading === 'audio' ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-80'
                   }`} style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>

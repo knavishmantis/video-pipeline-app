@@ -13,6 +13,9 @@ scenesRouter.use(requireProfileComplete);
 // GET /api/shorts/:shortId/scenes
 scenesRouter.get('/', scenesController.getAll);
 
+// GET /api/shorts/:shortId/scenes/:id/image-url (must be before /:id to avoid route conflict)
+scenesRouter.get('/:id/image-url', scenesController.getImageUrl);
+
 // GET /api/shorts/:shortId/scenes/:id
 scenesRouter.get('/:id', scenesController.getById);
 

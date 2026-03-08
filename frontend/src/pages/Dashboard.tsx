@@ -293,69 +293,96 @@ export default function Dashboard() {
     setUploadProgress(0);
     try {
       if (contentColumn === 'script') {
-        if (!contentForm.scriptFile || !contentForm.audioFile) {
-          showAlert('Both Script PDF and Audio MP3 are required', { type: 'warning' });
+        if (!contentForm.audioFile) {
+          showAlert('Audio MP3 is required', { type: 'warning' });
           setUploading(false);
           setUploadProgress(null);
           return;
         }
-        // Calculate total file size for accurate progress
-        const scriptFileSize = contentForm.scriptFile.size;
-        const audioFileSize = contentForm.audioFile.size;
-        const totalSize = scriptFileSize + audioFileSize;
-        let uploadedBytes = 0;
-        
-        // Upload script file directly to GCS (0-50% of total)
-        const scriptUploadUrl = await filesApi.getUploadUrl(
-          contentShort.id,
-          'script',
-          contentForm.scriptFile.name,
-          contentForm.scriptFile.size,
-          contentForm.scriptFile.type
-        );
-        await filesApi.uploadDirectToGCS(
-          scriptUploadUrl.upload_url,
-          contentForm.scriptFile,
-          (progress) => {
-            uploadedBytes = progress.loaded;
-            const percent = Math.round((uploadedBytes / totalSize) * 100);
-            setUploadProgress(Math.min(percent, 50));
-          }
-        );
-        await filesApi.confirmUpload(
-          contentShort.id,
-          'script',
-          scriptUploadUrl.bucket_path,
-          contentForm.scriptFile.name,
-          contentForm.scriptFile.size,
-          contentForm.scriptFile.type
-        );
-        
-        // Upload audio file directly to GCS (50-100% of total)
-        const audioUploadUrl = await filesApi.getUploadUrl(
-          contentShort.id,
-          'audio',
-          contentForm.audioFile.name,
-          contentForm.audioFile.size,
-          contentForm.audioFile.type
-        );
-        await filesApi.uploadDirectToGCS(
-          audioUploadUrl.upload_url,
-          contentForm.audioFile,
-          (progress) => {
-            uploadedBytes = scriptFileSize + progress.loaded;
-            const percent = Math.round((uploadedBytes / totalSize) * 100);
-            setUploadProgress(Math.min(percent, 100));
-          }
-        );
-        await filesApi.confirmUpload(
-          contentShort.id,
-          'audio',
-          audioUploadUrl.bucket_path,
-          contentForm.audioFile.name,
-          contentForm.audioFile.size,
-          contentForm.audioFile.type
-        );
+
+        // Upload script PDF if provided (legacy support)
+        if (contentForm.scriptFile) {
+          const scriptFileSize = contentForm.scriptFile.size;
+          const audioFileSize = contentForm.audioFile.size;
+          const totalSize = scriptFileSize + audioFileSize;
+          let uploadedBytes = 0;
+
+          const scriptUploadUrl = await filesApi.getUploadUrl(
+            contentShort.id,
+            'script',
+            contentForm.scriptFile.name,
+            contentForm.scriptFile.size,
+            contentForm.scriptFile.type
+          );
+          await filesApi.uploadDirectToGCS(
+            scriptUploadUrl.upload_url,
+            contentForm.scriptFile,
+            (progress) => {
+              uploadedBytes = progress.loaded;
+              const percent = Math.round((uploadedBytes / totalSize) * 100);
+              setUploadProgress(Math.min(percent, 50));
+            }
+          );
+          await filesApi.confirmUpload(
+            contentShort.id,
+            'script',
+            scriptUploadUrl.bucket_path,
+            contentForm.scriptFile.name,
+            contentForm.scriptFile.size,
+            contentForm.scriptFile.type
+          );
+
+          // Upload audio file directly to GCS (50-100% of total)
+          const audioUploadUrl = await filesApi.getUploadUrl(
+            contentShort.id,
+            'audio',
+            contentForm.audioFile.name,
+            contentForm.audioFile.size,
+            contentForm.audioFile.type
+          );
+          await filesApi.uploadDirectToGCS(
+            audioUploadUrl.upload_url,
+            contentForm.audioFile,
+            (progress) => {
+              uploadedBytes = scriptFileSize + progress.loaded;
+              const percent = Math.round((uploadedBytes / totalSize) * 100);
+              setUploadProgress(Math.min(percent, 100));
+            }
+          );
+          await filesApi.confirmUpload(
+            contentShort.id,
+            'audio',
+            audioUploadUrl.bucket_path,
+            contentForm.audioFile.name,
+            contentForm.audioFile.size,
+            contentForm.audioFile.type
+          );
+        } else {
+          // Audio-only upload
+          const audioUploadUrl = await filesApi.getUploadUrl(
+            contentShort.id,
+            'audio',
+            contentForm.audioFile.name,
+            contentForm.audioFile.size,
+            contentForm.audioFile.type
+          );
+          await filesApi.uploadDirectToGCS(
+            audioUploadUrl.upload_url,
+            contentForm.audioFile,
+            (progress) => {
+              const percent = Math.round((progress.loaded / progress.total) * 100);
+              setUploadProgress(percent);
+            }
+          );
+          await filesApi.confirmUpload(
+            contentShort.id,
+            'audio',
+            audioUploadUrl.bucket_path,
+            contentForm.audioFile.name,
+            contentForm.audioFile.size,
+            contentForm.audioFile.type
+          );
+        }
       } else if ((contentColumn === 'clips' || contentColumn === 'clip_changes') && contentForm.file) {
         // Get signed upload URL
         const uploadUrlData = await filesApi.getUploadUrl(

@@ -337,7 +337,14 @@ export const shortsController = {
     const input: UpdateShortInput = req.body;
     try {
       const isAdmin = req.userRoles?.includes('admin');
-      if (!isAdmin) {
+      const isScriptWriter = req.userRoles?.includes('script_writer');
+
+      // Allow script writers to toggle idea↔script status only
+      const isScriptStatusToggle = input.status !== undefined
+        && Object.keys(input).length === 1
+        && (input.status === 'idea' || input.status === 'script');
+
+      if (!isAdmin && !(isScriptWriter && isScriptStatusToggle)) {
         res.status(403).json({ error: 'Only admins can update shorts' });
         return;
       }
@@ -366,10 +373,11 @@ export const shortsController = {
         // Validate file requirements and completion status based on target status
         if (input.status === 'clipping' || input.status === 'clips') {
           const hasScript = files.some((f: any) => f.file_type === 'script' || f.file_type === 'script_pdf');
+          const hasScriptContent = !!short.script_content;
           const hasAudio = files.some((f: any) => f.file_type === 'audio');
-          if (!hasScript) {
-            res.status(400).json({ 
-              error: 'Cannot move to clipping stage. Required: script PDF' 
+          if (!hasScript && !hasScriptContent) {
+            res.status(400).json({
+              error: 'Cannot move to clipping stage. Required: script PDF or script content'
             });
             return;
           }

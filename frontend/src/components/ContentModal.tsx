@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Short, Assignment, User, File as FileInterface } from '../../../shared/types';
 import { ColumnType } from '../utils/dashboardUtils';
 import { TimezoneDisplay } from './TimezoneDisplay';
@@ -384,7 +385,7 @@ export function ContentModal({
   // Whether we can submit
   const canSubmit =
     isScriptStage
-      ? !!contentForm.scriptFile && !!contentForm.audioFile
+      ? !!contentForm.audioFile
       : !!contentForm.file;
 
   const showSubmitButton =
@@ -513,19 +514,49 @@ export function ContentModal({
             {isScriptStage && (() => {
               return (
                 <>
-                  {/* File status */}
-                  <SectionCard label="File Status">
+                  {/* Status */}
+                  <SectionCard label="Status">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <StatusRow
-                        ok={!!scriptPdf}
-                        label={scriptPdf ? `Script PDF · ${scriptPdf.file_name}` : 'Script PDF — not uploaded'}
+                        ok={contentShort.status === 'script'}
+                        label={contentShort.status === 'script' ? 'Script complete' : 'Script in progress'}
                       />
                       <StatusRow
                         ok={!!audioFile}
                         label={audioFile ? `Audio MP3 · ${audioFile.file_name}` : 'Audio MP3 — not uploaded'}
                       />
+                      {scriptPdf && (
+                        <StatusRow
+                          ok={true}
+                          label={`Script PDF · ${scriptPdf.file_name}`}
+                        />
+                      )}
                     </div>
                   </SectionCard>
+
+                  {/* Write Script button */}
+                  {canEditScript && (
+                    <SectionCard>
+                      <button
+                        type="button"
+                        onClick={() => window.location.href = `/shorts/${contentShort.id}/scenes`}
+                        style={{
+                          width: '100%',
+                          padding: '10px 16px',
+                          background: 'var(--gold)',
+                          color: 'var(--bg-base)',
+                          border: 'none',
+                          borderRadius: '7px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          letterSpacing: '-0.01em',
+                        }}
+                      >
+                        Write Script
+                      </button>
+                    </SectionCard>
+                  )}
 
                   {/* Download for non-editors */}
                   {!canEditScript && (scriptPdf || audioFile) && (
@@ -551,22 +582,21 @@ export function ContentModal({
                     </SectionCard>
                   )}
 
-                  {/* Upload for editors */}
+                  {/* Upload audio (and optional legacy script PDF) */}
                   {canEditScript ? (
-                    <SectionCard label="Upload Files">
-                      <FileInput
-                        label="Script PDF"
-                        accept="application/pdf"
-                        required
-                        disabled={uploading}
-                        onChange={(f) => onFormChange({ ...contentForm, scriptFile: f })}
-                      />
+                    <SectionCard label="Upload Audio">
                       <FileInput
                         label="Audio MP3"
                         accept="audio/mpeg,.mp3,audio/*"
                         required
                         disabled={uploading}
                         onChange={(f) => onFormChange({ ...contentForm, audioFile: f })}
+                      />
+                      <FileInput
+                        label="Script PDF (optional, legacy)"
+                        accept="application/pdf"
+                        disabled={uploading}
+                        onChange={(f) => onFormChange({ ...contentForm, scriptFile: f })}
                       />
                     </SectionCard>
                   ) : (
@@ -603,6 +633,32 @@ export function ContentModal({
                       {isClipsStage ? 'Downloads · Script & Audio' : 'Downloads · Script, Audio & Clips'}
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => window.location.href = `/shorts/${contentShort.id}/scenes`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '5px 12px',
+                          background: 'var(--bg-elevated)',
+                          color: 'var(--text-secondary)',
+                          border: '1px solid var(--border-default)',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)'; (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; }}
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        View Script
+                      </button>
                       {scriptPdf && (
                         <CompactDownloadPill
                           label="Script PDF"

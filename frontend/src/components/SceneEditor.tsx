@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Scene, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
-import { scenesApi } from '../services/api';
+import { scenesApi, filesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SceneEditorProps {
@@ -17,14 +17,12 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   const [saving, setSaving] = useState<number | null>(null);
   const [editingScript, setEditingScript] = useState(false);
   const [scriptDraft, setScriptDraft] = useState(scriptContent);
-  const [expandedNotes, setExpandedNotes] = useState<Record<number, 'clipper' | 'editor' | null>>({});
+  const [expandedScene, setExpandedScene] = useState<number | null>(null);
   const [draggedScene, setDraggedScene] = useState<number | null>(null);
   const [dragOverScene, setDragOverScene] = useState<number | null>(null);
   const scriptRef = useRef<HTMLDivElement>(null);
   const saveTimeouts = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
-  const isClipper = user?.roles?.includes('clipper') || false;
-  const isEditor = user?.roles?.includes('editor') || false;
   const canEditScenes = isAdmin || user?.roles?.includes('script_writer') || false;
 
   useEffect(() => {
@@ -53,7 +51,6 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
     const selectedText = selection.toString().trim();
     if (!selectedText) return;
 
-    // Check that selection is within the script area
     const range = selection.getRangeAt(0);
     if (!scriptRef.current.contains(range.commonAncestorContainer)) return;
 
@@ -71,10 +68,8 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   };
 
   const updateScene = async (sceneId: number, input: UpdateSceneInput) => {
-    // Optimistic update
     setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, ...input } : s));
 
-    // Debounced save
     if (saveTimeouts.current[sceneId]) {
       clearTimeout(saveTimeouts.current[sceneId]);
     }
@@ -84,7 +79,7 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
         await scenesApi.update(shortId, sceneId, input);
       } catch (error) {
         console.error('Failed to update scene:', error);
-        loadScenes(); // Reload on error
+        loadScenes();
       } finally {
         setSaving(null);
       }
@@ -104,6 +99,24 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   const handleSaveScript = async () => {
     onScriptContentChange(scriptDraft);
     setEditingScript(false);
+  };
+
+  const handleImageUpload = async (sceneId: number, file: File) => {
+    try {
+      const uploadUrlData = await filesApi.getUploadUrl(
+        shortId,
+        'scene_image',
+        file.name,
+        file.size,
+        file.type
+      );
+      await filesApi.uploadDirectToGCS(uploadUrlData.upload_url, file);
+      // Store the bucket path directly on the scene (skip files table)
+      await scenesApi.update(shortId, sceneId, { image_url: uploadUrlData.bucket_path });
+      setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, image_url: uploadUrlData.bucket_path } : s));
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+    }
   };
 
   // Drag and drop reordering
@@ -141,7 +154,6 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
     }
   };
 
-  // Get highlighted portions of script
   const getHighlightedScript = () => {
     if (!scriptContent) return null;
     const scriptLines = scenes.map(s => s.script_line).filter(Boolean);
@@ -150,13 +162,9 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
       return <span>{scriptContent}</span>;
     }
 
-    // Build segments - find each script_line in the content and mark it
     type Segment = { text: string; highlighted: boolean; sceneIndex?: number };
     const segments: Segment[] = [];
-    let remaining = scriptContent;
-    let currentPos = 0;
 
-    // Sort scene matches by position in script to process left-to-right
     const matches: { start: number; end: number; sceneIndex: number }[] = [];
     for (let i = 0; i < scenes.length; i++) {
       const line = scenes[i].script_line;
@@ -168,7 +176,6 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
     }
     matches.sort((a, b) => a.start - b.start);
 
-    // Remove overlapping matches (keep first)
     const cleanMatches: typeof matches = [];
     for (const m of matches) {
       if (cleanMatches.length === 0 || m.start >= cleanMatches[cleanMatches.length - 1].end) {
@@ -308,7 +315,7 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
         )}
       </div>
 
-      {/* Scenes Section */}
+      {/* Scenes Grid Section */}
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
@@ -327,183 +334,307 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
 
         {scenes.length === 0 ? (
           <div className="p-6 rounded-lg text-center" style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border-default)' }}>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
               No scenes yet. {canEditScenes ? 'Highlight text in the script above and click "Create Scene from Selection" to get started.' : ''}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {scenes.map((scene, index) => (
-              <div
-                key={scene.id}
-                draggable={canEditScenes}
-                onDragStart={() => handleDragStart(scene.id)}
-                onDragOver={(e) => handleDragOver(e, scene.id)}
-                onDrop={() => handleDrop(scene.id)}
-                onDragEnd={() => { setDraggedScene(null); setDragOverScene(null); }}
-                className="rounded-lg transition-all"
-                style={{
-                  background: 'var(--bg-elevated)',
-                  border: dragOverScene === scene.id
-                    ? '2px solid var(--gold)'
-                    : '1px solid var(--border-default)',
-                  opacity: draggedScene === scene.id ? 0.5 : 1,
-                }}
-              >
-                {/* Scene Header */}
-                <div className="flex items-center justify-between px-4 py-2" style={{ borderBottom: '1px solid var(--border-default)' }}>
-                  <div className="flex items-center gap-2">
-                    {canEditScenes && (
-                      <span className="cursor-grab text-sm" style={{ color: 'var(--text-muted)' }} title="Drag to reorder">
-                        ⠿
+          <>
+            {/* Grid of scene cards */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '12px',
+              marginBottom: expandedScene !== null ? '12px' : '0',
+            }}>
+              {scenes.map((scene, index) => (
+                <div
+                  key={scene.id}
+                  draggable={canEditScenes}
+                  onDragStart={() => handleDragStart(scene.id)}
+                  onDragOver={(e) => handleDragOver(e, scene.id)}
+                  onDrop={() => handleDrop(scene.id)}
+                  onDragEnd={() => { setDraggedScene(null); setDragOverScene(null); }}
+                  onClick={() => setExpandedScene(expandedScene === scene.id ? null : scene.id)}
+                  className="rounded-lg transition-all"
+                  style={{
+                    background: expandedScene === scene.id ? 'color-mix(in srgb, var(--gold) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
+                    border: dragOverScene === scene.id
+                      ? '2px solid var(--gold)'
+                      : expandedScene === scene.id
+                        ? '1px solid var(--gold)'
+                        : '1px solid var(--border-default)',
+                    opacity: draggedScene === scene.id ? 0.5 : 1,
+                    cursor: 'pointer',
+                    padding: '10px 12px',
+                    minHeight: '80px',
+                  }}
+                >
+                  {/* Scene number + saving indicator */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {canEditScenes && (
+                        <span style={{ cursor: 'grab', fontSize: '13px', color: 'var(--text-muted)' }} title="Drag to reorder">⠿</span>
+                      )}
+                      <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--gold)' }}>
+                        Scene {index + 1}
                       </span>
-                    )}
-                    <span className="text-xs font-bold" style={{ color: 'var(--gold)' }}>
-                      Scene {index + 1}
-                    </span>
+                    </div>
                     {saving === scene.id && (
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>Saving...</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
+                    )}
+                    {scene.image_url && (
+                      <span style={{ fontSize: '11px', color: 'var(--green)' }} title="Has image">IMG</span>
                     )}
                   </div>
-                  {canEditScenes && (
-                    <button
-                      onClick={() => deleteScene(scene.id)}
-                      className="px-2 py-1 rounded text-xs transition-opacity hover:opacity-70"
-                      style={{ color: 'var(--red)', background: 'transparent', border: 'none', cursor: 'pointer' }}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
 
-                {/* Script Line */}
-                <div className="px-4 pt-3 pb-2">
-                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Script Line</label>
-                  {canEditScenes ? (
-                    <textarea
-                      value={scene.script_line}
-                      onChange={(e) => updateScene(scene.id, { script_line: e.target.value })}
-                      className="w-full p-2 rounded text-sm leading-relaxed resize-y focus:outline-none"
-                      style={{
-                        background: 'var(--bg-base)',
-                        border: '1px solid var(--border-default)',
-                        color: 'var(--text-primary)',
-                        minHeight: '40px',
-                      }}
-                      placeholder="Script narration for this scene..."
-                    />
-                  ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
-                      {scene.script_line || <span style={{ color: 'var(--text-muted)' }}>No script line</span>}
-                    </p>
-                  )}
-                </div>
+                  {/* Script preview (3 lines max) */}
+                  <p style={{
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                    lineHeight: '1.4',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    margin: '0 0 6px 0',
+                  }}>
+                    {scene.script_line || <span style={{ color: 'var(--text-muted)', fontWeight: '400' }}>No script line</span>}
+                  </p>
 
-                {/* Direction */}
-                <div className="px-4 pb-3">
-                  <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Editing Direction</label>
-                  {canEditScenes ? (
-                    <textarea
-                      value={scene.direction}
-                      onChange={(e) => updateScene(scene.id, { direction: e.target.value })}
-                      className="w-full p-2 rounded text-sm leading-relaxed resize-y focus:outline-none"
-                      style={{
-                        background: 'var(--bg-base)',
-                        border: '1px solid var(--border-default)',
+                  {/* Clipper notes (always visible on card) */}
+                  {scene.clipper_notes && (
+                    <div style={{ marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--col-clips)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Clipper</span>
+                      <p style={{
+                        fontSize: '13px',
                         color: 'var(--text-secondary)',
-                        minHeight: '40px',
-                      }}
-                      placeholder="What should the editor/clipper show for this scene..."
-                    />
-                  ) : (
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>
-                      {scene.direction || <span style={{ color: 'var(--text-muted)' }}>No direction</span>}
-                    </p>
+                        lineHeight: '1.3',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        margin: '1px 0 0 0',
+                      }}>
+                        {scene.clipper_notes}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Editor notes (always visible on card) */}
+                  {scene.editor_notes && (
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--col-editing)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editor</span>
+                      <p style={{
+                        fontSize: '13px',
+                        color: 'var(--text-secondary)',
+                        lineHeight: '1.3',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        margin: '1px 0 0 0',
+                      }}>
+                        {scene.editor_notes}
+                      </p>
+                    </div>
                   )}
                 </div>
+              ))}
+            </div>
 
-                {/* Clipper / Editor Notes */}
-                <div className="px-4 pb-3 flex gap-2">
-                  {/* Clipper Notes Toggle */}
-                  <button
-                    onClick={() => setExpandedNotes(prev => ({
-                      ...prev,
-                      [scene.id]: prev[scene.id] === 'clipper' ? null : 'clipper',
-                    }))}
-                    className="px-2 py-1 rounded text-xs font-medium transition-opacity hover:opacity-80"
-                    style={{
-                      background: expandedNotes[scene.id] === 'clipper' ? 'color-mix(in srgb, var(--col-clips) 15%, transparent)' : 'var(--bg-base)',
-                      color: scene.clipper_notes ? 'var(--col-clips)' : 'var(--text-muted)',
-                      border: `1px solid ${scene.clipper_notes ? 'var(--col-clips-border)' : 'var(--border-default)'}`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Clipper Notes {scene.clipper_notes ? '(has notes)' : ''}
-                  </button>
+            {/* Expanded scene panel (full width below grid) */}
+            {expandedScene !== null && (() => {
+              const scene = scenes.find(s => s.id === expandedScene);
+              if (!scene) return null;
+              const sceneIndex = scenes.findIndex(s => s.id === expandedScene);
 
-                  {/* Editor Notes Toggle */}
-                  <button
-                    onClick={() => setExpandedNotes(prev => ({
-                      ...prev,
-                      [scene.id]: prev[scene.id] === 'editor' ? null : 'editor',
-                    }))}
-                    className="px-2 py-1 rounded text-xs font-medium transition-opacity hover:opacity-80"
-                    style={{
-                      background: expandedNotes[scene.id] === 'editor' ? 'color-mix(in srgb, var(--col-editing) 15%, transparent)' : 'var(--bg-base)',
-                      color: scene.editor_notes ? 'var(--col-editing)' : 'var(--text-muted)',
-                      border: `1px solid ${scene.editor_notes ? 'var(--col-editing-border)' : 'var(--border-default)'}`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Editor Notes {scene.editor_notes ? '(has notes)' : ''}
-                  </button>
+              return (
+                <div
+                  style={{
+                    background: 'var(--bg-elevated)',
+                    border: '1px solid var(--gold)',
+                    borderRadius: '10px',
+                    padding: '20px',
+                    marginTop: '12px',
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--gold)' }}>Scene {sceneIndex + 1}</span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      {saving === scene.id && (
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saving...</span>
+                      )}
+                      {canEditScenes && (
+                        <button
+                          onClick={() => deleteScene(scene.id)}
+                          style={{ fontSize: '13px', color: 'var(--red)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+                        >
+                          Delete
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setExpandedScene(null)}
+                        style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Script Line */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Script</label>
+                    {canEditScenes ? (
+                      <textarea
+                        value={scene.script_line}
+                        onChange={(e) => updateScene(scene.id, { script_line: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-primary)',
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          lineHeight: '1.5',
+                          minHeight: '80px',
+                          resize: 'vertical',
+                        }}
+                        placeholder="Script narration for this scene..."
+                      />
+                    ) : (
+                      <p style={{ fontSize: '16px', fontWeight: '600', lineHeight: '1.5', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                        {scene.script_line || <span style={{ color: 'var(--text-muted)' }}>No script line</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Direction */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Direction</label>
+                    {canEditScenes ? (
+                      <textarea
+                        value={scene.direction}
+                        onChange={(e) => updateScene(scene.id, { direction: e.target.value })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          background: 'var(--bg-base)',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-secondary)',
+                          fontSize: '15px',
+                          lineHeight: '1.5',
+                          minHeight: '60px',
+                          resize: 'vertical',
+                        }}
+                        placeholder="What should the editor/clipper show for this scene..."
+                      />
+                    ) : (
+                      <p style={{ fontSize: '15px', lineHeight: '1.5', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap' }}>
+                        {scene.direction || <span style={{ color: 'var(--text-muted)' }}>No direction</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Clipper Notes */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--col-clips)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Clipper Notes</label>
+                    {canEditScenes ? (
+                      <textarea
+                        value={scene.clipper_notes || ''}
+                        onChange={(e) => updateScene(scene.id, { clipper_notes: e.target.value || null })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          background: 'color-mix(in srgb, var(--col-clips) 5%, var(--bg-base))',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-primary)',
+                          fontSize: '15px',
+                          lineHeight: '1.5',
+                          minHeight: '50px',
+                          resize: 'vertical',
+                        }}
+                        placeholder="Add clipper notes..."
+                      />
+                    ) : (
+                      <p style={{ fontSize: '15px', lineHeight: '1.5', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                        {scene.clipper_notes || <span style={{ color: 'var(--text-muted)' }}>No notes yet</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Editor Notes */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--col-editing)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Editor Notes</label>
+                    {canEditScenes ? (
+                      <textarea
+                        value={scene.editor_notes || ''}
+                        onChange={(e) => updateScene(scene.id, { editor_notes: e.target.value || null })}
+                        style={{
+                          width: '100%',
+                          padding: '10px',
+                          borderRadius: '8px',
+                          background: 'color-mix(in srgb, var(--col-editing) 5%, var(--bg-base))',
+                          border: '1px solid var(--border-default)',
+                          color: 'var(--text-primary)',
+                          fontSize: '15px',
+                          lineHeight: '1.5',
+                          minHeight: '50px',
+                          resize: 'vertical',
+                        }}
+                        placeholder="Add editor notes..."
+                      />
+                    ) : (
+                      <p style={{ fontSize: '15px', lineHeight: '1.5', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
+                        {scene.editor_notes || <span style={{ color: 'var(--text-muted)' }}>No notes yet</span>}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Image Upload */}
+                  {canEditScenes && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Scene Image</label>
+                      <label style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '8px 14px',
+                        borderRadius: '7px',
+                        border: '1px dashed var(--border-strong)',
+                        background: 'var(--bg-base)',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        color: 'var(--text-muted)',
+                      }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        {scene.image_url ? 'Replace Image' : 'Upload Image'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleImageUpload(scene.id, file);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
-
-                {/* Expanded Notes Area */}
-                {expandedNotes[scene.id] === 'clipper' && (
-                  <div className="px-4 pb-3">
-                    <div className="p-3 rounded-lg" style={{ background: 'color-mix(in srgb, var(--col-clips) 8%, var(--bg-base))', border: '1px solid var(--col-clips-border)' }}>
-                      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--col-clips)' }}>Clipper Notes</label>
-                      {isAdmin || isClipper ? (
-                        <textarea
-                          value={scene.clipper_notes || ''}
-                          onChange={(e) => updateScene(scene.id, { clipper_notes: e.target.value || null })}
-                          className="w-full p-2 rounded text-sm resize-y focus:outline-none"
-                          style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', minHeight: '60px' }}
-                          placeholder="Add notes about this scene..."
-                        />
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
-                          {scene.clipper_notes || 'No notes yet'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {expandedNotes[scene.id] === 'editor' && (
-                  <div className="px-4 pb-3">
-                    <div className="p-3 rounded-lg" style={{ background: 'color-mix(in srgb, var(--col-editing) 8%, var(--bg-base))', border: '1px solid var(--col-editing-border)' }}>
-                      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--col-editing)' }}>Editor Notes</label>
-                      {isAdmin || isEditor ? (
-                        <textarea
-                          value={scene.editor_notes || ''}
-                          onChange={(e) => updateScene(scene.id, { editor_notes: e.target.value || null })}
-                          className="w-full p-2 rounded text-sm resize-y focus:outline-none"
-                          style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', minHeight: '60px' }}
-                          placeholder="Add notes about this scene..."
-                        />
-                      ) : (
-                        <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-primary)' }}>
-                          {scene.editor_notes || 'No notes yet'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+              );
+            })()}
+          </>
         )}
       </div>
     </div>

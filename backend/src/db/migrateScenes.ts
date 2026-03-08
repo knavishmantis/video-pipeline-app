@@ -46,6 +46,16 @@ export async function migrateScenes(): Promise<void> {
       }
     }
 
+    // Add image_url column if not exists
+    try {
+      await query('ALTER TABLE scenes ADD COLUMN IF NOT EXISTS image_url TEXT');
+      console.log('Added image_url column to scenes');
+    } catch (error: any) {
+      if (!error.message.includes('already exists')) {
+        console.warn('Could not add image_url column:', error.message);
+      }
+    }
+
     console.log('Scenes migration completed successfully');
   } catch (error) {
     console.error('Scenes migration failed:', error);

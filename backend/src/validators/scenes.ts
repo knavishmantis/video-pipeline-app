@@ -12,6 +12,7 @@ export const updateSceneSchema = z.object({
   clipper_notes: z.string().max(10000).nullable().optional(),
   editor_notes: z.string().max(10000).nullable().optional(),
   scene_order: z.number().int().min(0).optional(),
+  image_url: z.string().max(1000).nullable().optional(),
 });
 
 export const bulkCreateScenesSchema = z.object({

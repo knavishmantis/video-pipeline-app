@@ -2,7 +2,7 @@
 
 export type UserRole = 'admin' | 'script_writer' | 'clipper' | 'editor';
 export type ShortStatus = 'idea' | 'script' | 'clipping' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'completed' | 'uploaded';
-export type FileType = 'script' | 'clip' | 'audio' | 'final_video' | 'clips_zip';
+export type FileType = 'script' | 'clip' | 'audio' | 'final_video' | 'clips_zip' | 'scene_image';
 export type PaymentStatus = 'pending' | 'paid';
 export type PaymentRole = 'script_writer' | 'clipper' | 'editor';
 export type AssignmentRole = 'script_writer' | 'clipper' | 'editor';
@@ -149,6 +149,7 @@ export interface Scene {
   direction: string;
   clipper_notes?: string | null;
   editor_notes?: string | null;
+  image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -157,6 +158,7 @@ export interface CreateSceneInput {
   script_line: string;
   direction?: string;
   scene_order?: number;
+  image_url?: string | null;
 }
 
 export interface UpdateSceneInput {
@@ -165,6 +167,7 @@ export interface UpdateSceneInput {
   clipper_notes?: string | null;
   editor_notes?: string | null;
   scene_order?: number;
+  image_url?: string | null;
 }
 
 export interface BulkCreateScenesInput {

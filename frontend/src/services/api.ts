@@ -368,6 +368,17 @@ export const scenesApi = {
     const response = await api.post(`/shorts/${shortId}/scenes/reorder`, { scene_ids: sceneIds });
     return response.data;
   },
+  getImageUrl: async (shortId: number, sceneId: number): Promise<string> => {
+    const response = await api.get(`/shorts/${shortId}/scenes/${sceneId}/image-url`);
+    return response.data.url;
+  },
+};
+
+export const teamMetricsApi = {
+  get: async (): Promise<any> => {
+    const response = await api.get('/team-metrics');
+    return response.data;
+  },
 };
 
 export const paymentsApi = {

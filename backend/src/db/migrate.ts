@@ -137,7 +137,7 @@ export async function migrate(): Promise<void> {
         await query(`
           ALTER TABLE files 
           ADD CONSTRAINT files_file_type_check 
-          CHECK (file_type IN ('script', 'script_pdf', 'clip', 'clips_zip', 'audio', 'final_video', 'profile_picture'))
+          CHECK (file_type IN ('script', 'script_pdf', 'clip', 'clips_zip', 'audio', 'final_video', 'profile_picture', 'scene_image'))
         `);
         console.log('Updated files_file_type_check constraint');
       } catch (error: any) {

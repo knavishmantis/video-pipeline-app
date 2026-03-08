@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { query } from '../db';
 import { AuthRequest } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { getSignedUrl } from '../services/gcpStorage';
 
 export const scenesController = {
   // GET /api/shorts/:shortId/scenes
@@ -93,6 +94,10 @@ export const scenesController = {
         updates.push(`scene_order = $${paramCount++}`);
         params.push(input.scene_order);
       }
+      if (input.image_url !== undefined) {
+        updates.push(`image_url = $${paramCount++}`);
+        params.push(input.image_url);
+      }
 
       if (updates.length === 0) {
         res.status(400).json({ error: 'No fields to update' });
@@ -161,6 +166,31 @@ export const scenesController = {
     } catch (error) {
       logger.error('Bulk create scenes error', { shortId, error });
       res.status(500).json({ error: 'Failed to bulk create scenes' });
+    }
+  },
+
+  // GET /api/shorts/:shortId/scenes/:id/image-url
+  async getImageUrl(req: AuthRequest, res: Response): Promise<void> {
+    const { shortId, id } = req.params;
+    try {
+      const result = await query(
+        'SELECT image_url FROM scenes WHERE id = $1 AND short_id = $2',
+        [id, shortId]
+      );
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Scene not found' });
+        return;
+      }
+      const scene = result.rows[0];
+      if (!scene.image_url) {
+        res.status(404).json({ error: 'No image for this scene' });
+        return;
+      }
+      const url = await getSignedUrl(scene.image_url);
+      res.json({ url });
+    } catch (error) {
+      logger.error('Get scene image URL error', { shortId, sceneId: id, error });
+      res.status(500).json({ error: 'Failed to get scene image URL' });
     }
   },
 
