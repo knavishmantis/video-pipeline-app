@@ -8,6 +8,7 @@ import { shortsApi, assignmentsApi, filesApi, usersApi } from '../services/api';
 import { Short, File as FileInterface, FileType, User, ShortStatus, AssignmentRole } from '../../../shared/types';
 import { triggerConfetti } from '../utils/confetti';
 import { getErrorMessage } from '../utils/errorHandler';
+import SceneEditor from '../components/SceneEditor';
 
 // Helper to get profile picture (emoji, image URL, or fallback)
 const getProfilePicture = (user: User | undefined): string => {
@@ -642,21 +643,29 @@ export default function ShortDetail() {
               )}
             </div>
           </div>
+          {short.idea && (
+            <div className="px-6 pt-4 pb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Idea</h3>
+              <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{short.idea}</p>
+            </div>
+          )}
+
+          {/* Scene Editor - Main Script + Scenes */}
+          <SceneEditor
+            shortId={short.id}
+            scriptContent={short.script_content || ''}
+            onScriptContentChange={async (content) => {
+              try {
+                await shortsApi.update(short.id, { script_content: content });
+                loadShort();
+              } catch (error) {
+                console.error('Failed to save script:', error);
+              }
+            }}
+            isAdmin={isAdmin || false}
+          />
+
           <div className="px-6 py-4">
-            {short.idea && (
-              <div className="mb-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Idea</h3>
-                <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-secondary)' }}>{short.idea}</p>
-              </div>
-            )}
-            {short.script_content && (
-              <div className="mb-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Script Content</h3>
-                <div className="p-4 rounded-lg" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)' }}>
-                  <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>{short.script_content}</pre>
-                </div>
-              </div>
-            )}
             {scriptPdf && (
               <div className="mt-4">
                 <h3 className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Script PDF</h3>

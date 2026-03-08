@@ -1,5 +1,6 @@
 import { Express, Request, Response } from 'express';
 import { shortsRouter } from './shorts';
+import { scenesRouter } from './scenes';
 import { usersRouter } from './users';
 import { assignmentsRouter } from './assignments';
 import { filesRouter } from './files';
@@ -11,6 +12,7 @@ import { getCacheStats, clearCache } from '../db';
 export function setupRoutes(app: Express): void {
   app.use('/api/auth', authRouter);
   app.use('/api/shorts', shortsRouter);
+  app.use('/api/shorts/:shortId/scenes', scenesRouter);
   app.use('/api/users', usersRouter);
   app.use('/api/assignments', assignmentsRouter);
   app.use('/api/files', filesRouter);

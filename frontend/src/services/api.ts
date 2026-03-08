@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, Scene, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -336,6 +336,36 @@ export const usersApi = {
   },
   setUserRate: async (id: number, rate: { role: 'clipper' | 'editor'; rate: number; rate_description?: string }): Promise<UserRate> => {
     const response = await api.put(`/users/${id}/rate`, rate);
+    return response.data;
+  },
+};
+
+export const scenesApi = {
+  getAll: async (shortId: number): Promise<Scene[]> => {
+    const response = await api.get(`/shorts/${shortId}/scenes`);
+    return response.data;
+  },
+  getById: async (shortId: number, sceneId: number): Promise<Scene> => {
+    const response = await api.get(`/shorts/${shortId}/scenes/${sceneId}`);
+    return response.data;
+  },
+  create: async (shortId: number, input: CreateSceneInput): Promise<Scene> => {
+    const response = await api.post(`/shorts/${shortId}/scenes`, input);
+    return response.data;
+  },
+  update: async (shortId: number, sceneId: number, input: UpdateSceneInput): Promise<Scene> => {
+    const response = await api.put(`/shorts/${shortId}/scenes/${sceneId}`, input);
+    return response.data;
+  },
+  delete: async (shortId: number, sceneId: number): Promise<void> => {
+    await api.delete(`/shorts/${shortId}/scenes/${sceneId}`);
+  },
+  bulkCreate: async (shortId: number, scenes: CreateSceneInput[]): Promise<Scene[]> => {
+    const response = await api.post(`/shorts/${shortId}/scenes/bulk`, { scenes });
+    return response.data;
+  },
+  reorder: async (shortId: number, sceneIds: number[]): Promise<Scene[]> => {
+    const response = await api.post(`/shorts/${shortId}/scenes/reorder`, { scene_ids: sceneIds });
     return response.data;
   },
 };

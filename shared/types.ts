@@ -141,9 +141,37 @@ export interface UserRate {
   updated_at: string;
 }
 
+export interface Scene {
+  id: number;
+  short_id: number;
+  scene_order: number;
+  script_line: string;
+  direction: string;
+  clipper_notes?: string | null;
+  editor_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateSceneInput {
+  script_line: string;
+  direction?: string;
+  scene_order?: number;
+}
+
+export interface UpdateSceneInput {
+  script_line?: string;
+  direction?: string;
+  clipper_notes?: string | null;
+  editor_notes?: string | null;
+  scene_order?: number;
+}
+
+export interface BulkCreateScenesInput {
+  scenes: CreateSceneInput[];
+}
+
 export interface AuthResponse {
   user: User;
   token: string;
 }
-
-

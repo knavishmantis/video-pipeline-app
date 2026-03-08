@@ -20,7 +20,8 @@
     "migrate-analyzed-shorts-review": "tsx src/db/migrateAnalyzedShortsReview.ts",
     "setup-admin": "tsx src/scripts/setupAdmin.ts",
     "fetch-camman18": "tsx src/scripts/fetchCamman18Shorts.ts",
-    "migrate-reflection": "tsx src/db/migrateReflection.ts"
+    "migrate-reflection": "tsx src/db/migrateReflection.ts",
+    "migrate-scenes": "tsx src/db/migrateScenes.ts"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,20 @@
+{
+  "name": "video-pipeline-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for Video Pipeline API - enables Claude Code and other AI tools to manage shorts and scenes",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
