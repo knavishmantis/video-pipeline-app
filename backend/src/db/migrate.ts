@@ -96,7 +96,23 @@ CREATE TABLE IF NOT EXISTS payments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Scenes table (script broken into per-scene lines with directions)
+CREATE TABLE IF NOT EXISTS scenes (
+  id SERIAL PRIMARY KEY,
+  short_id INTEGER NOT NULL REFERENCES shorts(id) ON DELETE CASCADE,
+  scene_order INTEGER NOT NULL,
+  script_line TEXT NOT NULL DEFAULT '',
+  direction TEXT NOT NULL DEFAULT '',
+  clipper_notes TEXT,
+  editor_notes TEXT,
+  image_url TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_scenes_short_id ON scenes(short_id);
+CREATE INDEX IF NOT EXISTS idx_scenes_order ON scenes(short_id, scene_order);
 CREATE INDEX IF NOT EXISTS idx_shorts_status ON shorts(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_short_id ON assignments(short_id);

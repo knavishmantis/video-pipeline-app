@@ -34,6 +34,12 @@ jobs:
         working-directory: ./backend
         run: npm run build
 
+      - name: Run database migrations
+        working-directory: ./backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run migrate
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
