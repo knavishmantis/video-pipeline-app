@@ -64,3 +64,7 @@ coverage/
 *.temp
 .cache/
 
+# Claude Code settings (may contain tokens/credentials)
+.claude/settings.json
+.claude/settings.local.json
+

@@ -19,6 +19,12 @@ scenesRouter.get('/:id/image-url', scenesController.getImageUrl);
 // GET /api/shorts/:shortId/scenes/:id
 scenesRouter.get('/:id', scenesController.getById);
 
+// POST /api/shorts/:shortId/scenes/bulk - Replace all scenes at once (must be before /:id)
+scenesRouter.post('/bulk', validate(bulkCreateScenesSchema), scenesController.bulkCreate);
+
+// POST /api/shorts/:shortId/scenes/reorder (must be before /:id)
+scenesRouter.post('/reorder', validate(reorderScenesSchema), scenesController.reorder);
+
 // POST /api/shorts/:shortId/scenes
 scenesRouter.post('/', validate(createSceneSchema), scenesController.create);
 
@@ -27,9 +33,3 @@ scenesRouter.put('/:id', validate(updateSceneSchema), scenesController.update);
 
 // DELETE /api/shorts/:shortId/scenes/:id
 scenesRouter.delete('/:id', scenesController.delete);
-
-// POST /api/shorts/:shortId/scenes/bulk - Replace all scenes at once
-scenesRouter.post('/bulk', validate(bulkCreateScenesSchema), scenesController.bulkCreate);
-
-// POST /api/shorts/:shortId/scenes/reorder
-scenesRouter.post('/reorder', validate(reorderScenesSchema), scenesController.reorder);
