@@ -141,6 +141,13 @@ export interface UserRate {
   updated_at: string;
 }
 
+export interface SceneImage {
+  id: number;
+  scene_id: number;
+  bucket_path: string;
+  created_at: string;
+}
+
 export interface Scene {
   id: number;
   short_id: number;
@@ -150,6 +157,7 @@ export interface Scene {
   clipper_notes?: string | null;
   editor_notes?: string | null;
   image_url?: string | null;
+  images?: SceneImage[];
   created_at: string;
   updated_at: string;
 }

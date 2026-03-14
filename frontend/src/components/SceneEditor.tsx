@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Scene, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
+import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
 import { scenesApi, filesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -18,6 +18,7 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   const [editingScript, setEditingScript] = useState(false);
   const [scriptDraft, setScriptDraft] = useState(scriptContent);
   const [expandedScene, setExpandedScene] = useState<number | null>(null);
+  const [imageSignedUrls, setImageSignedUrls] = useState<Record<number, string>>({});
   const [draggedScene, setDraggedScene] = useState<number | null>(null);
   const [dragOverScene, setDragOverScene] = useState<number | null>(null);
   const scriptRef = useRef<HTMLDivElement>(null);
@@ -32,6 +33,19 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   useEffect(() => {
     setScriptDraft(scriptContent);
   }, [scriptContent]);
+
+  useEffect(() => {
+    if (expandedScene === null) return;
+    const scene = scenes.find(s => s.id === expandedScene);
+    if (!scene?.images?.length) return;
+    for (const img of scene.images) {
+      if (!imageSignedUrls[img.id]) {
+        scenesApi.getSceneImageUrl(shortId, scene.id, img.id)
+          .then(url => setImageSignedUrls(prev => ({ ...prev, [img.id]: url })))
+          .catch(() => {});
+      }
+    }
+  }, [expandedScene, scenes]);
 
   const loadScenes = async () => {
     try {
@@ -111,11 +125,28 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
         file.type
       );
       await filesApi.uploadDirectToGCS(uploadUrlData.upload_url, file);
-      // Store the bucket path directly on the scene (skip files table)
-      await scenesApi.update(shortId, sceneId, { image_url: uploadUrlData.bucket_path });
-      setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, image_url: uploadUrlData.bucket_path } : s));
+      const newImage: SceneImage = await scenesApi.addImage(shortId, sceneId, uploadUrlData.bucket_path);
+      setScenes(prev => prev.map(s =>
+        s.id === sceneId ? { ...s, images: [...(s.images || []), newImage] } : s
+      ));
+      // Fetch signed URL for new image immediately
+      scenesApi.getSceneImageUrl(shortId, sceneId, newImage.id)
+        .then(url => setImageSignedUrls(prev => ({ ...prev, [newImage.id]: url })))
+        .catch(() => {});
     } catch (error) {
       console.error('Failed to upload image:', error);
+    }
+  };
+
+  const handleDeleteImage = async (sceneId: number, imageId: number) => {
+    try {
+      await scenesApi.deleteImage(shortId, sceneId, imageId);
+      setScenes(prev => prev.map(s =>
+        s.id === sceneId ? { ...s, images: (s.images || []).filter(img => img.id !== imageId) } : s
+      ));
+      setImageSignedUrls(prev => { const next = { ...prev }; delete next[imageId]; return next; });
+    } catch (error) {
+      console.error('Failed to delete image:', error);
     }
   };
 
@@ -383,8 +414,10 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                     {saving === scene.id && (
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
                     )}
-                    {scene.image_url && (
-                      <span style={{ fontSize: '11px', color: 'var(--green)' }} title="Has image">IMG</span>
+                    {(scene.images?.length ?? 0) > 0 && (
+                      <span style={{ fontSize: '11px', color: 'var(--green)' }} title={`${scene.images!.length} image${scene.images!.length > 1 ? 's' : ''}`}>
+                        IMG{scene.images!.length > 1 ? ` ×${scene.images!.length}` : ''}
+                      </span>
                     )}
                   </div>
 
@@ -597,38 +630,69 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                     )}
                   </div>
 
-                  {/* Image Upload */}
-                  {canEditScenes && (
+                  {/* Scene Images */}
+                  {((scene.images?.length ?? 0) > 0 || canEditScenes) && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Scene Image</label>
-                      <label style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 14px',
-                        borderRadius: '7px',
-                        border: '1px dashed var(--border-strong)',
-                        background: 'var(--bg-base)',
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        color: 'var(--text-muted)',
-                      }}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="17 8 12 3 7 8" />
-                          <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                        {scene.image_url ? 'Replace Image' : 'Upload Image'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          style={{ display: 'none' }}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImageUpload(scene.id, file);
-                          }}
-                        />
-                      </label>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Scene Images</label>
+                      {(scene.images?.length ?? 0) > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                          {scene.images!.map(img => (
+                            <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
+                              {imageSignedUrls[img.id] ? (
+                                <img
+                                  src={imageSignedUrls[img.id]}
+                                  alt="Scene reference"
+                                  style={{ maxWidth: '220px', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--border-default)', objectFit: 'contain', display: 'block' }}
+                                />
+                              ) : (
+                                <div style={{ width: '120px', height: '90px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+                                  Loading…
+                                </div>
+                              )}
+                              {canEditScenes && (
+                                <button
+                                  onClick={() => handleDeleteImage(scene.id, img.id)}
+                                  style={{ position: 'absolute', top: '4px', right: '4px', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', lineHeight: 1 }}
+                                  title="Remove image"
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {canEditScenes && (
+                        <label style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 14px',
+                          borderRadius: '7px',
+                          border: '1px dashed var(--border-strong)',
+                          background: 'var(--bg-base)',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          color: 'var(--text-muted)',
+                        }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                          </svg>
+                          Add Image
+                          <input
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(scene.id, file);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                      )}
                     </div>
                   )}
                 </div>

@@ -110,9 +110,43 @@ CREATE TABLE IF NOT EXISTS scenes (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Scene images (multiple images per scene)
+CREATE TABLE IF NOT EXISTS scene_images (
+  id SERIAL PRIMARY KEY,
+  scene_id INTEGER NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
+  bucket_path TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- YouTube video analytics (synced by GitHub Action via sync_youtube_analytics.py)
+CREATE TABLE IF NOT EXISTS youtube_video_analytics (
+  video_id VARCHAR(20) PRIMARY KEY,
+  title TEXT NOT NULL,
+  published_at TIMESTAMP,
+  duration_sec INTEGER,
+  is_short BOOLEAN DEFAULT true,
+  views BIGINT DEFAULT 0,
+  estimated_minutes_watched DECIMAL(12,2) DEFAULT 0,
+  average_view_duration DECIMAL(10,2) DEFAULT 0,
+  average_view_percentage DECIMAL(6,2) DEFAULT 0,
+  likes INTEGER DEFAULT 0,
+  dislikes INTEGER DEFAULT 0,
+  comments INTEGER DEFAULT 0,
+  shares INTEGER DEFAULT 0,
+  subscribers_gained INTEGER DEFAULT 0,
+  subscribers_lost INTEGER DEFAULT 0,
+  like_rate DECIMAL(10,6) DEFAULT 0,
+  comment_rate DECIMAL(10,6) DEFAULT 0,
+  share_rate DECIMAL(10,6) DEFAULT 0,
+  sub_gain_rate DECIMAL(10,6) DEFAULT 0,
+  engagement_rate DECIMAL(10,6) DEFAULT 0,
+  fetched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_scenes_short_id ON scenes(short_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_order ON scenes(short_id, scene_order);
+CREATE INDEX IF NOT EXISTS idx_scene_images_scene_id ON scene_images(scene_id);
 CREATE INDEX IF NOT EXISTS idx_shorts_status ON shorts(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_short_id ON assignments(short_id);
@@ -178,6 +212,31 @@ export async function migrate(): Promise<void> {
         // Constraint might not exist or already be updated
         if (!error.message.includes('does not exist') && !error.message.includes('already exists')) {
           console.warn('Could not update shorts_status_check constraint:', error.message);
+        }
+      }
+
+      // Create scene_images table and migrate legacy image_url data
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS scene_images (
+            id SERIAL PRIMARY KEY,
+            scene_id INTEGER NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
+            bucket_path TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await query('CREATE INDEX IF NOT EXISTS idx_scene_images_scene_id ON scene_images(scene_id)');
+        // Migrate existing image_url values into scene_images (idempotent)
+        await query(`
+          INSERT INTO scene_images (scene_id, bucket_path)
+          SELECT id, image_url FROM scenes
+          WHERE image_url IS NOT NULL
+            AND id NOT IN (SELECT scene_id FROM scene_images)
+        `);
+        console.log('Created scene_images table and migrated legacy image_url data');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not create scene_images table:', error.message);
         }
       }
 

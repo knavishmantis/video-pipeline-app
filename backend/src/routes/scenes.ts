@@ -13,8 +13,17 @@ scenesRouter.use(requireProfileComplete);
 // GET /api/shorts/:shortId/scenes
 scenesRouter.get('/', scenesController.getAll);
 
-// GET /api/shorts/:shortId/scenes/:id/image-url (must be before /:id to avoid route conflict)
+// GET /api/shorts/:shortId/scenes/:id/image-url (legacy, must be before /:id)
 scenesRouter.get('/:id/image-url', scenesController.getImageUrl);
+
+// POST /api/shorts/:shortId/scenes/:id/images
+scenesRouter.post('/:id/images', scenesController.addImage);
+
+// GET /api/shorts/:shortId/scenes/:id/images/:imageId/url
+scenesRouter.get('/:id/images/:imageId/url', scenesController.getSceneImageUrl);
+
+// DELETE /api/shorts/:shortId/scenes/:id/images/:imageId
+scenesRouter.delete('/:id/images/:imageId', scenesController.deleteImage);
 
 // GET /api/shorts/:shortId/scenes/:id
 scenesRouter.get('/:id', scenesController.getById);

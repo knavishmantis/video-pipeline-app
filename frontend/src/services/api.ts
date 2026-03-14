@@ -372,11 +372,57 @@ export const scenesApi = {
     const response = await api.get(`/shorts/${shortId}/scenes/${sceneId}/image-url`);
     return response.data.url;
   },
+  addImage: async (shortId: number, sceneId: number, bucketPath: string) => {
+    const response = await api.post(`/shorts/${shortId}/scenes/${sceneId}/images`, { bucket_path: bucketPath });
+    return response.data;
+  },
+  deleteImage: async (shortId: number, sceneId: number, imageId: number): Promise<void> => {
+    await api.delete(`/shorts/${shortId}/scenes/${sceneId}/images/${imageId}`);
+  },
+  getSceneImageUrl: async (shortId: number, sceneId: number, imageId: number): Promise<string> => {
+    const response = await api.get(`/shorts/${shortId}/scenes/${sceneId}/images/${imageId}/url`);
+    return response.data.url;
+  },
 };
 
 export const teamMetricsApi = {
   get: async (): Promise<any> => {
     const response = await api.get('/team-metrics');
+    return response.data;
+  },
+};
+
+export interface YouTubeVideoAnalytics {
+  video_id: string;
+  title: string;
+  published_at: string;
+  duration_sec: number;
+  is_short: boolean;
+  views: number;
+  likes: number;
+  dislikes: number;
+  comments: number;
+  shares: number;
+  estimated_minutes_watched: number;
+  average_view_duration: number;
+  average_view_percentage: number;
+  subscribers_gained: number;
+  subscribers_lost: number;
+  like_rate: number;
+  comment_rate: number;
+  share_rate: number;
+  sub_gain_rate: number;
+  engagement_rate: number;
+  fetched_at: string;
+}
+
+export const youtubeAnalyticsApi = {
+  getAll: async (): Promise<YouTubeVideoAnalytics[]> => {
+    const response = await api.get('/youtube-analytics');
+    return response.data;
+  },
+  getPipeline: async (): Promise<any[]> => {
+    const response = await api.get('/youtube-analytics/pipeline');
     return response.data;
   },
 };

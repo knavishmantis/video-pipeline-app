@@ -9,11 +9,21 @@ export const scenesController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
     const { shortId } = req.params;
     try {
-      const result = await query(
+      const scenesResult = await query(
         'SELECT * FROM scenes WHERE short_id = $1 ORDER BY scene_order ASC',
         [shortId]
       );
-      res.json(result.rows);
+      const imagesResult = await query(
+        'SELECT * FROM scene_images WHERE scene_id IN (SELECT id FROM scenes WHERE short_id = $1) ORDER BY created_at ASC',
+        [shortId]
+      );
+      const imagesByScene: Record<number, any[]> = {};
+      for (const img of imagesResult.rows) {
+        if (!imagesByScene[img.scene_id]) imagesByScene[img.scene_id] = [];
+        imagesByScene[img.scene_id].push(img);
+      }
+      const scenes = scenesResult.rows.map((s: any) => ({ ...s, images: imagesByScene[s.id] || [] }));
+      res.json(scenes);
     } catch (error) {
       logger.error('Get scenes error', { shortId, error });
       res.status(500).json({ error: 'Failed to fetch scenes' });
@@ -169,7 +179,67 @@ export const scenesController = {
     }
   },
 
-  // GET /api/shorts/:shortId/scenes/:id/image-url
+  // POST /api/shorts/:shortId/scenes/:id/images
+  async addImage(req: AuthRequest, res: Response): Promise<void> {
+    const { shortId, id } = req.params;
+    const { bucket_path } = req.body;
+    try {
+      const sceneCheck = await query('SELECT id FROM scenes WHERE id = $1 AND short_id = $2', [id, shortId]);
+      if (sceneCheck.rows.length === 0) {
+        res.status(404).json({ error: 'Scene not found' });
+        return;
+      }
+      const result = await query(
+        'INSERT INTO scene_images (scene_id, bucket_path) VALUES ($1, $2) RETURNING *',
+        [id, bucket_path]
+      );
+      res.status(201).json(result.rows[0]);
+    } catch (error) {
+      logger.error('Add scene image error', { shortId, sceneId: id, error });
+      res.status(500).json({ error: 'Failed to add scene image' });
+    }
+  },
+
+  // DELETE /api/shorts/:shortId/scenes/:id/images/:imageId
+  async deleteImage(req: AuthRequest, res: Response): Promise<void> {
+    const { shortId, id, imageId } = req.params;
+    try {
+      const result = await query(
+        'DELETE FROM scene_images WHERE id = $1 AND scene_id = (SELECT id FROM scenes WHERE id = $2 AND short_id = $3) RETURNING id',
+        [imageId, id, shortId]
+      );
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Image not found' });
+        return;
+      }
+      res.json({ message: 'Image deleted' });
+    } catch (error) {
+      logger.error('Delete scene image error', { shortId, sceneId: id, imageId, error });
+      res.status(500).json({ error: 'Failed to delete scene image' });
+    }
+  },
+
+  // GET /api/shorts/:shortId/scenes/:id/images/:imageId/url
+  async getSceneImageUrl(req: AuthRequest, res: Response): Promise<void> {
+    const { shortId, id, imageId } = req.params;
+    try {
+      const result = await query(
+        'SELECT si.bucket_path FROM scene_images si JOIN scenes s ON s.id = si.scene_id WHERE si.id = $1 AND s.id = $2 AND s.short_id = $3',
+        [imageId, id, shortId]
+      );
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Image not found' });
+        return;
+      }
+      const url = await getSignedUrl(result.rows[0].bucket_path);
+      res.json({ url });
+    } catch (error) {
+      logger.error('Get scene image URL error', { shortId, sceneId: id, imageId, error });
+      res.status(500).json({ error: 'Failed to get scene image URL' });
+    }
+  },
+
+  // GET /api/shorts/:shortId/scenes/:id/image-url (legacy — kept for PDF export)
   async getImageUrl(req: AuthRequest, res: Response): Promise<void> {
     const { shortId, id } = req.params;
     try {
