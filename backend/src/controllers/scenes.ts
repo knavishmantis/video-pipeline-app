@@ -13,14 +13,18 @@ export const scenesController = {
         'SELECT * FROM scenes WHERE short_id = $1 ORDER BY scene_order ASC',
         [shortId]
       );
-      const imagesResult = await query(
-        'SELECT * FROM scene_images WHERE scene_id IN (SELECT id FROM scenes WHERE short_id = $1) ORDER BY created_at ASC',
-        [shortId]
-      );
-      const imagesByScene: Record<number, any[]> = {};
-      for (const img of imagesResult.rows) {
-        if (!imagesByScene[img.scene_id]) imagesByScene[img.scene_id] = [];
-        imagesByScene[img.scene_id].push(img);
+      let imagesByScene: Record<number, any[]> = {};
+      try {
+        const imagesResult = await query(
+          'SELECT * FROM scene_images WHERE scene_id IN (SELECT id FROM scenes WHERE short_id = $1) ORDER BY created_at ASC',
+          [shortId]
+        );
+        for (const img of imagesResult.rows) {
+          if (!imagesByScene[img.scene_id]) imagesByScene[img.scene_id] = [];
+          imagesByScene[img.scene_id].push(img);
+        }
+      } catch {
+        // scene_images table may not exist yet (pre-migration); return scenes without images
       }
       const scenes = scenesResult.rows.map((s: any) => ({ ...s, images: imagesByScene[s.id] || [] }));
       res.json(scenes);
