@@ -629,11 +629,13 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                           {scene.images!.map(img => (
                             <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
                               {imageSignedUrls[img.id] ? (
-                                <img
-                                  src={imageSignedUrls[img.id]}
-                                  alt="Scene reference"
-                                  style={{ maxWidth: '220px', maxHeight: '200px', borderRadius: '8px', border: '1px solid var(--border-default)', objectFit: 'contain', display: 'block' }}
-                                />
+                                <div style={{ resize: 'both', overflow: 'hidden', width: '220px', minWidth: '80px', minHeight: '60px', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'inline-block' }}>
+                                  <img
+                                    src={imageSignedUrls[img.id]}
+                                    alt="Scene reference"
+                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }}
+                                  />
+                                </div>
                               ) : (
                                 <div style={{ width: '120px', height: '90px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
                                   Loading…
