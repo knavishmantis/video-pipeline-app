@@ -247,7 +247,7 @@ export default function SceneEditorPage() {
             &larr; Back to Dashboard
           </button>
           <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            Scene Editor — {short.title}
+            {isAdmin || user?.roles?.includes('script_writer') ? 'Scene Editor' : 'Scene Viewer'} — {short.title}
           </h1>
         </div>
         <div className="flex items-center gap-2">

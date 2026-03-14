@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
 import { scenesApi, filesApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -371,16 +371,15 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
           </div>
         ) : (
           <>
-            {/* Grid of scene cards */}
+            {/* Grid of scene cards — expanded panel is injected inline after clicked card */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
               gap: '12px',
-              marginBottom: expandedScene !== null ? '12px' : '0',
             }}>
               {scenes.map((scene, index) => (
+                <React.Fragment key={scene.id}>
                 <div
-                  key={scene.id}
                   draggable={canEditScenes}
                   onDragStart={() => handleDragStart(scene.id)}
                   onDragOver={(e) => handleDragOver(e, scene.id)}
@@ -474,28 +473,19 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
-
-            {/* Expanded scene panel (full width below grid) */}
-            {expandedScene !== null && (() => {
-              const scene = scenes.find(s => s.id === expandedScene);
-              if (!scene) return null;
-              const sceneIndex = scenes.findIndex(s => s.id === expandedScene);
-
-              return (
-                <div
-                  style={{
-                    background: 'var(--bg-elevated)',
-                    border: '1px solid var(--gold)',
-                    borderRadius: '10px',
-                    padding: '20px',
-                    marginTop: '12px',
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                >
+                {expandedScene === scene.id && (
+                    <div
+                      style={{
+                        gridColumn: '1 / -1',
+                        background: 'var(--bg-elevated)',
+                        border: '1px solid var(--gold)',
+                        borderRadius: '10px',
+                        padding: '20px',
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--gold)' }}>Scene {sceneIndex + 1}</span>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--gold)' }}>Scene {index + 1}</span>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       {saving === scene.id && (
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saving...</span>
@@ -695,9 +685,11 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                       )}
                     </div>
                   )}
-                </div>
-              );
-            })()}
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
           </>
         )}
       </div>
