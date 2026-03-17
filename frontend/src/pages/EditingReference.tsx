@@ -10,15 +10,20 @@ export default function EditingReference() {
   const isEditor = user?.roles?.includes('editor') || user?.role === 'editor';
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
   const [content, setContent] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadGuide = async () => {
       try {
-        const response = await fetch('/editing-formula.md');
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/formula-guides/editing', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
         if (response.ok) {
-          const text = await response.text();
-          setContent(text);
+          const data = await response.json();
+          setContent(data.markdown);
+          setLastUpdated(data.lastUpdated);
         } else {
           setContent('# Editing Reference Guide\n\nGuide content will be available here.');
         }
@@ -52,18 +57,15 @@ export default function EditingReference() {
           <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: 'var(--col-editing-dim)', border: '1px solid var(--col-editing-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <IconEdit className="h-5 w-5" style={{ color: 'var(--col-editing)' }} />
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <p style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '1px' }}>Reference</p>
             <h1 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.02em', margin: 0 }}>Editing Reference</h1>
           </div>
-        </div>
-
-        <div style={{ padding: '12px 16px', background: 'var(--col-editing-dim)', border: '1px solid var(--col-editing-border)', borderRadius: '8px' }}>
-          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.55', margin: 0 }}>
-            <span style={{ color: 'var(--col-editing)', fontWeight: '700' }}>⚠️ Primary Reference</span>{' '}
-            This is your primary reference document for video editing and formatting.
-            Refer to this guide regularly when editing videos to ensure consistency and quality.
-          </p>
+          {lastUpdated && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+              Updated {new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          )}
         </div>
       </div>
 

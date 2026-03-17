@@ -7,6 +7,9 @@ import { filesRouter } from './files';
 import { paymentsRouter } from './payments';
 import { authRouter } from './auth';
 import analyzedShortsRouter from './analyzedShorts';
+import { youtubeAnalyticsRouter } from './youtubeAnalytics';
+import { teamMetricsRouter } from './teamMetrics';
+import { formulaGuidesRouter } from './formulaGuides';
 import { getCacheStats, clearCache } from '../db';
 
 export function setupRoutes(app: Express): void {
@@ -18,6 +21,9 @@ export function setupRoutes(app: Express): void {
   app.use('/api/files', filesRouter);
   app.use('/api/payments', paymentsRouter);
   app.use('/api/analyzed-shorts', analyzedShortsRouter);
+  app.use('/api/youtube-analytics', youtubeAnalyticsRouter);
+  app.use('/api/team-metrics', teamMetricsRouter);
+  app.use('/api/formula-guides', formulaGuidesRouter);
 
   // Debug endpoint for cache stats (only in non-production or with debug flag)
   if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ENDPOINTS === 'true') {
