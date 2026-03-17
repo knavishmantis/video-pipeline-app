@@ -5,6 +5,8 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { IconCamera } from '@tabler/icons-react';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 export default function FlashbackReference() {
   const { user } = useAuth();
   const isClipper = user?.roles?.includes('clipper') || user?.role === 'clipper';
@@ -17,12 +19,12 @@ export default function FlashbackReference() {
     const loadGuide = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/formula-guides/flashback', {
+        const response = await fetch(`${API_URL}/formula-guides/flashback`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (response.ok) {
           const data = await response.json();
-          setContent(data.markdown);
+          setContent(data.markdown.replace(/\{\{API_BASE\}\}/g, API_URL));
           setLastUpdated(data.lastUpdated);
         } else {
           setContent('# Flashback Reference Guide\n\nGuide content will be available here.');

@@ -5,6 +5,8 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { IconEdit } from '@tabler/icons-react';
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 export default function EditingReference() {
   const { user } = useAuth();
   const isEditor = user?.roles?.includes('editor') || user?.role === 'editor';
@@ -17,12 +19,12 @@ export default function EditingReference() {
     const loadGuide = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch('/api/formula-guides/editing', {
+        const response = await fetch(`${API_URL}/formula-guides/editing`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         if (response.ok) {
           const data = await response.json();
-          setContent(data.markdown);
+          setContent(data.markdown.replace(/\{\{API_BASE\}\}/g, API_URL));
           setLastUpdated(data.lastUpdated);
         } else {
           setContent('# Editing Reference Guide\n\nGuide content will be available here.');

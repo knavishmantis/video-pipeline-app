@@ -10,17 +10,18 @@ const REPOS: Record<string, string> = {
 };
 
 // Rewrite relative image paths (e.g. docs/images/foo.png) to our proxy endpoint
+// Uses a placeholder that the frontend replaces with the correct API base URL
 function rewriteRelativeImages(markdown: string, type: string): string {
-  const proxyBase = `/api/formula-guides/${type}`;
+  const proxyPath = `{{API_BASE}}/formula-guides/${type}`;
   // HTML src="docs/images/..." → proxy endpoint
   let result = markdown.replace(
     /src="docs\/images\/([^"]+)"/g,
-    `src="${proxyBase}/images/$1"`
+    `src="${proxyPath}/images/$1"`
   );
   // Markdown ![alt](docs/images/...) → proxy endpoint
   result = result.replace(
     /\]\(docs\/images\/([^)]+)\)/g,
-    `](${proxyBase}/images/$1)`
+    `](${proxyPath}/images/$1)`
   );
   return result;
 }
