@@ -1,0 +1,256 @@
+WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.080 --> 00:00:02.310 align:start position:0%
+ 
+Why<00:00:00.320><c> does</c><00:00:00.480><c> Mojang</c><00:00:00.960><c> not</c><00:00:01.199><c> bug</c><00:00:01.520><c> test</c><00:00:01.680><c> Bedrock?</c>
+
+00:00:02.310 --> 00:00:02.320 align:start position:0%
+Why does Mojang not bug test Bedrock?
+ 
+
+00:00:02.320 --> 00:00:04.070 align:start position:0%
+Why does Mojang not bug test Bedrock?
+Bedrock<00:00:02.800><c> has</c><00:00:02.960><c> gotten</c><00:00:03.280><c> several</c><00:00:03.679><c> updates</c>
+
+00:00:04.070 --> 00:00:04.080 align:start position:0%
+Bedrock has gotten several updates
+ 
+
+00:00:04.080 --> 00:00:05.269 align:start position:0%
+Bedrock has gotten several updates
+recently<00:00:04.400><c> that</c><00:00:04.560><c> have</c><00:00:04.720><c> made</c><00:00:04.880><c> the</c><00:00:05.040><c> game</c>
+
+00:00:05.269 --> 00:00:05.279 align:start position:0%
+recently that have made the game
+ 
+
+00:00:05.279 --> 00:00:07.590 align:start position:0%
+recently that have made the game
+completely<00:00:05.920><c> unplayable</c><00:00:06.640><c> for</c><00:00:06.879><c> anyone</c><00:00:07.200><c> on</c><00:00:07.440><c> a</c>
+
+00:00:07.590 --> 00:00:07.600 align:start position:0%
+completely unplayable for anyone on a
+ 
+
+00:00:07.600 --> 00:00:09.110 align:start position:0%
+completely unplayable for anyone on a
+computer.<00:00:08.160><c> First,</c><00:00:08.400><c> there's</c><00:00:08.559><c> a</c><00:00:08.720><c> bug</c><00:00:08.880><c> that's</c>
+
+00:00:09.110 --> 00:00:09.120 align:start position:0%
+computer. First, there's a bug that's
+ 
+
+00:00:09.120 --> 00:00:10.870 align:start position:0%
+computer. First, there's a bug that's
+causing<00:00:09.440><c> insane</c><00:00:09.920><c> amounts</c><00:00:10.160><c> of</c><00:00:10.320><c> lag,</c><00:00:10.559><c> and</c><00:00:10.719><c> it</c>
+
+00:00:10.870 --> 00:00:10.880 align:start position:0%
+causing insane amounts of lag, and it
+ 
+
+00:00:10.880 --> 00:00:12.790 align:start position:0%
+causing insane amounts of lag, and it
+seems<00:00:11.120><c> somehow</c><00:00:11.599><c> tied</c><00:00:11.920><c> to</c><00:00:12.080><c> this</c><00:00:12.320><c> random</c>
+
+00:00:12.790 --> 00:00:12.800 align:start position:0%
+seems somehow tied to this random
+ 
+
+00:00:12.800 --> 00:00:14.470 align:start position:0%
+seems somehow tied to this random
+setting.<00:00:13.200><c> But</c><00:00:13.360><c> it</c><00:00:13.519><c> gets</c><00:00:13.679><c> even</c><00:00:13.920><c> worse</c><00:00:14.240><c> because</c>
+
+00:00:14.470 --> 00:00:14.480 align:start position:0%
+setting. But it gets even worse because
+ 
+
+00:00:14.480 --> 00:00:16.470 align:start position:0%
+setting. But it gets even worse because
+now<00:00:14.719><c> Bedrock</c><00:00:15.280><c> has</c><00:00:15.440><c> a</c><00:00:15.599><c> memory</c><00:00:15.920><c> leak,</c><00:00:16.160><c> which</c>
+
+00:00:16.470 --> 00:00:16.480 align:start position:0%
+now Bedrock has a memory leak, which
+ 
+
+00:00:16.480 --> 00:00:18.150 align:start position:0%
+now Bedrock has a memory leak, which
+basically<00:00:16.800><c> means</c><00:00:17.039><c> that</c><00:00:17.279><c> over</c><00:00:17.520><c> time</c><00:00:17.760><c> it</c><00:00:18.000><c> will</c>
+
+00:00:18.150 --> 00:00:18.160 align:start position:0%
+basically means that over time it will
+ 
+
+00:00:18.160 --> 00:00:19.910 align:start position:0%
+basically means that over time it will
+start<00:00:18.400><c> using</c><00:00:18.720><c> all</c><00:00:18.960><c> of</c><00:00:19.119><c> your</c><00:00:19.439><c> computer's</c>
+
+00:00:19.910 --> 00:00:19.920 align:start position:0%
+start using all of your computer's
+ 
+
+00:00:19.920 --> 00:00:21.990 align:start position:0%
+start using all of your computer's
+memory<00:00:20.320><c> until</c><00:00:20.560><c> it</c><00:00:20.800><c> lags</c><00:00:21.279><c> horribly</c><00:00:21.760><c> and</c>
+
+00:00:21.990 --> 00:00:22.000 align:start position:0%
+memory until it lags horribly and
+ 
+
+00:00:22.000 --> 00:00:24.070 align:start position:0%
+memory until it lags horribly and
+crashes.<00:00:22.640><c> But</c><00:00:22.800><c> it</c><00:00:23.039><c> still</c><00:00:23.279><c> gets</c><00:00:23.519><c> worse</c><00:00:23.840><c> because</c>
+
+00:00:24.070 --> 00:00:24.080 align:start position:0%
+crashes. But it still gets worse because
+ 
+
+00:00:24.080 --> 00:00:25.990 align:start position:0%
+crashes. But it still gets worse because
+Bedrock<00:00:24.720><c> recently</c><00:00:25.119><c> had</c><00:00:25.279><c> an</c><00:00:25.439><c> update</c><00:00:25.680><c> that</c>
+
+00:00:25.990 --> 00:00:26.000 align:start position:0%
+Bedrock recently had an update that
+ 
+
+00:00:26.000 --> 00:00:27.990 align:start position:0%
+Bedrock recently had an update that
+required<00:00:26.480><c> PC</c><00:00:26.880><c> players</c><00:00:27.199><c> to</c><00:00:27.439><c> uninstall</c>
+
+00:00:27.990 --> 00:00:28.000 align:start position:0%
+required PC players to uninstall
+ 
+
+00:00:28.000 --> 00:00:29.669 align:start position:0%
+required PC players to uninstall
+Minecraft<00:00:28.480><c> and</c><00:00:28.720><c> reinstall</c><00:00:29.119><c> it.</c><00:00:29.359><c> But</c><00:00:29.519><c> what</c>
+
+00:00:29.669 --> 00:00:29.679 align:start position:0%
+Minecraft and reinstall it. But what
+ 
+
+00:00:29.679 --> 00:00:31.429 align:start position:0%
+Minecraft and reinstall it. But what
+some<00:00:29.920><c> players</c><00:00:30.240><c> didn't</c><00:00:30.560><c> know</c><00:00:30.720><c> was</c><00:00:30.960><c> that</c><00:00:31.119><c> this</c>
+
+00:00:31.429 --> 00:00:31.439 align:start position:0%
+some players didn't know was that this
+ 
+
+00:00:31.439 --> 00:00:33.510 align:start position:0%
+some players didn't know was that this
+deleted<00:00:32.000><c> everything</c><00:00:32.559><c> related</c><00:00:32.880><c> to</c><00:00:33.120><c> Minecraft</c>
+
+00:00:33.510 --> 00:00:33.520 align:start position:0%
+deleted everything related to Minecraft
+ 
+
+00:00:33.520 --> 00:00:35.350 align:start position:0%
+deleted everything related to Minecraft
+and<00:00:33.760><c> Mojang</c><00:00:34.320><c> didn't</c><00:00:34.640><c> say</c><00:00:34.800><c> anything</c><00:00:35.120><c> about</c>
+
+00:00:35.350 --> 00:00:35.360 align:start position:0%
+and Mojang didn't say anything about
+ 
+
+00:00:35.360 --> 00:00:37.350 align:start position:0%
+and Mojang didn't say anything about
+this.<00:00:35.680><c> So</c><00:00:35.920><c> loads</c><00:00:36.239><c> of</c><00:00:36.399><c> players</c><00:00:36.800><c> lost</c><00:00:37.120><c> their</c>
+
+00:00:37.350 --> 00:00:37.360 align:start position:0%
+this. So loads of players lost their
+ 
+
+00:00:37.360 --> 00:00:39.350 align:start position:0%
+this. So loads of players lost their
+worlds.<00:00:37.920><c> But</c><00:00:38.079><c> if</c><00:00:38.160><c> you</c><00:00:38.320><c> can</c><00:00:38.480><c> deal</c><00:00:38.719><c> with</c><00:00:38.960><c> all</c><00:00:39.200><c> of</c>
+
+00:00:39.350 --> 00:00:39.360 align:start position:0%
+worlds. But if you can deal with all of
+ 
+
+00:00:39.360 --> 00:00:41.190 align:start position:0%
+worlds. But if you can deal with all of
+those<00:00:39.520><c> things,</c><00:00:39.920><c> Mojang</c><00:00:40.480><c> made</c><00:00:40.559><c> it</c><00:00:40.719><c> worse</c><00:00:40.960><c> and</c>
+
+00:00:41.190 --> 00:00:41.200 align:start position:0%
+those things, Mojang made it worse and
+ 
+
+00:00:41.200 --> 00:00:43.510 align:start position:0%
+those things, Mojang made it worse and
+Bedrock<00:00:41.680><c> is</c><00:00:41.920><c> completely</c><00:00:42.559><c> unplayable.</c><00:00:43.200><c> Now,</c>
+
+00:00:43.510 --> 00:00:43.520 align:start position:0%
+Bedrock is completely unplayable. Now,
+ 
+
+00:00:43.520 --> 00:00:45.190 align:start position:0%
+Bedrock is completely unplayable. Now,
+this<00:00:43.680><c> is</c><00:00:43.840><c> because</c><00:00:44.160><c> normally</c><00:00:44.640><c> when</c><00:00:44.800><c> you</c><00:00:44.960><c> play</c>
+
+00:00:45.190 --> 00:00:45.200 align:start position:0%
+this is because normally when you play
+ 
+
+00:00:45.200 --> 00:00:47.350 align:start position:0%
+this is because normally when you play
+Minecraft,<00:00:45.760><c> your</c><00:00:45.920><c> cursor</c><00:00:46.320><c> is</c><00:00:46.480><c> invisible</c><00:00:47.039><c> but</c>
+
+00:00:47.350 --> 00:00:47.360 align:start position:0%
+Minecraft, your cursor is invisible but
+ 
+
+00:00:47.360 --> 00:00:48.950 align:start position:0%
+Minecraft, your cursor is invisible but
+stays<00:00:47.600><c> in</c><00:00:47.840><c> the</c><00:00:48.000><c> middle</c><00:00:48.160><c> of</c><00:00:48.320><c> the</c><00:00:48.480><c> screen.</c><00:00:48.800><c> But</c>
+
+00:00:48.950 --> 00:00:48.960 align:start position:0%
+stays in the middle of the screen. But
+ 
+
+00:00:48.960 --> 00:00:51.029 align:start position:0%
+stays in the middle of the screen. But
+Bedrock<00:00:49.520><c> now</c><00:00:49.680><c> has</c><00:00:49.840><c> a</c><00:00:50.079><c> bug</c><00:00:50.239><c> where</c><00:00:50.480><c> your</c><00:00:50.640><c> cursor</c>
+
+00:00:51.029 --> 00:00:51.039 align:start position:0%
+Bedrock now has a bug where your cursor
+ 
+
+00:00:51.039 --> 00:00:52.790 align:start position:0%
+Bedrock now has a bug where your cursor
+moves<00:00:51.360><c> when</c><00:00:51.600><c> you</c><00:00:51.760><c> move</c><00:00:51.920><c> your</c><00:00:52.079><c> head.</c><00:00:52.480><c> This</c>
+
+00:00:52.790 --> 00:00:52.800 align:start position:0%
+moves when you move your head. This
+ 
+
+00:00:52.800 --> 00:00:54.549 align:start position:0%
+moves when you move your head. This
+basically<00:00:53.199><c> means</c><00:00:53.440><c> that</c><00:00:53.680><c> anytime</c><00:00:54.079><c> you</c><00:00:54.320><c> move</c>
+
+00:00:54.549 --> 00:00:54.559 align:start position:0%
+basically means that anytime you move
+ 
+
+00:00:54.559 --> 00:00:56.389 align:start position:0%
+basically means that anytime you move
+around,<00:00:54.879><c> your</c><00:00:55.120><c> cursor</c><00:00:55.440><c> can</c><00:00:55.680><c> go</c><00:00:55.840><c> off</c><00:00:56.079><c> of</c><00:00:56.239><c> your</c>
+
+00:00:56.389 --> 00:00:56.399 align:start position:0%
+around, your cursor can go off of your
+ 
+
+00:00:56.399 --> 00:00:58.150 align:start position:0%
+around, your cursor can go off of your
+Minecraft<00:00:56.879><c> window,</c><00:00:57.199><c> and</c><00:00:57.360><c> if</c><00:00:57.520><c> you</c><00:00:57.600><c> click,</c><00:00:57.920><c> it</c>
+
+00:00:58.150 --> 00:00:58.160 align:start position:0%
+Minecraft window, and if you click, it
+ 
+
+00:00:58.160 --> 00:01:01.680 align:start position:0%
+Minecraft window, and if you click, it
+pauses<00:00:58.559><c> the</c><00:00:58.719><c> game,</c><00:00:59.039><c> causing</c><00:00:59.359><c> you</c><00:00:59.520><c> to</c>
+
