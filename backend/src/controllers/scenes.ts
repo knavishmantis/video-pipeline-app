@@ -56,7 +56,7 @@ export const scenesController = {
   // POST /api/shorts/:shortId/scenes
   async create(req: AuthRequest, res: Response): Promise<void> {
     const { shortId } = req.params;
-    const { script_line, direction, scene_order } = req.body;
+    const { script_line, direction, clipper_notes, editor_notes, scene_order } = req.body;
     try {
       // If no scene_order provided, append to end
       let order = scene_order;
@@ -69,8 +69,8 @@ export const scenesController = {
       }
 
       const result = await query(
-        'INSERT INTO scenes (short_id, scene_order, script_line, direction) VALUES ($1, $2, $3, $4) RETURNING *',
-        [shortId, order, script_line || '', direction || '']
+        'INSERT INTO scenes (short_id, scene_order, script_line, direction, clipper_notes, editor_notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [shortId, order, script_line || '', direction || '', clipper_notes || null, editor_notes || null]
       );
       res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -170,8 +170,8 @@ export const scenesController = {
         const scene = scenes[i];
         const order = scene.scene_order !== undefined ? scene.scene_order : i;
         const result = await query(
-          'INSERT INTO scenes (short_id, scene_order, script_line, direction) VALUES ($1, $2, $3, $4) RETURNING *',
-          [shortId, order, scene.script_line || '', scene.direction || '']
+          'INSERT INTO scenes (short_id, scene_order, script_line, direction, clipper_notes, editor_notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+          [shortId, order, scene.script_line || '', scene.direction || '', scene.clipper_notes || null, scene.editor_notes || null]
         );
         results.push(result.rows[0]);
       }

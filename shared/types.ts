@@ -165,6 +165,8 @@ export interface Scene {
 export interface CreateSceneInput {
   script_line: string;
   direction?: string;
+  clipper_notes?: string | null;
+  editor_notes?: string | null;
   scene_order?: number;
   image_url?: string | null;
 }

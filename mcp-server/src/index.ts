@@ -125,9 +125,11 @@ server.tool(
     short_id: z.number().describe('The ID of the short'),
     script_line: z.string().describe('The narration text for this scene'),
     direction: z.string().optional().describe('Editing/visual direction for what the clipper/editor should show'),
+    clipper_notes: z.string().optional().describe('Detailed instructions for the clipper'),
+    editor_notes: z.string().optional().describe('Post-production notes for the editor'),
   },
-  async ({ short_id, script_line, direction }) => {
-    const scene = await apiRequest('POST', `/shorts/${short_id}/scenes`, { script_line, direction });
+  async ({ short_id, script_line, direction, clipper_notes, editor_notes }) => {
+    const scene = await apiRequest('POST', `/shorts/${short_id}/scenes`, { script_line, direction, clipper_notes, editor_notes });
     return {
       content: [{ type: 'text' as const, text: JSON.stringify(scene, null, 2) }],
     };
@@ -171,13 +173,15 @@ server.tool(
 
 server.tool(
   'bulk_create_scenes',
-  'Replace all scenes for a short at once. Deletes existing scenes and creates new ones. This is the main tool for generating an editing script from a main script.',
+  'Replace all scenes for a short at once. Deletes existing scenes and creates new ones. This is the main tool for generating an editing script from a main script. Split at phrase boundaries (5-7 words per scene). Include detailed clipper_notes for every scene describing exactly what to record in Flashback.',
   {
     short_id: z.number().describe('The ID of the short'),
     scenes: z.array(z.object({
-      script_line: z.string().describe('The narration text for this scene'),
-      direction: z.string().optional().describe('Editing/visual direction'),
-    })).describe('Array of scenes in order. Each scene has a script_line (narration) and direction (what to show).'),
+      script_line: z.string().describe('The narration text for this scene (one phrase, 5-7 words)'),
+      direction: z.string().optional().describe('Brief visual direction'),
+      clipper_notes: z.string().optional().describe('Detailed instructions for the clipper: what to build, where, what skins/armor, camera angle, shot type'),
+      editor_notes: z.string().optional().describe('Post-production notes: SFX, transitions, overlays, timing. Only include when needed.'),
+    })).describe('Array of scenes in order.'),
   },
   async ({ short_id, scenes }) => {
     const result = await apiRequest('POST', `/shorts/${short_id}/scenes/bulk`, { scenes });
