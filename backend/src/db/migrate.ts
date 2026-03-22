@@ -160,7 +160,6 @@ CREATE TABLE IF NOT EXISTS youtube_video_analytics (
 CREATE INDEX IF NOT EXISTS idx_scenes_short_id ON scenes(short_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_order ON scenes(short_id, scene_order);
 CREATE INDEX IF NOT EXISTS idx_scene_images_scene_id ON scene_images(scene_id);
-CREATE INDEX IF NOT EXISTS idx_scenes_preset_clip_id ON scenes(preset_clip_id);
 CREATE INDEX IF NOT EXISTS idx_shorts_status ON shorts(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_short_id ON assignments(short_id);
