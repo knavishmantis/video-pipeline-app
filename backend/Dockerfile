@@ -35,6 +35,9 @@ COPY --from=builder /workspace/backend/dist ./dist
 # Copy script grading criteria file (needed at runtime)
 COPY --from=builder /workspace/backend/script-grading-criteria.md ./script-grading-criteria.md
 
+# Copy research reports (backlog.json needed for /api/research/ideas)
+COPY research-reports ./research-reports
+
 # Expose port
 EXPOSE 8080
 

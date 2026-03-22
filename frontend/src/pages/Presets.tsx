@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { PresetClip } from '../../../shared/types';
 import { presetClipsApi, filesApi } from '../services/api';
 
@@ -17,6 +17,7 @@ export default function Presets() {
   const [editDesc, setEditDesc] = useState('');
   const [durations, setDurations] = useState<Record<number, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadingUrls = useRef<Set<number>>(new Set());
 
   useEffect(() => {
     loadClips();
@@ -26,17 +27,36 @@ export default function Presets() {
     try {
       const data = await presetClipsApi.getAll();
       setClips(data);
-      for (const clip of data) {
-        presetClipsApi.getVideoUrl(clip.id)
-          .then(url => setVideoUrls(prev => ({ ...prev, [clip.id]: url })))
-          .catch(() => {});
-      }
     } catch (error) {
       console.error('Failed to load preset clips:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Lazy-load video URL when a clip card becomes visible
+  const loadVideoUrl = useCallback((clipId: number) => {
+    if (videoUrls[clipId] || loadingUrls.current.has(clipId)) return;
+    loadingUrls.current.add(clipId);
+    presetClipsApi.getVideoUrl(clipId)
+      .then(url => setVideoUrls(prev => ({ ...prev, [clipId]: url })))
+      .catch(() => {})
+      .finally(() => loadingUrls.current.delete(clipId));
+  }, [videoUrls]);
+
+  const clipObserverRef = useCallback((clipId: number) => (node: HTMLDivElement | null) => {
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          loadVideoUrl(clipId);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(node);
+  }, [loadVideoUrl]);
 
   const handleUpload = async () => {
     if (!uploadFile || !uploadName.trim()) return;
@@ -291,6 +311,7 @@ export default function Presets() {
           {clips.map((clip, index) => (
             <div
               key={clip.id}
+              ref={clipObserverRef(clip.id)}
               className="rounded-xl overflow-hidden transition-all"
               style={{
                 background: 'var(--bg-elevated)',
@@ -316,7 +337,7 @@ export default function Presets() {
                   color: 'var(--gold)',
                   letterSpacing: '-0.02em',
                 }}>
-                  {index + 1}
+                  {clip.label || index + 1}
                 </span>
               </div>
 
@@ -332,7 +353,7 @@ export default function Presets() {
                   <video
                     src={videoUrls[clip.id]}
                     controls
-                    preload="auto"
+                    preload="none"
                     onLoadedMetadata={(e) => { const d = (e.target as HTMLVideoElement).duration; if (d && isFinite(d)) setDurations(prev => ({ ...prev, [clip.id]: d })); }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />

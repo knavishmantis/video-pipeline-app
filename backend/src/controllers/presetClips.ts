@@ -8,7 +8,7 @@ export const presetClipsController = {
   // GET /api/preset-clips
   async getAll(_req: AuthRequest, res: Response): Promise<void> {
     try {
-      const result = await query('SELECT * FROM preset_clips ORDER BY created_at DESC');
+      const result = await query("SELECT * FROM preset_clips ORDER BY CAST(NULLIF(label, '') AS INTEGER) ASC NULLS LAST, created_at DESC");
       res.json(result.rows);
     } catch (error) {
       logger.error('Get preset clips error', { error });
@@ -49,9 +49,13 @@ export const presetClipsController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
     const { name, description, bucket_path, mime_type, file_size } = req.body;
     try {
+      // Auto-assign next label number
+      const maxResult = await query("SELECT COALESCE(MAX(CAST(label AS INTEGER)), 0) AS max_label FROM preset_clips WHERE label ~ '^[0-9]+$'");
+      const nextLabel = String((maxResult.rows[0].max_label || 0) + 1);
+
       const result = await query(
-        'INSERT INTO preset_clips (name, description, bucket_path, mime_type, file_size) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-        [name, description || null, bucket_path, mime_type || null, file_size || null]
+        'INSERT INTO preset_clips (label, name, description, bucket_path, mime_type, file_size) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+        [nextLabel, name, description || null, bucket_path, mime_type || null, file_size || null]
       );
       res.status(201).json(result.rows[0]);
     } catch (error) {

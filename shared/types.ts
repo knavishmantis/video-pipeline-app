@@ -143,6 +143,7 @@ export interface UserRate {
 
 export interface PresetClip {
   id: number;
+  label: string;
   name: string;
   description?: string | null;
   bucket_path: string;

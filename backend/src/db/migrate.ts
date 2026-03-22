@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS scenes (
 -- Preset clips (reusable video clips referenced by scenes)
 CREATE TABLE IF NOT EXISTS preset_clips (
   id SERIAL PRIMARY KEY,
+  label VARCHAR(50),
   name VARCHAR(255) NOT NULL,
   description TEXT,
   bucket_path TEXT NOT NULL,
@@ -273,6 +274,25 @@ export async function migrate(): Promise<void> {
       } catch (error: any) {
         if (!error.message.includes('already exists')) {
           console.warn('Could not create preset_clips table:', error.message);
+        }
+      }
+
+      // Add label column to preset_clips and backfill
+      try {
+        await query('ALTER TABLE preset_clips ADD COLUMN IF NOT EXISTS label VARCHAR(50)');
+        // Backfill unlabeled presets with sequential numbers based on creation order
+        await query(`
+          UPDATE preset_clips SET label = sub.new_label
+          FROM (
+            SELECT id, CAST(ROW_NUMBER() OVER (ORDER BY created_at ASC) AS TEXT) AS new_label
+            FROM preset_clips WHERE label IS NULL
+          ) sub
+          WHERE preset_clips.id = sub.id
+        `);
+        console.log('Added label column to preset_clips');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add label column:', error.message);
         }
       }
 

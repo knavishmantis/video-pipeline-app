@@ -367,7 +367,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; }}
               onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-              <span style={{ fontWeight: '600' }}>{preset.name}</span>
+              <span style={{ fontWeight: '600' }}>{preset.label ? `${preset.label}. ` : ''}{preset.name}</span>
               {preset.description && (
                 <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>{preset.description}</span>
               )}
@@ -399,7 +399,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               />
             )}
             <div style={{ flex: 1 }}>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.name}</span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.label ? `${preset.label}. ` : ''}{preset.name}</span>
               {preset.description && (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{preset.description}</p>
               )}
@@ -512,7 +512,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               />
             )}
             <div>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{scene.preset_clip.name}</span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{scene.preset_clip.label ? `${scene.preset_clip.label}. ` : ''}{scene.preset_clip.name}</span>
               {scene.preset_clip.description && (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{scene.preset_clip.description}</p>
               )}
@@ -869,8 +869,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
                       )}
                       {scene.preset_clip && (
-                        <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: '600' }} title={`Preset: ${scene.preset_clip.name}`}>
-                          PRESET
+                        <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: '600' }} title={`Preset ${scene.preset_clip.label || ''}: ${scene.preset_clip.name}`}>
+                          PRESET {scene.preset_clip.label || ''}
                         </span>
                       )}
                       {(scene.images?.length ?? 0) > 0 && (
