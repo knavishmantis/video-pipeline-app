@@ -118,6 +118,7 @@ CREATE TABLE IF NOT EXISTS preset_clips (
   name VARCHAR(255) NOT NULL,
   description TEXT,
   bucket_path TEXT NOT NULL,
+  thumbnail_path TEXT,
   mime_type VARCHAR(100),
   file_size BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -293,6 +294,16 @@ export async function migrate(): Promise<void> {
       } catch (error: any) {
         if (!error.message.includes('already exists')) {
           console.warn('Could not add label column:', error.message);
+        }
+      }
+
+      // Add thumbnail_path column to preset_clips
+      try {
+        await query('ALTER TABLE preset_clips ADD COLUMN IF NOT EXISTS thumbnail_path TEXT');
+        console.log('Added thumbnail_path column to preset_clips');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add thumbnail_path column:', error.message);
         }
       }
 

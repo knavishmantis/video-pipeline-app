@@ -17,6 +17,9 @@ presetClipsRouter.post('/upload-url', presetClipsController.getUploadUrl);
 // GET /api/preset-clips/:id
 presetClipsRouter.get('/:id', presetClipsController.getById);
 
+// GET /api/preset-clips/:id/thumbnail-url
+presetClipsRouter.get('/:id/thumbnail-url', presetClipsController.getThumbnailUrl);
+
 // GET /api/preset-clips/:id/video-url
 presetClipsRouter.get('/:id/video-url', presetClipsController.getVideoUrl);
 

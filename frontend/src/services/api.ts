@@ -409,6 +409,10 @@ export const presetClipsApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/preset-clips/${id}`);
   },
+  getThumbnailUrl: async (id: number): Promise<string> => {
+    const response = await api.get(`/preset-clips/${id}/thumbnail-url`);
+    return response.data.url;
+  },
   getVideoUrl: async (id: number): Promise<string> => {
     const response = await api.get(`/preset-clips/${id}/video-url`);
     return response.data.url;
@@ -457,22 +461,8 @@ export const youtubeAnalyticsApi = {
   },
 };
 
-export interface ResearchReportSummary {
-  date: string;
-  periodStart?: string;
-  periodEnd?: string;
-  collectedAt?: string;
-  hasIdeas: boolean;
-  ideaCount: number;
-  summary?: {
-    youtubeChannels: number;
-    youtubeStandouts: number;
-    redditPosts: number;
-    minecraftVersions: number;
-  };
-}
-
 export interface ResearchIdea {
+  ideaId: string;
   title: string;
   hook: string;
   whyItFits: string;
@@ -485,26 +475,22 @@ export interface ResearchIdea {
   codeReference?: string;
   sources?: { label: string; url?: string }[];
   score: number;
+  createdAt: string;
+  acknowledged?: boolean;
 }
 
-export interface ResearchIdeas {
-  generatedAt: string;
-  periodStart: string;
-  periodEnd: string;
+export interface ResearchBacklog {
+  lastUpdated: string | null;
   ideas: ResearchIdea[];
 }
 
 export const researchApi = {
-  listReports: async (): Promise<ResearchReportSummary[]> => {
-    const response = await api.get('/research/reports');
+  getBacklog: async (): Promise<ResearchBacklog> => {
+    const response = await api.get('/research/ideas');
     return response.data;
   },
-  getIdeas: async (date: string): Promise<ResearchIdeas> => {
-    const response = await api.get(`/research/reports/${date}/ideas`);
-    return response.data;
-  },
-  getRaw: async (date: string): Promise<any> => {
-    const response = await api.get(`/research/reports/${date}/raw`);
+  acknowledgeIdea: async (ideaId: string): Promise<{ ideaId: string; acknowledged: boolean }> => {
+    const response = await api.post(`/research/ideas/${ideaId}/acknowledge`);
     return response.data;
   },
 };

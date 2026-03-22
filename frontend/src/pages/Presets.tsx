@@ -5,7 +5,9 @@ import { presetClipsApi, filesApi } from '../services/api';
 export default function Presets() {
   const [clips, setClips] = useState<PresetClip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [thumbnailUrls, setThumbnailUrls] = useState<Record<number, string>>({});
   const [videoUrls, setVideoUrls] = useState<Record<number, string>>({});
+  const [playingClip, setPlayingClip] = useState<number | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [uploadName, setUploadName] = useState('');
   const [uploadDesc, setUploadDesc] = useState('');
@@ -17,7 +19,7 @@ export default function Presets() {
   const [editDesc, setEditDesc] = useState('');
   const [durations, setDurations] = useState<Record<number, number>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const loadingUrls = useRef<Set<number>>(new Set());
+  const loadingUrls = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     loadClips();
@@ -34,54 +36,133 @@ export default function Presets() {
     }
   };
 
-  // Lazy-load video URL when a clip card becomes visible
-  const loadVideoUrl = useCallback((clipId: number) => {
-    if (videoUrls[clipId] || loadingUrls.current.has(clipId)) return;
-    loadingUrls.current.add(clipId);
-    presetClipsApi.getVideoUrl(clipId)
-      .then(url => setVideoUrls(prev => ({ ...prev, [clipId]: url })))
+  // Lazy-load thumbnail URL when a clip card becomes visible
+  const loadThumbnailUrl = useCallback((clip: PresetClip) => {
+    const key = `thumb-${clip.id}`;
+    if (thumbnailUrls[clip.id] || loadingUrls.current.has(key)) return;
+    if (!clip.thumbnail_path) {
+      // No thumbnail — fall back to loading video URL for legacy presets
+      const vKey = `video-${clip.id}`;
+      if (videoUrls[clip.id] || loadingUrls.current.has(vKey)) return;
+      loadingUrls.current.add(vKey);
+      presetClipsApi.getVideoUrl(clip.id)
+        .then(url => setVideoUrls(prev => ({ ...prev, [clip.id]: url })))
+        .catch(() => {})
+        .finally(() => loadingUrls.current.delete(vKey));
+      return;
+    }
+    loadingUrls.current.add(key);
+    presetClipsApi.getThumbnailUrl(clip.id)
+      .then(url => setThumbnailUrls(prev => ({ ...prev, [clip.id]: url })))
       .catch(() => {})
-      .finally(() => loadingUrls.current.delete(clipId));
-  }, [videoUrls]);
+      .finally(() => loadingUrls.current.delete(key));
+  }, [thumbnailUrls, videoUrls]);
 
-  const clipObserverRef = useCallback((clipId: number) => (node: HTMLDivElement | null) => {
+  const clipObserverRef = useCallback((clip: PresetClip) => (node: HTMLDivElement | null) => {
     if (!node) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          loadVideoUrl(clipId);
+          loadThumbnailUrl(clip);
           observer.disconnect();
         }
       },
       { rootMargin: '200px' }
     );
     observer.observe(node);
-  }, [loadVideoUrl]);
+  }, [loadThumbnailUrl]);
+
+  // Load video URL on demand when user clicks play
+  const handlePlay = useCallback((clipId: number) => {
+    setPlayingClip(clipId);
+    if (videoUrls[clipId]) return;
+    const key = `video-${clipId}`;
+    if (loadingUrls.current.has(key)) return;
+    loadingUrls.current.add(key);
+    presetClipsApi.getVideoUrl(clipId)
+      .then(url => setVideoUrls(prev => ({ ...prev, [clipId]: url })))
+      .catch(() => {})
+      .finally(() => loadingUrls.current.delete(key));
+  }, [videoUrls]);
+
+  // Generate a thumbnail PNG from a video file at 50% duration
+  const generateThumbnail = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.muted = true;
+      const url = URL.createObjectURL(file);
+      video.src = url;
+      video.onloadedmetadata = () => {
+        video.currentTime = video.duration / 2;
+      };
+      video.onseeked = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(video, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Failed to generate thumbnail'));
+        }, 'image/png');
+      };
+      video.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to load video for thumbnail'));
+      };
+    });
+  };
 
   const handleUpload = async () => {
     if (!uploadFile || !uploadName.trim()) return;
     setUploading(true);
     setUploadProgress(0);
     try {
+      // 1. Upload video
       const { upload_url, bucket_path } = await presetClipsApi.getUploadUrl(
         uploadFile.name,
         uploadFile.size,
         uploadFile.type
       );
       await filesApi.uploadDirectToGCS(upload_url, uploadFile, (p) => {
-        setUploadProgress(Math.round((p.loaded / p.total) * 100));
+        setUploadProgress(Math.round((p.loaded / p.total) * 90));
       });
+
+      // 2. Generate and upload thumbnail
+      let thumbnailPath: string | undefined;
+      try {
+        const thumbBlob = await generateThumbnail(uploadFile);
+        const thumbName = uploadFile.name.replace(/\.[^.]+$/, '') + '-thumb.png';
+        const { upload_url: thumbUploadUrl, bucket_path: thumbBucketPath } = await presetClipsApi.getUploadUrl(
+          thumbName,
+          thumbBlob.size,
+          'image/png'
+        );
+        await filesApi.uploadDirectToGCS(thumbUploadUrl, new File([thumbBlob], thumbName, { type: 'image/png' }), () => {});
+        thumbnailPath = thumbBucketPath;
+        setUploadProgress(95);
+      } catch (thumbErr) {
+        console.warn('Thumbnail generation failed, continuing without:', thumbErr);
+      }
+
+      // 3. Create DB record
       const newClip = await presetClipsApi.create({
         name: uploadName.trim(),
         description: uploadDesc.trim() || undefined,
         bucket_path,
+        thumbnail_path: thumbnailPath,
         mime_type: uploadFile.type,
         file_size: uploadFile.size,
       });
-      setClips(prev => [newClip, ...prev]);
-      presetClipsApi.getVideoUrl(newClip.id)
-        .then(url => setVideoUrls(prev => ({ ...prev, [newClip.id]: url })))
-        .catch(() => {});
+      setUploadProgress(100);
+      setClips(prev => [...prev, newClip]);
+      if (thumbnailPath) {
+        presetClipsApi.getThumbnailUrl(newClip.id)
+          .then(url => setThumbnailUrls(prev => ({ ...prev, [newClip.id]: url })))
+          .catch(() => {});
+      }
       setShowUpload(false);
       setUploadName('');
       setUploadDesc('');
@@ -311,7 +392,7 @@ export default function Presets() {
           {clips.map((clip, index) => (
             <div
               key={clip.id}
-              ref={clipObserverRef(clip.id)}
+              ref={clipObserverRef(clip)}
               className="rounded-xl overflow-hidden transition-all"
               style={{
                 background: 'var(--bg-elevated)',
@@ -341,22 +422,45 @@ export default function Presets() {
                 </span>
               </div>
 
-              {/* Video */}
+              {/* Preview / Video */}
               <div style={{
                 width: '360px',
                 minWidth: '360px',
                 height: '220px',
                 background: '#000',
                 overflow: 'hidden',
-              }}>
-                {videoUrls[clip.id] ? (
+                position: 'relative',
+                cursor: playingClip === clip.id ? 'default' : 'pointer',
+              }}
+                onClick={() => { if (playingClip !== clip.id) handlePlay(clip.id); }}
+              >
+                {playingClip === clip.id && videoUrls[clip.id] ? (
                   <video
                     src={videoUrls[clip.id]}
                     controls
-                    preload="none"
+                    autoPlay
+                    preload="auto"
                     onLoadedMetadata={(e) => { const d = (e.target as HTMLVideoElement).duration; if (d && isFinite(d)) setDurations(prev => ({ ...prev, [clip.id]: d })); }}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
+                ) : thumbnailUrls[clip.id] ? (
+                  <>
+                    <img src={thumbnailUrls[clip.id]} alt={clip.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="8 5 20 12 8 19" /></svg>
+                      </div>
+                    </div>
+                  </>
+                ) : videoUrls[clip.id] ? (
+                  <>
+                    <video src={videoUrls[clip.id]} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.25)' }}>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><polygon points="8 5 20 12 8 19" /></svg>
+                      </div>
+                    </div>
+                  </>
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>Loading...</div>
                 )}
@@ -420,14 +524,15 @@ export default function Presets() {
                           Edit
                         </button>
                         <button
-                          onClick={() => {
-                            const url = videoUrls[clip.id];
-                            if (url) {
-                              const a = document.createElement('a');
-                              a.href = url;
-                              a.download = clip.name.replace(/\s+/g, '-').toLowerCase() + '.mp4';
-                              a.click();
+                          onClick={async () => {
+                            let url = videoUrls[clip.id];
+                            if (!url) {
+                              try { url = await presetClipsApi.getVideoUrl(clip.id); } catch { return; }
                             }
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = clip.name.replace(/\s+/g, '-').toLowerCase() + '.mp4';
+                            a.click();
                           }}
                           className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
                           style={{ color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer' }}

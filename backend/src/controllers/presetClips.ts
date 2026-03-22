@@ -47,15 +47,15 @@ export const presetClipsController = {
 
   // POST /api/preset-clips
   async create(req: AuthRequest, res: Response): Promise<void> {
-    const { name, description, bucket_path, mime_type, file_size } = req.body;
+    const { name, description, bucket_path, thumbnail_path, mime_type, file_size } = req.body;
     try {
       // Auto-assign next label number
       const maxResult = await query("SELECT COALESCE(MAX(CAST(label AS INTEGER)), 0) AS max_label FROM preset_clips WHERE label ~ '^[0-9]+$'");
       const nextLabel = String((maxResult.rows[0].max_label || 0) + 1);
 
       const result = await query(
-        'INSERT INTO preset_clips (label, name, description, bucket_path, mime_type, file_size) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [nextLabel, name, description || null, bucket_path, mime_type || null, file_size || null]
+        'INSERT INTO preset_clips (label, name, description, bucket_path, thumbnail_path, mime_type, file_size) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [nextLabel, name, description || null, bucket_path, thumbnail_path || null, mime_type || null, file_size || null]
       );
       res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -67,7 +67,7 @@ export const presetClipsController = {
   // PUT /api/preset-clips/:id
   async update(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, thumbnail_path } = req.body;
     try {
       const updates: string[] = [];
       const params: any[] = [];
@@ -80,6 +80,10 @@ export const presetClipsController = {
       if (description !== undefined) {
         updates.push(`description = $${paramCount++}`);
         params.push(description);
+      }
+      if (thumbnail_path !== undefined) {
+        updates.push(`thumbnail_path = $${paramCount++}`);
+        params.push(thumbnail_path);
       }
 
       if (updates.length === 0) {
@@ -134,6 +138,27 @@ export const presetClipsController = {
     } catch (error) {
       logger.error('Delete preset clip error', { id, error });
       res.status(500).json({ error: 'Failed to delete preset clip' });
+    }
+  },
+
+  // GET /api/preset-clips/:id/thumbnail-url
+  async getThumbnailUrl(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const result = await query('SELECT thumbnail_path FROM preset_clips WHERE id = $1', [id]);
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Preset clip not found' });
+        return;
+      }
+      if (!result.rows[0].thumbnail_path) {
+        res.status(404).json({ error: 'No thumbnail available' });
+        return;
+      }
+      const url = await getSignedUrl(result.rows[0].thumbnail_path);
+      res.json({ url });
+    } catch (error) {
+      logger.error('Get preset clip thumbnail URL error', { id, error });
+      res.status(500).json({ error: 'Failed to get thumbnail URL' });
     }
   },
 

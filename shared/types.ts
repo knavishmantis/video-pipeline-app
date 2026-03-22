@@ -147,9 +147,11 @@ export interface PresetClip {
   name: string;
   description?: string | null;
   bucket_path: string;
+  thumbnail_path?: string | null;
   mime_type?: string | null;
   file_size?: number | null;
   video_url?: string;
+  thumbnail_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -158,6 +160,7 @@ export interface CreatePresetClipInput {
   name: string;
   description?: string;
   bucket_path: string;
+  thumbnail_path?: string;
   mime_type?: string;
   file_size?: number;
 }
