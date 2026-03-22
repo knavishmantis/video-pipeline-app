@@ -322,6 +322,7 @@ export default function SceneEditorPage() {
       <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
         <SceneEditor
           shortId={short.id}
+          shortStatus={short.status}
           scriptContent={short.script_content || ''}
           onScriptContentChange={async (content) => {
             try {

@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
-import { scenesApi, filesApi } from '../services/api';
+import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput, PresetClip, ShortStatus } from '../../../shared/types';
+import { scenesApi, filesApi, presetClipsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SceneEditorProps {
   shortId: number;
+  shortStatus?: ShortStatus;
   scriptContent: string;
   onScriptContentChange: (content: string) => void;
   isAdmin: boolean;
 }
 
-export default function SceneEditor({ shortId, scriptContent, onScriptContentChange, isAdmin }: SceneEditorProps) {
+export default function SceneEditor({ shortId, shortStatus, scriptContent, onScriptContentChange, isAdmin }: SceneEditorProps) {
   const { user } = useAuth();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +25,21 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   const scriptRef = useRef<HTMLDivElement>(null);
   const saveTimeouts = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
+  // Preset clips state
+  const [presetClips, setPresetClips] = useState<PresetClip[]>([]);
+  const [presetVideoUrls, setPresetVideoUrls] = useState<Record<number, string>>({});
+  const [showPresetPicker, setShowPresetPicker] = useState<number | null>(null);
+
+  // Scroll view state — default to scroll view when short is past script stage
+  const isScriptMode = !shortStatus || shortStatus === 'idea' || shortStatus === 'script';
+  const [scrollView, setScrollView] = useState(!isScriptMode);
+  const [scrollIndex, setScrollIndex] = useState(0);
+
   const canEditScenes = isAdmin || user?.roles?.includes('script_writer') || false;
 
   useEffect(() => {
     loadScenes();
+    loadPresetClips();
   }, [shortId]);
 
   useEffect(() => {
@@ -47,6 +59,38 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
     }
   }, [expandedScene, scenes]);
 
+  // Flashcard keyboard navigation
+  useEffect(() => {
+    if (!scrollView) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setScrollIndex(prev => Math.max(0, prev - 1));
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setScrollIndex(prev => Math.min(scenes.length - 1, prev + 1));
+      } else if (e.key === 'Escape') {
+        setScrollView(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [scrollView, scenes.length]);
+
+  // Load image signed URLs for flashcard scene
+  useEffect(() => {
+    if (!scrollView || scenes.length === 0) return;
+    const scene = scenes[scrollIndex];
+    if (!scene?.images?.length) return;
+    for (const img of scene.images) {
+      if (!imageSignedUrls[img.id]) {
+        scenesApi.getSceneImageUrl(shortId, scene.id, img.id)
+          .then(url => setImageSignedUrls(prev => ({ ...prev, [img.id]: url })))
+          .catch(() => {});
+      }
+    }
+  }, [scrollView, scrollIndex, scenes]);
+
   const loadScenes = async () => {
     try {
       const data = await scenesApi.getAll(shortId);
@@ -56,6 +100,22 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadPresetClips = async () => {
+    try {
+      const data = await presetClipsApi.getAll();
+      setPresetClips(data);
+    } catch {
+      // presets may not be available
+    }
+  };
+
+  const loadPresetVideoUrl = (presetId: number) => {
+    if (presetVideoUrls[presetId]) return;
+    presetClipsApi.getVideoUrl(presetId)
+      .then(url => setPresetVideoUrls(prev => ({ ...prev, [presetId]: url })))
+      .catch(() => {});
   };
 
   const handleCreateSceneFromSelection = useCallback(() => {
@@ -82,7 +142,17 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
   };
 
   const updateScene = async (sceneId: number, input: UpdateSceneInput) => {
-    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, ...input } : s));
+    setScenes(prev => prev.map(s => {
+      if (s.id !== sceneId) return s;
+      const updated = { ...s, ...input };
+      // If preset_clip_id changed, attach or clear preset_clip
+      if (input.preset_clip_id !== undefined) {
+        updated.preset_clip = input.preset_clip_id
+          ? presetClips.find(p => p.id === input.preset_clip_id) || null
+          : null;
+      }
+      return updated;
+    }));
 
     if (saveTimeouts.current[sceneId]) {
       clearTimeout(saveTimeouts.current[sceneId]);
@@ -129,7 +199,6 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
       setScenes(prev => prev.map(s =>
         s.id === sceneId ? { ...s, images: [...(s.images || []), newImage] } : s
       ));
-      // Fetch signed URL for new image immediately
       scenesApi.getSceneImageUrl(shortId, sceneId, newImage.id)
         .then(url => setImageSignedUrls(prev => ({ ...prev, [newImage.id]: url })))
         .catch(() => {});
@@ -226,20 +295,361 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
       segments.push({ text: scriptContent.slice(pos), highlighted: false });
     }
 
-    return segments.map((seg, i) => (
-      <span
-        key={i}
-        style={seg.highlighted ? {
-          background: 'color-mix(in srgb, var(--gold) 20%, transparent)',
-          borderBottom: '2px solid var(--gold)',
-          borderRadius: '2px',
-          padding: '1px 0',
-        } : undefined}
-        title={seg.highlighted ? `Scene ${(seg.sceneIndex ?? 0) + 1}` : undefined}
+    // In scroll view, the current scene gets a stronger highlight
+    const activeSceneIdx = scrollView ? scrollIndex : null;
+
+    return segments.map((seg, i) => {
+      const isActive = seg.highlighted && activeSceneIdx !== null && seg.sceneIndex === activeSceneIdx;
+      return (
+        <span
+          key={i}
+          style={seg.highlighted ? {
+            background: isActive
+              ? 'color-mix(in srgb, var(--gold) 40%, transparent)'
+              : 'color-mix(in srgb, var(--gold) 12%, transparent)',
+            borderBottom: isActive ? '2px solid var(--gold)' : '1px solid color-mix(in srgb, var(--gold) 40%, transparent)',
+            borderRadius: '2px',
+            padding: '1px 0',
+            transition: 'all 0.2s',
+          } : undefined}
+          title={seg.highlighted ? `Scene ${(seg.sceneIndex ?? 0) + 1}` : undefined}
+        >
+          {seg.text}
+        </span>
+      );
+    });
+  };
+
+  // Preset picker for expanded scene
+  const renderPresetPicker = (sceneId: number) => {
+    if (showPresetPicker !== sceneId) return null;
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          zIndex: 10,
+          background: 'var(--modal-bg)',
+          border: '1px solid var(--border-default)',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          maxHeight: '200px',
+          overflowY: 'auto',
+          marginTop: '4px',
+        }}
       >
-        {seg.text}
-      </span>
-    ));
+        {presetClips.length === 0 ? (
+          <div style={{ padding: '12px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+            No presets yet. Create some on the Presets page.
+          </div>
+        ) : (
+          presetClips.map(preset => (
+            <button
+              key={preset.id}
+              onClick={() => {
+                updateScene(sceneId, { preset_clip_id: preset.id });
+                setShowPresetPicker(null);
+              }}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '8px 12px',
+                textAlign: 'left',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                borderBottom: '1px solid var(--border-subtle)',
+                fontSize: '13px',
+                color: 'var(--text-primary)',
+              }}
+              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+            >
+              <span style={{ fontWeight: '600' }}>{preset.name}</span>
+              {preset.description && (
+                <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>{preset.description}</span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    );
+  };
+
+  // Preset display for a scene (in expanded panel or flashcard)
+  const renderPresetSection = (scene: Scene) => {
+    const preset = scene.preset_clip;
+    if (preset?.id) {
+      loadPresetVideoUrl(preset.id);
+    }
+
+    return (
+      <div style={{ marginBottom: '14px' }}>
+        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Preset Clip</label>
+        {preset ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: 'color-mix(in srgb, var(--gold) 8%, var(--bg-base))', border: '1px solid var(--gold-border, var(--border-default))' }}>
+            {presetVideoUrls[preset.id] && (
+              <video
+                src={presetVideoUrls[preset.id]}
+                style={{ width: '80px', height: '45px', objectFit: 'cover', borderRadius: '4px' }}
+                muted
+                preload="metadata"
+              />
+            )}
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.name}</span>
+              {preset.description && (
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{preset.description}</p>
+              )}
+            </div>
+            {canEditScenes && (
+              <button
+                onClick={() => updateScene(scene.id, { preset_clip_id: null })}
+                style={{ fontSize: '12px', color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
+              >
+                Unlink
+              </button>
+            )}
+          </div>
+        ) : canEditScenes ? (
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setShowPresetPicker(showPresetPicker === scene.id ? null : scene.id)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 14px',
+                borderRadius: '7px',
+                border: '1px dashed var(--border-strong)',
+                background: 'var(--bg-base)',
+                cursor: 'pointer',
+                fontSize: '13px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              + Link Preset Clip
+            </button>
+            {renderPresetPicker(scene.id)}
+          </div>
+        ) : (
+          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>None</span>
+        )}
+      </div>
+    );
+  };
+
+  // Flashcard view
+  const renderScrollView = () => {
+    if (scenes.length === 0) return null;
+    const scene = scenes[scrollIndex];
+    if (!scene) return null;
+
+    // Collect sections to render with separators between them
+    const sections: React.ReactNode[] = [];
+
+    // Script Line (always shown)
+    sections.push(
+      <div key="script" style={{ padding: '20px 24px' }}>
+        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Script Line</label>
+        <p style={{ fontSize: '18px', fontWeight: '600', lineHeight: '1.6', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>
+          {scene.script_line || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic', fontWeight: '400' }}>No script line</span>}
+        </p>
+      </div>
+    );
+
+    // Direction
+    if (scene.direction) {
+      sections.push(
+        <div key="direction" style={{ padding: '16px 24px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Direction</label>
+          <p style={{ fontSize: '15px', lineHeight: '1.6', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', margin: 0 }}>
+            {scene.direction}
+          </p>
+        </div>
+      );
+    }
+
+    // Clipper Notes
+    if (scene.clipper_notes) {
+      sections.push(
+        <div key="clipper" style={{ padding: '16px 24px', background: 'color-mix(in srgb, var(--col-clips) 4%, transparent)' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--col-clips)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Clipper Notes</label>
+          <p style={{ fontSize: '15px', lineHeight: '1.6', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>
+            {scene.clipper_notes}
+          </p>
+        </div>
+      );
+    }
+
+    // Editor Notes
+    if (scene.editor_notes) {
+      sections.push(
+        <div key="editor" style={{ padding: '16px 24px', background: 'color-mix(in srgb, var(--col-editing) 4%, transparent)' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--col-editing)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Editor Notes</label>
+          <p style={{ fontSize: '15px', lineHeight: '1.6', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>
+            {scene.editor_notes}
+          </p>
+        </div>
+      );
+    }
+
+    // Preset Clip
+    if (scene.preset_clip) {
+      if (scene.preset_clip.id) loadPresetVideoUrl(scene.preset_clip.id);
+      sections.push(
+        <div key="preset" style={{ padding: '16px 24px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--gold)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Preset Clip</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--gold) 6%, var(--bg-base))', border: '1px solid var(--border-default)' }}>
+            {scene.preset_clip.id && presetVideoUrls[scene.preset_clip.id] && (
+              <video
+                src={presetVideoUrls[scene.preset_clip.id]}
+                controls
+                preload="metadata"
+                style={{ width: '160px', height: '90px', objectFit: 'cover', borderRadius: '6px' }}
+              />
+            )}
+            <div>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{scene.preset_clip.name}</span>
+              {scene.preset_clip.description && (
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{scene.preset_clip.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Images
+    if ((scene.images?.length ?? 0) > 0) {
+      sections.push(
+        <div key="images" style={{ padding: '16px 24px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Reference Images</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+            {scene.images!.map(img => (
+              <div key={img.id} style={{ resize: 'both', overflow: 'hidden', height: '200px', minWidth: '80px', minHeight: '60px', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'inline-block' }}>
+                {imageSignedUrls[img.id] ? (
+                  <img src={imageSignedUrls[img.id]} alt="Scene reference" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>Loading...</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 340px)', minHeight: '400px' }}>
+        {/* Scene card — fills available space */}
+        <div
+          style={{
+            flex: 1,
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-default)',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* Scene header */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 24px',
+            borderBottom: '1px solid var(--border-default)',
+            background: 'color-mix(in srgb, var(--gold) 5%, var(--bg-elevated))',
+            flexShrink: 0,
+          }}>
+            <span style={{ fontSize: '17px', fontWeight: '700', color: 'var(--gold)' }}>
+              Scene {scrollIndex + 1}
+              <span style={{ fontWeight: '400', color: 'var(--text-muted)', fontSize: '14px', marginLeft: '6px' }}>of {scenes.length}</span>
+            </span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Arrow keys to navigate</span>
+          </div>
+
+          {/* Content — sections with separators */}
+          <div style={{ flex: 1, overflow: 'auto' }}>
+            {sections.map((section, i) => (
+              <React.Fragment key={i}>
+                {i > 0 && <div style={{ height: '1px', background: 'var(--border-default)', margin: '0 24px' }} />}
+                {section}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* Navigation — always at bottom, fixed position */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '20px',
+          padding: '16px 0 4px',
+          flexShrink: 0,
+        }}>
+          <button
+            onClick={() => setScrollIndex(prev => Math.max(0, prev - 1))}
+            disabled={scrollIndex === 0}
+            style={{
+              padding: '8px 20px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-default)',
+              background: scrollIndex === 0 ? 'var(--border-subtle)' : 'var(--bg-elevated)',
+              color: scrollIndex === 0 ? 'var(--text-muted)' : 'var(--text-primary)',
+              cursor: scrollIndex === 0 ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              minWidth: '100px',
+            }}
+          >
+            ← Prev
+          </button>
+
+          <div style={{ display: 'flex', gap: '5px', alignItems: 'center' }}>
+            {scenes.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setScrollIndex(i)}
+                style={{
+                  width: i === scrollIndex ? '20px' : '8px',
+                  height: '8px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: i === scrollIndex ? 'var(--gold)' : 'var(--border-default)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  padding: 0,
+                }}
+              />
+            ))}
+          </div>
+
+          <button
+            onClick={() => setScrollIndex(prev => Math.min(scenes.length - 1, prev + 1))}
+            disabled={scrollIndex === scenes.length - 1}
+            style={{
+              padding: '8px 20px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-default)',
+              background: scrollIndex === scenes.length - 1 ? 'var(--border-subtle)' : 'var(--bg-elevated)',
+              color: scrollIndex === scenes.length - 1 ? 'var(--text-muted)' : 'var(--text-primary)',
+              cursor: scrollIndex === scenes.length - 1 ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              minWidth: '100px',
+            }}
+          >
+            Next →
+          </button>
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -352,15 +762,57 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
           <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
             Scenes ({scenes.length})
           </h3>
-          {canEditScenes && (
-            <button
-              onClick={() => createScene({ script_line: '', direction: '' })}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
-              style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer' }}
-            >
-              + Add Empty Scene
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {scenes.length > 0 && (
+              <div style={{
+                display: 'inline-flex',
+                borderRadius: '8px',
+                border: '1px solid var(--border-default)',
+                overflow: 'hidden',
+              }}>
+                <button
+                  onClick={() => setScrollView(false)}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: !scrollView ? 'var(--gold)' : 'var(--bg-elevated)',
+                    color: !scrollView ? 'var(--bg-base)' : 'var(--text-muted)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  Grid
+                </button>
+                <button
+                  onClick={() => { setScrollIndex(0); setScrollView(true); }}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    border: 'none',
+                    borderLeft: '1px solid var(--border-default)',
+                    cursor: 'pointer',
+                    background: scrollView ? 'var(--gold)' : 'var(--bg-elevated)',
+                    color: scrollView ? 'var(--bg-base)' : 'var(--text-muted)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  Scroll View
+                </button>
+              </div>
+            )}
+            {canEditScenes && (
+              <button
+                onClick={() => createScene({ script_line: '', direction: '' })}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: 'pointer' }}
+              >
+                + Add Empty Scene
+              </button>
+            )}
+          </div>
         </div>
 
         {scenes.length === 0 ? (
@@ -369,9 +821,11 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
               No scenes yet. {canEditScenes ? 'Highlight text in the script above and click "Create Scene from Selection" to get started.' : ''}
             </p>
           </div>
+        ) : scrollView ? (
+          renderScrollView()
         ) : (
           <>
-            {/* Grid of scene cards — expanded panel is injected inline after clicked card */}
+            {/* Grid of scene cards */}
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
@@ -400,7 +854,7 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                     minHeight: '80px',
                   }}
                 >
-                  {/* Scene number + saving indicator */}
+                  {/* Scene number + saving indicator + badges */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {canEditScenes && (
@@ -410,14 +864,21 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                         Scene {index + 1}
                       </span>
                     </div>
-                    {saving === scene.id && (
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
-                    )}
-                    {(scene.images?.length ?? 0) > 0 && (
-                      <span style={{ fontSize: '11px', color: 'var(--green)' }} title={`${scene.images!.length} image${scene.images!.length > 1 ? 's' : ''}`}>
-                        IMG{scene.images!.length > 1 ? ` ×${scene.images!.length}` : ''}
-                      </span>
-                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {saving === scene.id && (
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
+                      )}
+                      {scene.preset_clip && (
+                        <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: '600' }} title={`Preset: ${scene.preset_clip.name}`}>
+                          PRESET
+                        </span>
+                      )}
+                      {(scene.images?.length ?? 0) > 0 && (
+                        <span style={{ fontSize: '11px', color: 'var(--green)' }} title={`${scene.images!.length} image${scene.images!.length > 1 ? 's' : ''}`}>
+                          IMG{scene.images!.length > 1 ? ` ×${scene.images!.length}` : ''}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Script preview (3 lines max) */}
@@ -619,6 +1080,9 @@ export default function SceneEditor({ shortId, scriptContent, onScriptContentCha
                       </p>
                     )}
                   </div>
+
+                  {/* Preset Clip Section */}
+                  {renderPresetSection(scene)}
 
                   {/* Scene Images */}
                   {((scene.images?.length ?? 0) > 0 || canEditScenes) && (

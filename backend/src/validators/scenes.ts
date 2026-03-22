@@ -6,6 +6,7 @@ export const createSceneSchema = z.object({
   clipper_notes: z.string().max(10000).nullable().optional(),
   editor_notes: z.string().max(10000).nullable().optional(),
   scene_order: z.number().int().min(0).optional(),
+  preset_clip_id: z.number().int().positive().nullable().optional(),
 });
 
 export const updateSceneSchema = z.object({
@@ -15,6 +16,7 @@ export const updateSceneSchema = z.object({
   editor_notes: z.string().max(10000).nullable().optional(),
   scene_order: z.number().int().min(0).optional(),
   image_url: z.string().max(1000).nullable().optional(),
+  preset_clip_id: z.number().int().positive().nullable().optional(),
 });
 
 export const bulkCreateScenesSchema = z.object({
@@ -24,6 +26,7 @@ export const bulkCreateScenesSchema = z.object({
     clipper_notes: z.string().max(10000).nullable().optional(),
     editor_notes: z.string().max(10000).nullable().optional(),
     scene_order: z.number().int().min(0).optional(),
+    preset_clip_id: z.number().int().positive().nullable().optional(),
   })).min(1).max(200),
 });
 

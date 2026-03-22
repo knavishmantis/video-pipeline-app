@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, Scene, CreateSceneInput, UpdateSceneInput } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -385,6 +385,36 @@ export const scenesApi = {
   },
 };
 
+export const presetClipsApi = {
+  getAll: async (): Promise<PresetClip[]> => {
+    const response = await api.get('/preset-clips');
+    return response.data;
+  },
+  getById: async (id: number): Promise<PresetClip> => {
+    const response = await api.get(`/preset-clips/${id}`);
+    return response.data;
+  },
+  getUploadUrl: async (fileName: string, fileSize: number, contentType: string): Promise<{ upload_url: string; bucket_path: string; expires_in: number }> => {
+    const response = await api.post('/preset-clips/upload-url', { file_name: fileName, file_size: fileSize, content_type: contentType });
+    return response.data;
+  },
+  create: async (input: CreatePresetClipInput): Promise<PresetClip> => {
+    const response = await api.post('/preset-clips', input);
+    return response.data;
+  },
+  update: async (id: number, input: UpdatePresetClipInput): Promise<PresetClip> => {
+    const response = await api.put(`/preset-clips/${id}`, input);
+    return response.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/preset-clips/${id}`);
+  },
+  getVideoUrl: async (id: number): Promise<string> => {
+    const response = await api.get(`/preset-clips/${id}/video-url`);
+    return response.data.url;
+  },
+};
+
 export const teamMetricsApi = {
   get: async (): Promise<any> => {
     const response = await api.get('/team-metrics');
@@ -423,6 +453,58 @@ export const youtubeAnalyticsApi = {
   },
   getPipeline: async (): Promise<any[]> => {
     const response = await api.get('/youtube-analytics/pipeline');
+    return response.data;
+  },
+};
+
+export interface ResearchReportSummary {
+  date: string;
+  periodStart?: string;
+  periodEnd?: string;
+  collectedAt?: string;
+  hasIdeas: boolean;
+  ideaCount: number;
+  summary?: {
+    youtubeChannels: number;
+    youtubeStandouts: number;
+    redditPosts: number;
+    minecraftVersions: number;
+  };
+}
+
+export interface ResearchIdea {
+  title: string;
+  hook: string;
+  whyItFits: string;
+  sourceSignal: string;
+  sourceType: 'youtube' | 'reddit' | 'minecraft' | 'mixed';
+  category: string;
+  timeliness: 'evergreen' | 'time_sensitive';
+  timeWindow?: string | null;
+  contentPoints: string[];
+  codeReference?: string;
+  sources?: { label: string; url?: string }[];
+  score: number;
+}
+
+export interface ResearchIdeas {
+  generatedAt: string;
+  periodStart: string;
+  periodEnd: string;
+  ideas: ResearchIdea[];
+}
+
+export const researchApi = {
+  listReports: async (): Promise<ResearchReportSummary[]> => {
+    const response = await api.get('/research/reports');
+    return response.data;
+  },
+  getIdeas: async (date: string): Promise<ResearchIdeas> => {
+    const response = await api.get(`/research/reports/${date}/ideas`);
+    return response.data;
+  },
+  getRaw: async (date: string): Promise<any> => {
+    const response = await api.get(`/research/reports/${date}/raw`);
     return response.data;
   },
 };

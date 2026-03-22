@@ -26,7 +26,31 @@ export const scenesController = {
       } catch {
         // scene_images table may not exist yet (pre-migration); return scenes without images
       }
-      const scenes = scenesResult.rows.map((s: any) => ({ ...s, images: imagesByScene[s.id] || [] }));
+
+      // Load preset clips for scenes that reference them
+      let presetClipsById: Record<number, any> = {};
+      try {
+        const presetIds = scenesResult.rows.map((s: any) => s.preset_clip_id).filter(Boolean);
+        if (presetIds.length > 0) {
+          const uniqueIds = [...new Set(presetIds)];
+          const placeholders = uniqueIds.map((_, i) => `$${i + 1}`).join(',');
+          const presetsResult = await query(
+            `SELECT * FROM preset_clips WHERE id IN (${placeholders})`,
+            uniqueIds
+          );
+          for (const p of presetsResult.rows) {
+            presetClipsById[p.id] = p;
+          }
+        }
+      } catch {
+        // preset_clips table may not exist yet
+      }
+
+      const scenes = scenesResult.rows.map((s: any) => ({
+        ...s,
+        images: imagesByScene[s.id] || [],
+        preset_clip: s.preset_clip_id ? presetClipsById[s.preset_clip_id] || null : null,
+      }));
       res.json(scenes);
     } catch (error) {
       logger.error('Get scenes error', { shortId, error });
@@ -56,7 +80,7 @@ export const scenesController = {
   // POST /api/shorts/:shortId/scenes
   async create(req: AuthRequest, res: Response): Promise<void> {
     const { shortId } = req.params;
-    const { script_line, direction, clipper_notes, editor_notes, scene_order } = req.body;
+    const { script_line, direction, clipper_notes, editor_notes, scene_order, preset_clip_id } = req.body;
     try {
       // If no scene_order provided, append to end
       let order = scene_order;
@@ -69,8 +93,8 @@ export const scenesController = {
       }
 
       const result = await query(
-        'INSERT INTO scenes (short_id, scene_order, script_line, direction, clipper_notes, editor_notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [shortId, order, script_line || '', direction || '', clipper_notes || null, editor_notes || null]
+        'INSERT INTO scenes (short_id, scene_order, script_line, direction, clipper_notes, editor_notes, preset_clip_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [shortId, order, script_line || '', direction || '', clipper_notes || null, editor_notes || null, preset_clip_id || null]
       );
       res.status(201).json(result.rows[0]);
     } catch (error) {
@@ -111,6 +135,10 @@ export const scenesController = {
       if (input.image_url !== undefined) {
         updates.push(`image_url = $${paramCount++}`);
         params.push(input.image_url);
+      }
+      if (input.preset_clip_id !== undefined) {
+        updates.push(`preset_clip_id = $${paramCount++}`);
+        params.push(input.preset_clip_id);
       }
 
       if (updates.length === 0) {
@@ -170,8 +198,8 @@ export const scenesController = {
         const scene = scenes[i];
         const order = scene.scene_order !== undefined ? scene.scene_order : i;
         const result = await query(
-          'INSERT INTO scenes (short_id, scene_order, script_line, direction, clipper_notes, editor_notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-          [shortId, order, scene.script_line || '', scene.direction || '', scene.clipper_notes || null, scene.editor_notes || null]
+          'INSERT INTO scenes (short_id, scene_order, script_line, direction, clipper_notes, editor_notes, preset_clip_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+          [shortId, order, scene.script_line || '', scene.direction || '', scene.clipper_notes || null, scene.editor_notes || null, scene.preset_clip_id || null]
         );
         results.push(result.rows[0]);
       }

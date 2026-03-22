@@ -56,6 +56,18 @@ cd backend && npm run dev
 
 This tool supports a Flashback-style YouTube Shorts channel (KnavishMantis). When making creative decisions about the platform, consider the production workflow: scripts are written → scenes are broken down → clips are gathered by clippers → editors assemble final shorts → uploaded to YouTube.
 
+## Decompiled Minecraft Source Code
+
+Decompiled Minecraft Java source is available at `/home/quinncaverly/Projects/DecompilerMC/src/1.21.1/client/net/minecraft/`. Use this when writing scripts that reference game mechanics, mob AI, enchantment behavior, or any code-level analysis. Search the decompiled source to find specific numbers, behaviors, and implementation details that make scripts more authoritative.
+
+Key paths for common topics:
+- Mob AI: `net/minecraft/world/entity/ai/`
+- Enchantments: `net/minecraft/world/item/enchantment/`
+- Villager trading: `net/minecraft/world/entity/npc/`
+- Combat/weapons: `net/minecraft/world/item/`
+- World generation: `net/minecraft/world/level/levelgen/`
+- Block behavior: `net/minecraft/world/level/block/`
+
 ## Script Writing Guide
 
 Detailed script writing frameworks, channel voice guide, and competitor analysis live in `/script-guide/`. When helping with scripts or scene breakdowns, read the files in `script-guide/frameworks/` for guidance.
@@ -68,3 +80,11 @@ script-guide/
   competitor-data/           — Downloaded transcripts from competitor channels
   analysis/                  — AI-generated analysis of competitor patterns
 ```
+
+## Research Reports
+
+Research data and curated short ideas live in `research-reports/`. To generate new data:
+
+1. `cd backend && npm run research` — collects YouTube competitor data, Reddit trends, and Minecraft updates
+2. Ask Claude Code to read the raw data + `backend/src/research/RESEARCH_PROMPT.md` and generate ideas
+3. View ideas on the frontend at `/research` (admin-only)

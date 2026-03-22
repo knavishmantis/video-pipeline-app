@@ -14,7 +14,9 @@ import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
 import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
+import Research from './pages/Research';
 import SceneEditorPage from './pages/SceneEditorPage';
+import Presets from './pages/Presets';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -156,6 +158,26 @@ function AppContent() {
               <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <Reflections />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/presets"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <Presets />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/research"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <Research />
                 </AppLayout>
               </ProfileCheckRoute>
             }

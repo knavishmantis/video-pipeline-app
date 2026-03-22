@@ -141,6 +141,31 @@ export interface UserRate {
   updated_at: string;
 }
 
+export interface PresetClip {
+  id: number;
+  name: string;
+  description?: string | null;
+  bucket_path: string;
+  mime_type?: string | null;
+  file_size?: number | null;
+  video_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreatePresetClipInput {
+  name: string;
+  description?: string;
+  bucket_path: string;
+  mime_type?: string;
+  file_size?: number;
+}
+
+export interface UpdatePresetClipInput {
+  name?: string;
+  description?: string | null;
+}
+
 export interface SceneImage {
   id: number;
   scene_id: number;
@@ -157,6 +182,8 @@ export interface Scene {
   clipper_notes?: string | null;
   editor_notes?: string | null;
   image_url?: string | null;
+  preset_clip_id?: number | null;
+  preset_clip?: PresetClip | null;
   images?: SceneImage[];
   created_at: string;
   updated_at: string;
@@ -169,6 +196,7 @@ export interface CreateSceneInput {
   editor_notes?: string | null;
   scene_order?: number;
   image_url?: string | null;
+  preset_clip_id?: number | null;
 }
 
 export interface UpdateSceneInput {
@@ -178,6 +206,7 @@ export interface UpdateSceneInput {
   editor_notes?: string | null;
   scene_order?: number;
   image_url?: string | null;
+  preset_clip_id?: number | null;
 }
 
 export interface BulkCreateScenesInput {

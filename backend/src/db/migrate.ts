@@ -106,6 +106,19 @@ CREATE TABLE IF NOT EXISTS scenes (
   clipper_notes TEXT,
   editor_notes TEXT,
   image_url TEXT,
+  preset_clip_id INTEGER REFERENCES preset_clips(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Preset clips (reusable video clips referenced by scenes)
+CREATE TABLE IF NOT EXISTS preset_clips (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  bucket_path TEXT NOT NULL,
+  mime_type VARCHAR(100),
+  file_size BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -147,6 +160,7 @@ CREATE TABLE IF NOT EXISTS youtube_video_analytics (
 CREATE INDEX IF NOT EXISTS idx_scenes_short_id ON scenes(short_id);
 CREATE INDEX IF NOT EXISTS idx_scenes_order ON scenes(short_id, scene_order);
 CREATE INDEX IF NOT EXISTS idx_scene_images_scene_id ON scene_images(scene_id);
+CREATE INDEX IF NOT EXISTS idx_scenes_preset_clip_id ON scenes(preset_clip_id);
 CREATE INDEX IF NOT EXISTS idx_shorts_status ON shorts(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_user_id ON assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_short_id ON assignments(short_id);
@@ -237,6 +251,29 @@ export async function migrate(): Promise<void> {
       } catch (error: any) {
         if (!error.message.includes('already exists')) {
           console.warn('Could not create scene_images table:', error.message);
+        }
+      }
+
+      // Create preset_clips table and add preset_clip_id to scenes
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS preset_clips (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            bucket_path TEXT NOT NULL,
+            mime_type VARCHAR(100),
+            file_size BIGINT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        await query('ALTER TABLE scenes ADD COLUMN IF NOT EXISTS preset_clip_id INTEGER REFERENCES preset_clips(id) ON DELETE SET NULL');
+        await query('CREATE INDEX IF NOT EXISTS idx_scenes_preset_clip_id ON scenes(preset_clip_id)');
+        console.log('Created preset_clips table and added preset_clip_id to scenes');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not create preset_clips table:', error.message);
         }
       }
 

@@ -10,6 +10,8 @@ import analyzedShortsRouter from './analyzedShorts';
 import { youtubeAnalyticsRouter } from './youtubeAnalytics';
 import { teamMetricsRouter } from './teamMetrics';
 import { formulaGuidesRouter } from './formulaGuides';
+import { researchRouter } from './research';
+import { presetClipsRouter } from './presetClips';
 import { getCacheStats, clearCache } from '../db';
 
 export function setupRoutes(app: Express): void {
@@ -24,6 +26,8 @@ export function setupRoutes(app: Express): void {
   app.use('/api/youtube-analytics', youtubeAnalyticsRouter);
   app.use('/api/team-metrics', teamMetricsRouter);
   app.use('/api/formula-guides', formulaGuidesRouter);
+  app.use('/api/research', researchRouter);
+  app.use('/api/preset-clips', presetClipsRouter);
 
   // Debug endpoint for cache stats (only in non-production or with debug flag)
   if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ENDPOINTS === 'true') {

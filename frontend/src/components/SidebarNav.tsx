@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget, IconSun, IconMoon, IconPencil } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -172,9 +172,13 @@ export function SidebarNav() {
         </div>
       ),
     }, {
-      label: "Script Review",
-      href: "/script-review",
-      icon: <IconTarget className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+      label: "Research",
+      href: "/research",
+      icon: <IconReportSearch className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+    }, {
+      label: "Presets",
+      href: "/presets",
+      icon: <IconMovie className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     }] : []),
     ...((isClipper || isAdmin) ? [{
       label: "Flashback Reference",
