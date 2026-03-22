@@ -300,6 +300,64 @@ export async function query(text: string, params?: any[]): Promise<any> {
   return await db.query(text, params);
 }
 
+async function runAllMigrations(): Promise<void> {
+  console.log('Running database migrations...');
+
+  // Import all migrations - order matters for dependencies
+  const { migrate } = await import('./migrate');
+  const { migrateRoles } = await import('./migrateRoles');
+  const { migrateStatus } = await import('./migrateStatus');
+  const { migrateProfilePicture } = await import('./migrateProfilePicture');
+  const { migrateTimezone } = await import('./migrateTimezone');
+  const { migratePayments } = await import('./migratePayments');
+  const { migratePayPalLink } = await import('./migratePayPalLink');
+  const { migrateScriptPipeline } = await import('./migrateScriptPipeline');
+  const { migrateAnalyzedShorts } = await import('./migrateAnalyzedShorts');
+  const { migrateAnalyzedShortsFix } = await import('./migrateAnalyzedShortsFix');
+  const { migrateAnalyzedShortsReview } = await import('./migrateAnalyzedShortsReview');
+  const { migrateReflection } = await import('./migrateReflection');
+  const { migrateScenes } = await import('./migrateScenes');
+  const { migrateScriptRating } = await import('./migrateScriptRating');
+  const { migrateProfilePictureSize } = await import('./migrateProfilePictureSize');
+  const { migrateUserRates } = await import('./migrateUserRates');
+  const { migrateYoutubeVideoId } = await import('./migrateYoutubeVideoId');
+  const { migratePresetClips } = await import('./migratePresetClips');
+
+  const migrations = [
+    { name: 'base schema', fn: migrate },
+    { name: 'roles', fn: migrateRoles },
+    { name: 'status', fn: migrateStatus },
+    { name: 'profile picture', fn: migrateProfilePicture },
+    { name: 'timezone', fn: migrateTimezone },
+    { name: 'payments', fn: migratePayments },
+    { name: 'paypal link', fn: migratePayPalLink },
+    { name: 'script pipeline', fn: migrateScriptPipeline },
+    { name: 'analyzed shorts', fn: migrateAnalyzedShorts },
+    { name: 'analyzed shorts fix', fn: migrateAnalyzedShortsFix },
+    { name: 'analyzed shorts review', fn: migrateAnalyzedShortsReview },
+    { name: 'reflection', fn: migrateReflection },
+    { name: 'scenes', fn: migrateScenes },
+    { name: 'script rating', fn: migrateScriptRating },
+    { name: 'profile picture size', fn: migrateProfilePictureSize },
+    { name: 'user rates', fn: migrateUserRates },
+    { name: 'youtube video id', fn: migrateYoutubeVideoId },
+    { name: 'preset clips', fn: migratePresetClips },
+  ];
+
+  for (const { name, fn } of migrations) {
+    try {
+      await fn();
+    } catch (error: any) {
+      // All migrations are idempotent, so "already exists" errors are fine
+      if (!error.message?.includes('already exists')) {
+        console.warn(`Migration "${name}" warning:`, error.message);
+      }
+    }
+  }
+
+  console.log('All migrations completed');
+}
+
 export async function initDatabase(): Promise<void> {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) {
@@ -315,6 +373,9 @@ export async function initDatabase(): Promise<void> {
       await db.query('SELECT NOW()');
       console.log('PostgreSQL database connected successfully');
     }
+
+    // Run all migrations automatically on startup
+    await runAllMigrations();
   } catch (error) {
     console.error('Database connection failed:', error);
     throw error;
