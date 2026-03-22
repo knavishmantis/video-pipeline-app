@@ -165,7 +165,7 @@ function AppContent() {
           <Route
             path="/presets"
             element={
-              <ProfileCheckRoute requiredRole="admin">
+              <ProfileCheckRoute>
                 <AppLayout>
                   <Presets />
                 </AppLayout>

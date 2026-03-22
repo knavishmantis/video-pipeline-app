@@ -399,6 +399,23 @@ export default function Presets() {
                           Edit
                         </button>
                         <button
+                          onClick={() => {
+                            const url = videoUrls[clip.id];
+                            if (url) {
+                              const a = document.createElement('a');
+                              a.href = url;
+                              a.download = clip.name.replace(/\s+/g, '-').toLowerCase() + '.mp4';
+                              a.click();
+                            }
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
+                          style={{ color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer' }}
+                          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; }}
+                          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+                        >
+                          Download
+                        </button>
+                        <button
                           onClick={() => handleDelete(clip.id)}
                           className="px-2.5 py-1 text-xs font-semibold rounded-md transition-all"
                           style={{ color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer' }}

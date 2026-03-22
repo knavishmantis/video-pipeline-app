@@ -175,11 +175,12 @@ export function SidebarNav() {
       label: "Research",
       href: "/research",
       icon: <IconReportSearch className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
-    }, {
+    }] : []),
+    {
       label: "Presets",
       href: "/presets",
       icon: <IconMovie className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
-    }] : []),
+    },
     ...((isClipper || isAdmin) ? [{
       label: "Flashback Reference",
       href: "/flashback-reference",
