@@ -100,6 +100,56 @@ When breaking a script into scenes, each scene = one visual clip the clipper nee
 - Sound: "Jet noise or bird noise could be funny here", "war noises, sword slashing, yells"
 - Reuse: "Can reuse the same scene from #8 and have like an X crossing it out"
 
+## Idea Evaluation Criteria (Gate Before Writing)
+
+Before writing a script, every idea must pass these checks. If it fails 2+, don't make the short.
+
+| Criteria | Pass | Fail |
+|----------|------|------|
+| **In-game content?** | Mechanics, mobs, items, builds, game code | YouTube drama, dev history, outside-game concepts |
+| **Genuinely interesting to you?** | You'd watch this short yourself | You're making it because it "should" be viral |
+| **Enough substance?** | 3+ genuinely surprising facts or a full narrative arc | One fact stretched, or padding needed to hit 60s |
+| **Strong visual potential?** | Can be shown with in-game builds, mobs, items | Needs abstract visualizations, external footage, or talking head |
+| **Clear viewing need?** | Mystery ("what is it?"), useful ("how do I?"), controversy ("is this true?") | Just informational with no hook tension |
+| **Has a payoff?** | A reveal, twist, or punchline that rewards watching to the end | Ends with a summary, caveat, or soft landing |
+
+**Idea rating shortcut** — score 1-10 on: (1) how interesting is the hook alone, (2) how dense is the content, (3) how strong is the ending. Average below 7 = rethink the idea.
+
+## Winning Script Template
+
+Based on the highest-rated shorts (horse armor 9/10, best potion 10/10, time period 10/10, luck potion, dog breeds, dolphins, wandering trader):
+
+```
+[HOOK — 1-2 sentences, first 5 seconds]
+Provocative question OR surprising claim that creates immediate curiosity.
+"What is the lowest IQ mob in Minecraft?"
+"Dolphins in Minecraft have a big problem: They drown themselves."
+
+[BRIDGE — 1 sentence]
+"Let me explain." / Challenge conventional wisdom / "You're probably thinking X..."
+
+[CORE — 3-5 beats, connected by BUT/THEREFORE/SO]
+Beat 1: First interesting fact with specific numbers from code/mechanics
+  → BUT/THEREFORE →
+Beat 2: Complication or deeper layer that reframes Beat 1
+  → "But what's even crazier..." →
+Beat 3: The real revelation or the step-by-step payoff
+  → (optional) "But there's one more thing..." →
+Beat 4: Final twist, callback, or escalation
+
+[ENDING — 1-2 sentences, strongest beat of the short]
+Dramatic payoff / comedic punchline / abrupt cutoff / energetic closer
+"its The Squid!!!"
+"Mojang what are you doinngggggg?!?!?!?!"
+"adding a bonus of ZERO everytime FOR NO REASON!!!"
+```
+
+**Every transition between beats MUST be BUT, THEREFORE, or SO — never AND.**
+
+**Personality checklist**: 2-3 brief (~2 second) personality moments spread throughout. Never tangents. Examples that work: "or just the stables is fine", "carrier strike group of dogs", "Wandy".
+
+**Density check**: If you can remove a sentence and the short doesn't lose anything, remove it. The best shorts have overflow of content that's been simplified — if you're stretching to fill time, the idea isn't strong enough.
+
 ## How to Help Write Scripts
 
 When asked to write or help with a script:
@@ -142,3 +192,56 @@ When asked to create a scene breakdown:
 6. **Reference scene numbers for continuity**: "Same scene as #8 but different angle", "Show my character infront of the scene from #12".
 7. **Specify sub-clips** (a, b, c) when a scene needs multiple angles or sequential shots.
 8. **Include links** to builds, reference videos, or external media when relevant.
+
+## Lessons From Past Shorts (Reflections)
+
+Distilled from 21 post-upload reflections with retention data and ratings.
+
+### Topic Selection Rules
+
+- **In-game Minecraft content performs dramatically better** than outside-Minecraft topics. Comparing horse armor (700k+ views) to Hytale or code obfuscation (low thousands) — pure gameplay topics win because the visuals write themselves, the info is more consumable, and there's zero abstraction. Stick to mechanics, builds, items, mobs.
+- **If the topic isn't genuinely interesting to you personally, don't make it.** Even technically "viral" topics fail if the creator doesn't care (Hytale, Sniffers).
+- **Don't make a short if there isn't enough substance.** If the interesting part is only 30 seconds, either keep it at 30 seconds or pivot to a second topic with a BUT transition — don't pad with filler to reach 60.
+
+### Structure Anti-Patterns (What Kills Shorts)
+
+- **AND → AND → AND is death.** Listing facts sequentially with no connective tension loses viewers fast. Every transition should be BUT, THEREFORE, or SO — each point must challenge or build on the last.
+- **Never use the listicle outline format** ("There are 3 categories...", "The 7 best..."). It tells the viewer they'll sit through filler before the payoff. If doing multiple points, make them a mystery: just start with the first one and connect them naturally.
+- **Never preview/outline what you'll cover** ("We'll talk about X, then Y, then Z"). Just start talking about X. The preview is boring and causes immediate engagement drops.
+- **Don't contradict the hook.** If the hook says "this mistake cost Minecraft millions", the ending must justify that claim. Be black and white — nuance and caveats at the end confuse the viewer and undermine the whole short. Embellish slightly if needed.
+- **Don't give the payoff too early.** If the answer is revealed at 25 seconds, the remaining 30+ seconds feel like filler. Structure so the reveal happens late, with double hooks bridging sections.
+
+### Structure Patterns (What Works)
+
+- **"Follow along" narratives** — guide the viewer through steps while adding fun facts and personality. Horse armor, building blocks, and best potion all used this effectively.
+- **BUT → THEREFORE → BUT → THEREFORE chains** create natural flow where each point connects to the next. Viewer always has a reason to keep watching.
+- **Double hooks between sections** keep attention: "And saving the best for last...", "And this is my favorite one...", "But that's not even the craziest part..." — these prevent mid-video swipe-offs.
+- **"I checked the code" / "I wrote some code"** adds instant credibility, especially for controversial claims. Lean into this more when making factual claims the audience might doubt.
+- **Overflow of content, simplified** — the best shorts (horse armor, best potion) had MORE good info than could fit, and the best parts were selected. This produces density. Shorts where you're stretching thin content to fill time always feel worse.
+
+### Pacing Rules
+
+- **First 15 seconds are sacred.** No fluff, no anecdotes, no personality tangents before the content starts. Get to genuinely interesting info immediately.
+- **Personality bits should be ~2 seconds, not tangents.** "Build an English country manor and stables — or just the stables is fine" works. A 10-second personal anecdote after the hook doesn't.
+- **2-3 seconds of confusion = swipe away.** If the viewer can't follow what you're saying for even a few seconds, they leave. Fast pacing is good but clarity cannot be sacrificed — it's a tightrope.
+- **Every line must earn its place.** If a fact isn't WOW-worthy or doesn't directly advance the narrative, cut it. Lines like "I don't know about you but..." or "If you're in a sticky situation..." are 3-4 wasted scenes.
+
+### Endings
+
+- **End on something memorable** — a dramatic payoff, comedic punchline, or abrupt cutoff. Never a soft landing or caveats.
+- **Don't add nuance at the end.** "I guess the devs are just dumb" > a balanced 15-second caveat paragraph. Make them think, don't make them bored.
+
+### Engagement & Retention Benchmarks
+
+- **57% end retention** = not good enough for viral
+- **74% end retention** = excellent (best potion achieved this)
+- **66% retention at 25 seconds** = poor; horse armor video had 66% retention past a minute
+- **Comment/engagement bait doesn't correlate with views or subs.** Discord notification sounds, "Jean/John" pronunciation bait — these generate comments but not virality. Don't sacrifice pacing for engagement bait.
+- **Mid-video subscribe CTAs cause engagement drops.** One short got more subs but the retention cliff likely prevented it from going viral. Not worth it.
+
+### Visual Production Notes
+
+- **In-game builds and structures as visuals >>> abstract visualizations.** 15 boats full of cats to show a cat farm is infinitely better than "Notch holding a pig representing Minecraft."
+- **Scenes don't need to match narration 100%.** A Christmas tree burning down during an explanation about updates doesn't "make sense" but it's a visual spectacle that keeps engagement.
+- **Timelapse builds tied to narration are strong** — building walls, bridges, farms while explaining the topic.
+- **Having your character visible frequently adds personality** — don't just do gameplay demos, show KnavishMantis reacting, walking, being present.

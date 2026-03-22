@@ -9,99 +9,49 @@ researchRouter.use(authenticateToken);
 researchRouter.use(requireRole('admin'));
 
 const REPORTS_DIR = path.resolve(__dirname, '../../../research-reports');
+const BACKLOG_PATH = path.join(REPORTS_DIR, 'backlog.json');
 
-// GET /api/research/reports — list all reports with ideas status
-researchRouter.get('/reports', (_req: Request, res: Response) => {
-  try {
-    if (!fs.existsSync(REPORTS_DIR)) {
-      return res.json([]);
-    }
-
-    const files = fs.readdirSync(REPORTS_DIR)
-      .filter(f => f.endsWith('-raw.json'))
-      .sort()
-      .reverse()
-      .map(filename => {
-        const date = filename.replace('-raw.json', '');
-        const filePath = path.join(REPORTS_DIR, filename);
-        const ideasPath = path.join(REPORTS_DIR, `${date}-ideas.json`);
-        const stats = fs.statSync(filePath);
-
-        try {
-          const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          const hasIdeas = fs.existsSync(ideasPath);
-          let ideaCount = 0;
-          if (hasIdeas) {
-            try {
-              const ideas = JSON.parse(fs.readFileSync(ideasPath, 'utf-8'));
-              ideaCount = ideas.ideas?.length || 0;
-            } catch {}
-          }
-
-          return {
-            date,
-            periodStart: raw.periodStart,
-            periodEnd: raw.periodEnd,
-            collectedAt: raw.collectedAt,
-            hasIdeas,
-            ideaCount,
-            summary: {
-              youtubeChannels: raw.youtube?.length || 0,
-              youtubeStandouts: raw.youtube?.reduce((acc: number, ch: any) => acc + (ch.standouts?.length || 0), 0) || 0,
-              redditPosts: raw.reddit?.reduce((acc: number, sub: any) => acc + (sub.posts?.length || 0), 0) || 0,
-              minecraftVersions: raw.minecraft?.newVersions?.length || 0,
-            },
-          };
-        } catch {
-          return { date, size: stats.size, hasIdeas: false, ideaCount: 0 };
-        }
-      });
-
-    res.json(files);
-  } catch (error: any) {
-    console.error('Failed to list research reports:', error);
-    res.status(500).json({ error: 'Failed to list reports' });
+function readBacklog(): any {
+  if (!fs.existsSync(BACKLOG_PATH)) {
+    return { ideas: [], lastUpdated: null };
   }
-});
+  return JSON.parse(fs.readFileSync(BACKLOG_PATH, 'utf-8'));
+}
 
-// GET /api/research/reports/:date/ideas — get curated ideas
-researchRouter.get('/reports/:date/ideas', (req: Request, res: Response) => {
+function writeBacklog(data: any): void {
+  if (!fs.existsSync(REPORTS_DIR)) {
+    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  }
+  data.lastUpdated = new Date().toISOString();
+  fs.writeFileSync(BACKLOG_PATH, JSON.stringify(data, null, 2));
+}
+
+// GET /api/research/ideas — get all ideas from the backlog
+researchRouter.get('/ideas', (_req: Request, res: Response) => {
   try {
-    const { date } = req.params;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return res.status(400).json({ error: 'Invalid date format' });
-    }
-
-    const filePath = path.join(REPORTS_DIR, `${date}-ideas.json`);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'No ideas generated yet. Run Claude Code to analyze the raw data.' });
-    }
-
-    const ideas = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    res.json(ideas);
+    const backlog = readBacklog();
+    res.json(backlog);
   } catch (error: any) {
-    console.error('Failed to read ideas:', error);
+    console.error('Failed to read backlog:', error);
     res.status(500).json({ error: 'Failed to read ideas' });
   }
 });
 
-// GET /api/research/reports/:date/raw — get raw collected data
-researchRouter.get('/reports/:date/raw', (req: Request, res: Response) => {
+// POST /api/research/ideas/:ideaId/acknowledge — toggle acknowledged
+researchRouter.post('/ideas/:ideaId/acknowledge', (req: Request, res: Response) => {
   try {
-    const { date } = req.params;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      return res.status(400).json({ error: 'Invalid date format' });
+    const { ideaId } = req.params;
+    const backlog = readBacklog();
+    const idea = backlog.ideas?.find((i: any) => i.ideaId === ideaId);
+    if (!idea) {
+      return res.status(404).json({ error: 'Idea not found' });
     }
 
-    const filePath = path.join(REPORTS_DIR, `${date}-raw.json`);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ error: 'Report not found' });
-    }
-
-    const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    res.json(raw);
+    idea.acknowledged = !idea.acknowledged;
+    writeBacklog(backlog);
+    res.json({ ideaId, acknowledged: idea.acknowledged });
   } catch (error: any) {
-    console.error('Failed to read research report:', error);
-    res.status(500).json({ error: 'Failed to read report' });
+    console.error('Failed to acknowledge idea:', error);
+    res.status(500).json({ error: 'Failed to acknowledge idea' });
   }
 });
