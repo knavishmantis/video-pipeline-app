@@ -67,7 +67,7 @@ export const presetClipsController = {
   // PUT /api/preset-clips/:id
   async update(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params;
-    const { name, description, thumbnail_path } = req.body;
+    const { name, description, thumbnail_path, label } = req.body;
     try {
       const updates: string[] = [];
       const params: any[] = [];
@@ -84,6 +84,10 @@ export const presetClipsController = {
       if (thumbnail_path !== undefined) {
         updates.push(`thumbnail_path = $${paramCount++}`);
         params.push(thumbnail_path);
+      }
+      if (label !== undefined) {
+        updates.push(`label = $${paramCount++}`);
+        params.push(label);
       }
 
       if (updates.length === 0) {
