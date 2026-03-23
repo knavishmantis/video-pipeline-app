@@ -8,7 +8,7 @@ export const researchRouter = Router();
 researchRouter.use(authenticateToken);
 researchRouter.use(requireRole('admin'));
 
-const REPORTS_DIR = path.resolve(__dirname, '../../../research-reports');
+const REPORTS_DIR = path.resolve(__dirname, '../../../../research-reports');
 const BACKLOG_PATH = path.join(REPORTS_DIR, 'backlog.json');
 
 function readBacklog(): any {
