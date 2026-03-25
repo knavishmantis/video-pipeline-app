@@ -530,3 +530,22 @@ export const paymentsApi = {
   },
 };
 
+export const scriptEngineApi = {
+  getStatus: async (): Promise<any> => {
+    const response = await api.get('/script-engine/status');
+    return response.data;
+  },
+  getRuns: async (): Promise<any> => {
+    const response = await api.get('/script-engine/runs');
+    return response.data;
+  },
+  getIdeas: async (status?: string): Promise<any> => {
+    const response = await api.get('/script-engine/ideas', { params: status ? { status } : {} });
+    return response.data;
+  },
+  getIdea: async (id: number): Promise<any> => {
+    const response = await api.get(`/script-engine/ideas/${id}`);
+    return response.data;
+  },
+};
+

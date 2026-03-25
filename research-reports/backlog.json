@@ -7943,7 +7943,7 @@
       ],
       "score": 8,
       "createdAt": "2026-03-22T20:00:00Z",
-      "acknowledged": false
+      "acknowledged": true
     },
     {
       "ideaId": "idea-enchanted-golden-apple-best",
@@ -8216,7 +8216,7 @@
       ],
       "score": 8,
       "createdAt": "2026-03-22T20:00:00Z",
-      "acknowledged": false
+      "acknowledged": true
     },
     {
       "ideaId": "idea-deprecated-code-cleanup",
@@ -8908,5 +8908,5 @@
       "acknowledged": false
     }
   ],
-  "lastUpdated": "2026-03-22T18:44:45.639Z"
+  "lastUpdated": "2026-03-23T11:50:46.148Z"
 }

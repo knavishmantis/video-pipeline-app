@@ -15,6 +15,7 @@ import YouTubeStats from './pages/YouTubeStats';
 import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
 import Research from './pages/Research';
+import ScriptEngine from './pages/ScriptEngine';
 import SceneEditorPage from './pages/SceneEditorPage';
 import Presets from './pages/Presets';
 import PrivateRoute from './components/PrivateRoute';
@@ -178,6 +179,16 @@ function AppContent() {
               <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <Research />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/script-engine"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <ScriptEngine />
                 </AppLayout>
               </ProfileCheckRoute>
             }
