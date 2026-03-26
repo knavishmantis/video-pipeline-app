@@ -322,6 +322,7 @@ async function runAllMigrations(): Promise<void> {
   const { migrateUserRates } = await import('./migrateUserRates');
   const { migrateYoutubeVideoId } = await import('./migrateYoutubeVideoId');
   const { migratePresetClips } = await import('./migratePresetClips');
+  const { migrateIncentiveRules } = await import('./migrateIncentiveRules');
 
   const migrations = [
     { name: 'base schema', fn: migrate },
@@ -342,6 +343,7 @@ async function runAllMigrations(): Promise<void> {
     { name: 'user rates', fn: migrateUserRates },
     { name: 'youtube video id', fn: migrateYoutubeVideoId },
     { name: 'preset clips', fn: migratePresetClips },
+    { name: 'incentive rules', fn: migrateIncentiveRules },
   ];
 
   for (const { name, fn } of migrations) {

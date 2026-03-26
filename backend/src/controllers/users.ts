@@ -394,7 +394,103 @@ export const usersController = {
       logger.error('Set user rate error', { userId: id, error });
       res.status(500).json({ error: 'Failed to set user rate' });
     }
-  }
+  },
+
+  async getIncentiveRules(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (parseInt(id) !== req.userId && !isAdmin) {
+        res.status(403).json({ error: 'You can only view your own incentive rules' });
+        return;
+      }
+
+      const result = await query(
+        'SELECT * FROM incentive_rules WHERE user_id = $1 ORDER BY role, metric, threshold',
+        [id]
+      );
+      res.json(result.rows);
+    } catch (error) {
+      logger.error('Get incentive rules error', { userId: id, error });
+      res.status(500).json({ error: 'Failed to fetch incentive rules' });
+    }
+  },
+
+  async setIncentiveRule(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can set incentive rules' });
+        return;
+      }
+
+      const { role, metric, threshold, amount } = req.body;
+
+      if (!role || !['clipper', 'editor'].includes(role)) {
+        res.status(400).json({ error: 'Valid role (clipper or editor) is required' });
+        return;
+      }
+      if (!metric || !['views', 'subscribers_gained'].includes(metric)) {
+        res.status(400).json({ error: 'Valid metric (views or subscribers_gained) is required' });
+        return;
+      }
+      if (!threshold || threshold <= 0) {
+        res.status(400).json({ error: 'Threshold must be a positive number' });
+        return;
+      }
+      if (!amount || amount <= 0) {
+        res.status(400).json({ error: 'Amount must be a positive number' });
+        return;
+      }
+
+      const userResult = await query('SELECT id FROM users WHERE id = $1', [id]);
+      if (userResult.rows.length === 0) {
+        res.status(404).json({ error: 'User not found' });
+        return;
+      }
+
+      const result = await query(
+        `INSERT INTO incentive_rules (user_id, role, metric, threshold, amount)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (user_id, role, metric, threshold)
+         DO UPDATE SET amount = $5, updated_at = CURRENT_TIMESTAMP
+         RETURNING *`,
+        [id, role, metric, threshold, amount]
+      );
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      logger.error('Set incentive rule error', { userId: id, error });
+      res.status(500).json({ error: 'Failed to set incentive rule' });
+    }
+  },
+
+  async deleteIncentiveRule(req: AuthRequest, res: Response): Promise<void> {
+    const { id, ruleId } = req.params;
+    try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can delete incentive rules' });
+        return;
+      }
+
+      const result = await query(
+        'DELETE FROM incentive_rules WHERE id = $1 AND user_id = $2 RETURNING id',
+        [ruleId, id]
+      );
+
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Incentive rule not found' });
+        return;
+      }
+
+      res.json({ message: 'Incentive rule deleted' });
+    } catch (error) {
+      logger.error('Delete incentive rule error', { userId: id, ruleId, error });
+      res.status(500).json({ error: 'Failed to delete incentive rule' });
+    }
+  },
 };
 
 

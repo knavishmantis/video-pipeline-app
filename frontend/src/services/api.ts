@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, IncentiveRule, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -337,6 +337,17 @@ export const usersApi = {
   setUserRate: async (id: number, rate: { role: 'clipper' | 'editor'; rate: number; rate_description?: string }): Promise<UserRate> => {
     const response = await api.put(`/users/${id}/rate`, rate);
     return response.data;
+  },
+  getIncentiveRules: async (id: number): Promise<IncentiveRule[]> => {
+    const response = await api.get(`/users/${id}/incentive-rules`);
+    return response.data;
+  },
+  setIncentiveRule: async (id: number, rule: { role: 'clipper' | 'editor'; metric: 'views' | 'subscribers_gained'; threshold: number; amount: number }): Promise<IncentiveRule> => {
+    const response = await api.post(`/users/${id}/incentive-rules`, rule);
+    return response.data;
+  },
+  deleteIncentiveRule: async (userId: number, ruleId: number): Promise<void> => {
+    await api.delete(`/users/${userId}/incentive-rules/${ruleId}`);
   },
 };
 

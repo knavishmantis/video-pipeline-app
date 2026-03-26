@@ -141,6 +141,17 @@ export interface UserRate {
   updated_at: string;
 }
 
+export interface IncentiveRule {
+  id: number;
+  user_id: number;
+  role: 'clipper' | 'editor';
+  metric: 'views' | 'subscribers_gained';
+  threshold: number;
+  amount: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PresetClip {
   id: number;
   label: string;

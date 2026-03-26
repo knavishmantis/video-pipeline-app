@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
 import { usersApi } from '../services/api';
-import { User, UserRole, UserRate } from '../../../shared/types';
+import { User, UserRole, UserRate, IncentiveRule } from '../../../shared/types';
 import { getErrorMessage } from '../utils/errorHandler';
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
@@ -38,6 +38,9 @@ export default function UserManagement() {
   const [userRates, setUserRates] = useState<UserRate[]>([]);
   const [editingRate, setEditingRate] = useState<{ role: 'clipper' | 'editor'; rate: number; description: string } | null>(null);
   const [savingRate, setSavingRate] = useState(false);
+  const [incentiveRules, setIncentiveRules] = useState<IncentiveRule[]>([]);
+  const [addingIncentive, setAddingIncentive] = useState(false);
+  const [newIncentive, setNewIncentive] = useState<{ role: 'clipper' | 'editor'; metric: 'views' | 'subscribers_gained'; threshold: number; amount: number }>({ role: 'editor', metric: 'views', threshold: 200000, amount: 10 });
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
@@ -173,9 +176,14 @@ export default function UserManagement() {
     setRatesUser(user);
     setShowRatesModal(true);
     setEditingRate(null);
+    setAddingIncentive(false);
     try {
-      const rates = await usersApi.getUserRates(user.id);
+      const [rates, rules] = await Promise.all([
+        usersApi.getUserRates(user.id),
+        usersApi.getIncentiveRules(user.id),
+      ]);
       setUserRates(rates);
+      setIncentiveRules(rules);
     } catch (err: unknown) {
       showToast(getErrorMessage(err, 'Failed to load rates'), 'error');
     }
@@ -204,6 +212,33 @@ export default function UserManagement() {
       showToast(getErrorMessage(err, 'Failed to save rate'), 'error');
     } finally {
       setSavingRate(false);
+    }
+  };
+
+  const handleSaveIncentive = async () => {
+    if (!ratesUser) return;
+    setSavingRate(true);
+    try {
+      await usersApi.setIncentiveRule(ratesUser.id, newIncentive);
+      const rules = await usersApi.getIncentiveRules(ratesUser.id);
+      setIncentiveRules(rules);
+      setAddingIncentive(false);
+      showToast('Incentive rule saved', 'success');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to save incentive rule'), 'error');
+    } finally {
+      setSavingRate(false);
+    }
+  };
+
+  const handleDeleteIncentive = async (ruleId: number) => {
+    if (!ratesUser) return;
+    try {
+      await usersApi.deleteIncentiveRule(ratesUser.id, ruleId);
+      setIncentiveRules(prev => prev.filter(r => r.id !== ruleId));
+      showToast('Incentive rule deleted', 'success');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, 'Failed to delete incentive rule'), 'error');
     }
   };
 
@@ -654,6 +689,135 @@ export default function UserManagement() {
               </div>
             )}
 
+            {/* Incentive Rules Section */}
+            {!editingRate && (
+              <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-default)', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', letterSpacing: '-0.01em', margin: 0 }}>Milestone Bonuses</h3>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Auto-paid when a video hits a threshold</p>
+                  </div>
+                  {!addingIncentive && (
+                    <button
+                      onClick={() => setAddingIncentive(true)}
+                      style={{ padding: '4px 10px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      + Add
+                    </button>
+                  )}
+                </div>
+
+                {incentiveRules.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: addingIncentive ? '12px' : '0' }}>
+                    {incentiveRules.map((rule) => {
+                      const rc = roleColors[rule.role as UserRole];
+                      return (
+                        <div key={rule.id} style={{ padding: '10px 12px', background: 'var(--bg-elevated)', borderRadius: '7px', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'capitalize', padding: '1px 6px', borderRadius: '4px', background: rc.bg, color: rc.color, border: `1px solid ${rc.border}` }}>
+                              {rule.role}
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: '600' }}>
+                              +${Number(rule.amount).toFixed(2)}
+                            </span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                              at {Number(rule.threshold).toLocaleString()} {rule.metric === 'views' ? 'views' : 'subs'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteIncentive(rule.id)}
+                            style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', flexShrink: 0, lineHeight: 0 }}
+                            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#e05a4e'; }}
+                            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+                            title="Delete rule"
+                          >
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {incentiveRules.length === 0 && !addingIncentive && (
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: '0' }}>No milestone bonuses configured</p>
+                )}
+
+                {addingIncentive && (
+                  <div style={{ padding: '12px', background: 'var(--bg-elevated)', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                      <div>
+                        <Label htmlFor="incentive-role" style={{ fontSize: '11px' }}>Role</Label>
+                        <select
+                          id="incentive-role"
+                          value={newIncentive.role}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, role: e.target.value as 'clipper' | 'editor' })}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '12px', padding: '0 8px' }}
+                        >
+                          <option value="editor">Editor</option>
+                          <option value="clipper">Clipper</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label htmlFor="incentive-metric" style={{ fontSize: '11px' }}>Metric</Label>
+                        <select
+                          id="incentive-metric"
+                          value={newIncentive.metric}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, metric: e.target.value as 'views' | 'subscribers_gained' })}
+                          style={{ width: '100%', height: '34px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', color: 'var(--text-primary)', fontSize: '12px', padding: '0 8px' }}
+                        >
+                          <option value="views">Views</option>
+                          <option value="subscribers_gained">Subscribers Gained</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                      <div>
+                        <Label htmlFor="incentive-threshold" style={{ fontSize: '11px' }}>Threshold</Label>
+                        <Input
+                          id="incentive-threshold"
+                          type="number"
+                          min="1"
+                          value={newIncentive.threshold}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, threshold: parseInt(e.target.value) || 0 })}
+                          placeholder="200000"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="incentive-amount" style={{ fontSize: '11px' }}>Bonus ($)</Label>
+                        <Input
+                          id="incentive-amount"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          value={newIncentive.amount}
+                          onChange={(e) => setNewIncentive({ ...newIncentive, amount: parseFloat(e.target.value) || 0 })}
+                          placeholder="10.00"
+                        />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleSaveIncentive}
+                        disabled={savingRate || newIncentive.threshold <= 0 || newIncentive.amount <= 0}
+                        style={{ flex: 1, height: '32px', borderRadius: '6px', background: 'var(--gold)', color: 'var(--bg-surface)', border: 'none', fontSize: '12px', fontWeight: '700', cursor: 'pointer', opacity: (savingRate || newIncentive.threshold <= 0 || newIncentive.amount <= 0) ? 0.5 : 1 }}
+                      >
+                        {savingRate ? 'Saving…' : 'Save Rule'}
+                      </button>
+                      <button
+                        onClick={() => setAddingIncentive(false)}
+                        style={{ padding: '0 12px', height: '32px', borderRadius: '6px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
               {editingRate ? (
                 <>
@@ -677,6 +841,7 @@ export default function UserManagement() {
                     setShowRatesModal(false);
                     setRatesUser(null);
                     setUserRates([]);
+                    setIncentiveRules([]);
                   }}
                   style={{ flex: 1, height: '38px', borderRadius: '8px', background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border-default)', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
                 >
