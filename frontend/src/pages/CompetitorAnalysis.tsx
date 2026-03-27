@@ -534,7 +534,7 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
       </div>
 
       {/* Accuracy */}
-      <div>
+      <div style={{ paddingLeft: '12px' }}>
         {ch.avg_error != null && ch.reviewed > 0 ? (
           <>
             <div style={{ fontSize: '13px', fontWeight: 700, color: accuracyColor(ch.avg_error) }}>±{ch.avg_error} pts</div>
