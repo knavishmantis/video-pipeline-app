@@ -94,7 +94,7 @@ export default function Login() {
         {/* Header */}
         <div className="flex items-center gap-3 mb-1">
           <img
-            src="/knavishmantis-profilepic.jpg"
+            src="/knavishmantis-profilepic.png"
             alt="Logo"
             className="h-9 w-9 rounded-full object-cover"
             style={{ border: '2px solid var(--border-default)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}

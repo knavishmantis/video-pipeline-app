@@ -386,7 +386,7 @@ const SidebarLogo = () => {
   return (
     <a href="/" className="relative z-20 flex items-center gap-3 py-1">
       <img
-        src="/knavishmantis-profilepic.jpg"
+        src="/knavishmantis-profilepic.png"
         alt="Logo"
         className="h-7 w-7 shrink-0 rounded-full object-cover"
         style={{ border: '1.5px solid var(--border-default)', boxShadow: '0 1px 4px rgba(0,0,0,0.1)', flexShrink: 0 }}
