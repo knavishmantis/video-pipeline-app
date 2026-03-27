@@ -124,6 +124,13 @@ resource "google_storage_bucket_iam_member" "service_account_read" {
   member = "serviceAccount:${google_service_account.app_service_account.email}"
 }
 
+# IAM binding: Service account can read from script-engine bucket (competitor videos)
+resource "google_storage_bucket_iam_member" "service_account_script_engine_read" {
+  bucket = "knavishmantis-script-engine"
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:${google_service_account.app_service_account.email}"
+}
+
 # IAM binding: Service account can sign blobs (required for generating signed URLs)
 # This allows the service account to sign blobs on its own behalf
 resource "google_service_account_iam_member" "service_account_token_creator" {
