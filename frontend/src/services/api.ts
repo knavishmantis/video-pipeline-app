@@ -585,5 +585,43 @@ export const scriptEngineApi = {
     const response = await api.patch(`/script-engine/scripts/${id}/status`, { status });
     return response.data;
   },
+  getCritiques: async (decision?: string): Promise<any> => {
+    const response = await api.get('/script-engine/critiques', { params: decision ? { decision } : {} });
+    return response.data;
+  },
+  getCritique: async (id: number): Promise<any> => {
+    const response = await api.get(`/script-engine/critiques/${id}`);
+    return response.data;
+  },
+  approveCritique: async (id: number): Promise<any> => {
+    const response = await api.patch(`/script-engine/critiques/${id}/approve`);
+    return response.data;
+  },
+  rejectCritique: async (id: number): Promise<any> => {
+    const response = await api.patch(`/script-engine/critiques/${id}/reject`);
+    return response.data;
+  },
+};
+
+export const competitorAnalysisApi = {
+  getChannels: async (): Promise<any[]> => {
+    const response = await api.get('/competitor-analysis/channels');
+    return response.data;
+  },
+  getNextVideo: async (channel: string): Promise<any> => {
+    const response = await api.get(`/competitor-analysis/channels/${encodeURIComponent(channel)}/next`);
+    return response.data;
+  },
+  getVideoUrl: async (id: string): Promise<string> => {
+    const response = await api.get(`/competitor-analysis/videos/${id}/url`);
+    return response.data.url;
+  },
+  saveReview: async (id: string, data: { notes?: string; percentile_guess?: number; rating?: number }): Promise<void> => {
+    await api.post(`/competitor-analysis/videos/${id}/review`, data);
+  },
+  getReveal: async (id: string): Promise<any> => {
+    const response = await api.get(`/competitor-analysis/videos/${id}/reveal`);
+    return response.data;
+  },
 };
 

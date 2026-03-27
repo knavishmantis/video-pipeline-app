@@ -17,6 +17,8 @@ import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
 import Research from './pages/Research';
 import ScriptEngine from './pages/ScriptEngine';
+import CriticReview from './pages/CriticReview';
+import CompetitorAnalysis from './pages/CompetitorAnalysis';
 import SceneEditorPage from './pages/SceneEditorPage';
 import Presets from './pages/Presets';
 import PrivateRoute from './components/PrivateRoute';
@@ -194,6 +196,26 @@ function AppContent() {
               <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <ScriptEngine />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/critic"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <CriticReview />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/competitor-analysis"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <CompetitorAnalysis />
                 </AppLayout>
               </ProfileCheckRoute>
             }

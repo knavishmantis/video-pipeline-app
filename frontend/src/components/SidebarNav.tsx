@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie, IconBolt, IconChartBar } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie, IconBolt, IconChartBar, IconStarFilled, IconSword } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -179,6 +179,14 @@ export function SidebarNav() {
       label: "Script Engine",
       href: "/script-engine",
       icon: <IconBolt className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+    }, {
+      label: "Critic Review",
+      href: "/critic",
+      icon: <IconStarFilled className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+    }, {
+      label: "Competitor Analysis",
+      href: "/competitor-analysis",
+      icon: <IconSword className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     }] : []),
     {
       label: "Presets",
