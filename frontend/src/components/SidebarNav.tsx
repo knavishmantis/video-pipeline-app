@@ -155,11 +155,11 @@ export function SidebarNav() {
       href: "/guide",
       icon: <IconHelp className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
-    {
+    ...(isAdmin ? [{
       label: "Metrics",
       href: "/metrics",
       icon: <IconChartBar className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
-    },
+    }] : []),
     ...(isAdmin ? [{
       label: "Reflections",
       href: "/reflections",

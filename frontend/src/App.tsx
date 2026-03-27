@@ -141,7 +141,7 @@ function AppContent() {
           <Route
             path="/metrics"
             element={
-              <ProfileCheckRoute>
+              <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <Metrics />
                 </AppLayout>
