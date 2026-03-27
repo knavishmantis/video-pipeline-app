@@ -84,7 +84,7 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
       ORDER BY rb.created_at DESC LIMIT 10
     `);
 
-    // Data collection stats
+    // Data collection stats (only relevant channels we download)
     const videoStats = await seQuery(`
       SELECT
         COUNT(*)::INTEGER as total,
@@ -92,6 +92,7 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
         COUNT(*) FILTER (WHERE auto_captions IS NOT NULL AND is_short)::INTEGER as captions,
         COUNT(*) FILTER (WHERE gcs_path IS NOT NULL AND is_short)::INTEGER as in_gcs
       FROM videos
+      WHERE channel IN ('camman18', 'DashPum4', 'Skip the Tutorial', 'TurbaneMC')
     `);
 
     const dataCounts = {
