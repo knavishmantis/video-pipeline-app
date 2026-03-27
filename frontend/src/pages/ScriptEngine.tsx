@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { scriptEngineApi } from '../services/api';
 
-const S: Record<string, string> = { researched: 'var(--green)', approved: 'var(--blue)', rejected: 'var(--red)', duplicate: 'var(--text-muted)', new: 'var(--gold)', scripted: 'var(--col-script)', published: 'var(--col-uploaded)' };
+const S: Record<string, string> = { researched: 'var(--green)', approved: 'var(--blue)', rejected: 'var(--red)', duplicate: 'var(--text-muted)', new: 'var(--gold)', scripted: 'var(--col-script)', published: 'var(--col-uploaded)', needs_review: 'var(--gold)', rewrite_pending: 'var(--red)' };
 const SRC: Record<string, string> = { code: 'CODE', youtube: 'YT', reddit: 'RDT', bugs: 'BUGS', mods: 'MODS', wiki: 'WIKI', minecraft: 'MC' };
 
 const p = (d: string) => { if (!d) return null; const x = new Date(d); return !d.includes('Z') && !d.includes('+') && !d.includes('T') ? new Date(d + 'Z') : x; };
@@ -62,7 +62,9 @@ export default function ScriptEngine() {
   const [selectedIdea, setSelectedIdea] = useState<any>(null);
   const [allIdeas, setAllIdeas] = useState<any[] | null>(null);
   const [allBriefs, setAllBriefs] = useState<any[] | null>(null);
-  const [viewMode, setViewMode] = useState<'dashboard' | 'ideas' | 'briefs'>('dashboard');
+  const [allScripts, setAllScripts] = useState<any[] | null>(null);
+  const [selectedScript, setSelectedScript] = useState<any>(null);
+  const [viewMode, setViewMode] = useState<'dashboard' | 'ideas' | 'briefs' | 'scripts'>('dashboard');
 
   useEffect(() => { loadData(); }, []);
   const loadData = async () => {
@@ -74,6 +76,15 @@ export default function ScriptEngine() {
   const loadIdea = async (id: number) => { try { setSelectedIdea(await scriptEngineApi.getIdea(id)); } catch (e) { console.error(e); } };
   const loadAllIdeas = async (status?: string) => { try { setAllIdeas(await scriptEngineApi.getIdeas(status)); } catch (e) { console.error(e); } };
   const loadAllBriefs = async () => { try { setAllBriefs(await scriptEngineApi.getBriefs()); } catch (e) { console.error(e); } };
+  const loadAllScripts = async () => { try { setAllScripts(await scriptEngineApi.getScripts()); } catch (e) { console.error(e); } };
+  const loadScript = async (id: number) => { try { setSelectedScript(await scriptEngineApi.getScript(id)); } catch (e) { console.error(e); } };
+  const updateScriptStatus = async (id: number, status: string) => {
+    try {
+      await scriptEngineApi.updateScriptStatus(id, status);
+      setSelectedScript((prev: any) => prev ? { ...prev, status } : prev);
+      setAllScripts(prev => prev ? prev.map((s: any) => s.id === id ? { ...s, status } : s) : prev);
+    } catch (e) { console.error(e); }
+  };
 
   const sparkData = useMemo(() => {
     if (!runs.length) return { ideas: [], duration: [], errors: [] };
@@ -147,6 +158,64 @@ export default function ScriptEngine() {
     </div>
   );
 
+  // Script detail view
+  if (selectedScript) return (
+    <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+        <button onClick={() => setSelectedScript(null)} style={{ fontSize: '10px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>&larr; Scripts</button>
+        <span style={{ fontSize: '8px', fontWeight: 700, padding: '2px 8px', borderRadius: '3px', textTransform: 'uppercase', background: selectedScript.status === 'approved' ? 'color-mix(in srgb, var(--green) 15%, transparent)' : selectedScript.status === 'rejected' ? 'color-mix(in srgb, var(--red) 15%, transparent)' : 'color-mix(in srgb, var(--gold) 15%, transparent)', color: selectedScript.status === 'approved' ? 'var(--green)' : selectedScript.status === 'rejected' ? 'var(--red)' : 'var(--gold)' }}>{selectedScript.status}</span>
+        <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>draft {selectedScript.draft_number} · {selectedScript.word_count}w · {selectedScript.model_used}</span>
+        <div style={{ flex: 1 }} />
+        {selectedScript.status !== 'approved' && (
+          <button onClick={() => updateScriptStatus(selectedScript.id, 'approved')} style={{ padding: '4px 12px', background: 'color-mix(in srgb, var(--green) 15%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 30%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Approve</button>
+        )}
+        {selectedScript.status !== 'rejected' && (
+          <button onClick={() => updateScriptStatus(selectedScript.id, 'rejected')} style={{ padding: '4px 12px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer' }}>Reject</button>
+        )}
+      </div>
+      <PNL style={{ padding: '20px', marginBottom: '8px' }}>
+        <div style={{ fontSize: '8px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{SRC[selectedScript.source] || selectedScript.source}</div>
+        <h2 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: '0 0 8px', lineHeight: 1.3 }}>{selectedScript.title}</h2>
+        {selectedScript.hook && (
+          <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0', borderLeft: '2px solid var(--gold)', paddingLeft: '10px' }}>{selectedScript.hook}</p>
+        )}
+      </PNL>
+      <PNL label="Script">
+        <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.8, whiteSpace: 'pre-wrap', fontFamily: 'inherit', padding: '4px 0' }}>
+          {selectedScript.script_text}
+        </div>
+      </PNL>
+    </div>
+  );
+
+  // All scripts view
+  if (viewMode === 'scripts') return (
+    <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+        <button onClick={() => { setViewMode('dashboard'); setAllScripts(null); }} style={{ fontSize: '10px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>&larr; Dashboard</button>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>Scripts ({allScripts?.length ?? '…'})</span>
+        <div style={{ flex: 1 }} />
+        {['draft', 'approved', 'rejected'].map(f => (
+          <button key={f} onClick={() => loadAllScripts()} style={{ padding: '3px 10px', borderRadius: '4px', fontSize: '9px', fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>{f}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        {(allScripts || []).map((s: any) => (
+          <div key={s.id} onClick={() => loadScript(s.id)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', cursor: 'pointer', borderRadius: '4px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; }}>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', width: '22px' }}>#{s.id}</span>
+            <span style={{ fontSize: '8px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase', width: '72px', textAlign: 'center', background: s.status === 'approved' ? 'color-mix(in srgb, var(--green) 15%, transparent)' : s.status === 'rejected' ? 'color-mix(in srgb, var(--red) 15%, transparent)' : s.status === 'needs_review' ? 'color-mix(in srgb, var(--red) 10%, transparent)' : 'color-mix(in srgb, var(--gold) 15%, transparent)', color: s.status === 'approved' ? 'var(--green)' : s.status === 'rejected' ? 'var(--red)' : s.status === 'needs_review' ? 'var(--red)' : 'var(--gold)' }}>{s.status}</span>
+            <span style={{ fontSize: '8px', color: 'var(--gold)', fontWeight: 700, width: '30px' }}>{SRC[s.source] || s.source}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</span>
+            <span style={{ fontSize: '8px', color: 'var(--text-muted)', flexShrink: 0 }}>{s.word_count}w</span>
+            <span style={{ fontSize: '8px', color: 'var(--text-muted)', flexShrink: 0, marginLeft: '6px' }}>{ago(s.created_at)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   // All briefs view
   if (viewMode === 'briefs') return (
     <div style={{ fontVariantNumeric: 'tabular-nums' }}>
@@ -183,11 +252,11 @@ export default function ScriptEngine() {
         {[
           { stage: '1', label: 'IDEA', desc: '7 sources → ideas', count: totalIdeas, color: 'var(--gold)' },
           null,
-          { stage: '2', label: 'RESEARCH', desc: 'validate + evidence', count: researchedCount, color: 'var(--green)' },
+          { stage: '2', label: 'RESEARCH', desc: 'validate + evidence', count: data.briefStats?.total || 0, color: 'var(--green)' },
           null,
-          { stage: '3', label: 'WRITE', desc: 'fine-tuned model', count: 0, color: 'var(--col-script)' },
+          { stage: '3', label: 'WRITE', desc: 'fine-tuned model', count: data.scriptStats?.total || 0, color: 'var(--col-script)' },
           null,
-          { stage: '4', label: 'CRITIC', desc: 'score + rewrite', count: 0, color: 'var(--col-editing)' },
+          { stage: '4', label: 'CRITIC', desc: 'score + rewrite', count: data.critiqueStats?.total || 0, color: 'var(--col-editing)' },
         ].map((item, i) => item ? (
           <PNL key={i} style={{ padding: '8px 12px', textAlign: 'center', borderColor: `color-mix(in srgb, ${item.color} 30%, var(--border-default))` }}>
             <div style={{ fontSize: '8px', fontWeight: 800, color: item.color, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Stage {item.stage}</div>
@@ -235,6 +304,7 @@ export default function ScriptEngine() {
         <div style={{ flex: 1 }} />
         <span style={{ color: 'var(--text-muted)' }}>{totalIdeas} ideas</span>
         <span style={{ color: 'var(--text-muted)' }}>{data.briefStats?.total || 0} briefs</span>
+        <span style={{ color: 'var(--text-muted)' }}>{data.scriptStats?.total || 0} scripts</span>
         <span style={{ color: 'var(--text-muted)' }}>{n(vs.shorts)} videos</span>
       </div>
 
@@ -341,6 +411,28 @@ export default function ScriptEngine() {
                 <span style={{ fontSize: '8px', color: 'var(--text-muted)', flexShrink: 0 }}>{ago(idea.created_at)}</span>
               </div>
             ))}
+          </PNL>
+
+          <PNL style={{ flex: 1, maxHeight: '160px', overflow: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Scripts</span>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <span style={{ fontSize: '8px', color: 'var(--green)' }}>{data.scriptStats?.approved || 0} approved</span>
+                <button onClick={() => { setViewMode('scripts'); loadAllScripts(); }} style={{ fontSize: '8px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>View all {data.scriptStats?.total || 0} →</button>
+              </div>
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 2 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total written</span><span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{data.scriptStats?.total || 0}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Draft</span><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{data.scriptStats?.draft || 0}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Approved</span><span style={{ color: 'var(--green)', fontWeight: 700 }}>{data.scriptStats?.approved || 0}</span></div>
+              {(data.scriptStats?.needs_review || 0) > 0 && <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Needs Review</span><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{data.scriptStats.needs_review}</span></div>}
+              {(data.critiqueStats?.total || 0) > 0 && <>
+                <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '2px 0' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Critiques run</span><span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{data.critiqueStats.total}</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Avg score</span><span style={{ color: 'var(--gold)', fontWeight: 700 }}>{data.critiqueStats.avg_score}/10</span></div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Rewrites</span><span style={{ color: 'var(--red)', fontWeight: 700 }}>{data.critiqueStats.rewrites}</span></div>
+              </>}
+            </div>
           </PNL>
 
           <PNL style={{ flex: 1, maxHeight: '160px', overflow: 'auto' }}>

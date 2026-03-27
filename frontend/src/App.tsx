@@ -15,7 +15,6 @@ import YouTubeStats from './pages/YouTubeStats';
 import Metrics from './pages/Metrics';
 import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
-import Research from './pages/Research';
 import ScriptEngine from './pages/ScriptEngine';
 import CriticReview from './pages/CriticReview';
 import CompetitorAnalysis from './pages/CompetitorAnalysis';
@@ -176,16 +175,6 @@ function AppContent() {
               <ProfileCheckRoute>
                 <AppLayout>
                   <Presets />
-                </AppLayout>
-              </ProfileCheckRoute>
-            }
-          />
-          <Route
-            path="/research"
-            element={
-              <ProfileCheckRoute requiredRole="admin">
-                <AppLayout>
-                  <Research />
                 </AppLayout>
               </ProfileCheckRoute>
             }

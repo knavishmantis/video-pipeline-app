@@ -172,10 +172,6 @@ export function SidebarNav() {
         </div>
       ),
     }, {
-      label: "Research",
-      href: "/research",
-      icon: <IconReportSearch className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
-    }, {
       label: "Script Engine",
       href: "/script-engine",
       icon: <IconBolt className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,

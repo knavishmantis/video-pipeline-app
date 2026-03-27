@@ -37,7 +37,7 @@ async function seQuery(sql: string, params?: any[]) {
 scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
   try {
     // Run ALL queries in parallel
-    const [runs, ideaStats, ideaSources, recentIdeas, briefStatsRows, recentBriefs, videoStatsRows, bugCount, redditCount, modCount, versionCount, wikiCount] = await Promise.all([
+    const [runs, ideaStats, ideaSources, recentIdeas, briefStatsRows, recentBriefs, videoStatsRows, bugCount, redditCount, modCount, versionCount, wikiCount, scriptStatsRows, critiqueStatsRows] = await Promise.all([
       seQuery(`SELECT id, status, total_ideas, duplicates_removed, errors_count, started_at, completed_at, EXTRACT(EPOCH FROM (completed_at - started_at))::INTEGER as duration_sec FROM runs ORDER BY id DESC LIMIT 10`),
       seQuery(`SELECT status, COUNT(*)::INTEGER as count FROM ideas GROUP BY status ORDER BY count DESC`),
       seQuery(`SELECT source, COUNT(*)::INTEGER as count FROM ideas GROUP BY source ORDER BY count DESC`),
@@ -50,6 +50,8 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
       seQuery('SELECT COUNT(*)::INTEGER as c FROM mods'),
       seQuery('SELECT COUNT(*)::INTEGER as c FROM mc_versions'),
       seQuery('SELECT COUNT(*)::INTEGER as c FROM wiki_pages'),
+      seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE status = 'approved')::INTEGER as approved, COUNT(*) FILTER (WHERE status = 'draft')::INTEGER as draft, COUNT(*) FILTER (WHERE status = 'needs_review')::INTEGER as needs_review FROM scripts WHERE status != 'superseded'`),
+      seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE decision = 'approved')::INTEGER as approved, COUNT(*) FILTER (WHERE decision = 'rewrite')::INTEGER as rewrites, ROUND(AVG(score_overall), 1)::FLOAT as avg_score FROM script_critiques`),
     ]);
 
     // Steps for latest run (depends on runs result)
@@ -73,6 +75,8 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
       ideaSources,
       recentIdeas,
       briefStats: briefStats[0] || {},
+      scriptStats: scriptStatsRows[0] || {},
+      critiqueStats: critiqueStatsRows[0] || {},
       recentBriefs,
       videoStats: videoStats[0] || {},
       dataCounts,
@@ -127,6 +131,174 @@ scriptEngineRouter.get('/briefs', async (_req: Request, res: Response) => {
     res.json(briefs);
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch briefs' });
+  }
+});
+
+// GET /api/script-engine/scripts — all generated scripts with idea title
+scriptEngineRouter.get('/scripts', async (_req: Request, res: Response) => {
+  try {
+    const scripts = await seQuery(`
+      SELECT s.id, s.idea_id, s.draft_number, s.word_count, s.model_used, s.status, s.created_at,
+        i.title, i.source, i.hook
+      FROM scripts s
+      JOIN ideas i ON s.idea_id = i.id
+      WHERE s.status != 'superseded'
+      ORDER BY s.created_at DESC
+    `);
+    res.json(scripts);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch scripts' });
+  }
+});
+
+// GET /api/script-engine/scripts/:id — single script with full text
+scriptEngineRouter.get('/scripts/:id', async (req: Request, res: Response) => {
+  try {
+    const scripts = await seQuery(`
+      SELECT s.*, i.title, i.source, i.hook, i.angle, i.content_points
+      FROM scripts s JOIN ideas i ON s.idea_id = i.id
+      WHERE s.id = $1
+    `, [req.params.id]);
+    if (!scripts.length) return res.status(404).json({ error: 'Script not found' });
+    res.json(scripts[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch script' });
+  }
+});
+
+// PATCH /api/script-engine/scripts/:id/status — update script status (draft → approved / rejected)
+scriptEngineRouter.patch('/scripts/:id/status', async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body;
+    if (!['draft', 'approved', 'rejected', 'superseded', 'needs_review'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    await seQuery('UPDATE scripts SET status = $1 WHERE id = $2', [status, req.params.id]);
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to update script status' });
+  }
+});
+
+// GET /api/script-engine/scripts/:id/critiques — critique history for a script
+scriptEngineRouter.get('/scripts/:id/critiques', async (req: Request, res: Response) => {
+  try {
+    const critiques = await seQuery(`
+      SELECT sc.*, s.draft_number, s.word_count
+      FROM script_critiques sc
+      JOIN scripts s ON sc.script_id = s.id
+      WHERE sc.script_id = $1
+      ORDER BY sc.created_at DESC
+    `, [req.params.id]);
+    res.json(critiques);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch critiques' });
+  }
+});
+
+// GET /api/script-engine/ideas/:id/critiques — all critique history for an idea (all drafts)
+scriptEngineRouter.get('/ideas/:id/critiques', async (req: Request, res: Response) => {
+  try {
+    const critiques = await seQuery(`
+      SELECT sc.id, sc.script_id, sc.draft_number,
+        sc.score_hook, sc.score_pivot, sc.score_pacing, sc.score_density,
+        sc.score_voice, sc.score_ending, sc.score_accuracy, sc.score_competitive, sc.score_overall,
+        sc.decision, sc.critique, sc.rewrite_guidance, sc.created_at
+      FROM script_critiques sc
+      WHERE sc.idea_id = $1
+      ORDER BY sc.draft_number ASC
+    `, [req.params.id]);
+    res.json(critiques);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch critiques' });
+  }
+});
+
+// GET /api/script-engine/critiques — all critiques with scores, script text, idea info (for review page)
+scriptEngineRouter.get('/critiques', async (req: Request, res: Response) => {
+  try {
+    const decision = req.query.decision as string;
+    // Only show the LATEST critique per idea (highest sc.id per idea_id)
+    let sql = `
+      SELECT sc.id, sc.script_id, sc.idea_id, sc.draft_number,
+        sc.score_hook, sc.score_pivot, sc.score_pacing, sc.score_density,
+        sc.score_voice, sc.score_ending, sc.score_accuracy, sc.score_competitive, sc.score_overall,
+        sc.decision, sc.critique, sc.rewrite_guidance, sc.created_at,
+        s.script_text, s.word_count, s.model_used, s.status as script_status,
+        i.title, i.source, i.hook, i.angle, i.status as idea_status,
+        rb.summary as brief_summary
+      FROM script_critiques sc
+      JOIN scripts s ON sc.script_id = s.id
+      JOIN ideas i ON sc.idea_id = i.id
+      LEFT JOIN research_briefs rb ON rb.idea_id = i.id AND rb.verdict = 'validated'
+      WHERE sc.id = (
+        SELECT MAX(sc2.id) FROM script_critiques sc2 WHERE sc2.idea_id = sc.idea_id
+      )
+    `;
+    const params: any[] = [];
+    if (decision) {
+      sql += ' AND sc.decision = $1';
+      params.push(decision);
+    }
+    sql += ' ORDER BY sc.score_overall DESC, sc.created_at DESC';
+    const critiques = await seQuery(sql, params);
+    res.json(critiques);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch critiques' });
+  }
+});
+
+// GET /api/script-engine/critiques/:id — single critique with full detail + draft history
+scriptEngineRouter.get('/critiques/:id', async (req: Request, res: Response) => {
+  try {
+    const critique = await seQuery(`
+      SELECT sc.*,
+        s.script_text, s.word_count, s.model_used, s.status as script_status,
+        i.title, i.source, i.hook, i.angle, i.content_points, i.status as idea_status,
+        rb.full_brief, rb.summary as brief_summary
+      FROM script_critiques sc
+      JOIN scripts s ON sc.script_id = s.id
+      JOIN ideas i ON sc.idea_id = i.id
+      LEFT JOIN research_briefs rb ON rb.idea_id = i.id AND rb.verdict = 'validated'
+      WHERE sc.id = $1
+    `, [req.params.id]);
+    if (!critique.length) return res.status(404).json({ error: 'Critique not found' });
+
+    // Also get all critiques for this idea (draft history)
+    const history = await seQuery(`
+      SELECT sc.id, sc.draft_number, sc.score_overall, sc.decision, sc.created_at
+      FROM script_critiques sc WHERE sc.idea_id = $1 ORDER BY sc.draft_number ASC
+    `, [critique[0].idea_id]);
+
+    res.json({ ...critique[0], draft_history: history });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch critique' });
+  }
+});
+
+// PATCH /api/script-engine/critiques/:id/approve — human approves a needs_review or any critiqued script
+scriptEngineRouter.patch('/critiques/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const critique = await seQuery('SELECT script_id, idea_id FROM script_critiques WHERE id = $1', [req.params.id]);
+    if (!critique.length) return res.status(404).json({ error: 'Critique not found' });
+    await seQuery('UPDATE scripts SET status = $1 WHERE id = $2', ['approved', critique[0].script_id]);
+    await seQuery('UPDATE ideas SET status = $1 WHERE id = $2', ['approved', critique[0].idea_id]);
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to approve' });
+  }
+});
+
+// PATCH /api/script-engine/critiques/:id/reject — human rejects
+scriptEngineRouter.patch('/critiques/:id/reject', async (req: Request, res: Response) => {
+  try {
+    const critique = await seQuery('SELECT script_id, idea_id FROM script_critiques WHERE id = $1', [req.params.id]);
+    if (!critique.length) return res.status(404).json({ error: 'Critique not found' });
+    await seQuery('UPDATE scripts SET status = $1 WHERE id = $2', ['rejected', critique[0].script_id]);
+    await seQuery('UPDATE ideas SET status = $1 WHERE id = $2', ['rejected', critique[0].idea_id]);
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to reject' });
   }
 });
 
