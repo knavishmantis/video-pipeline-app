@@ -36,71 +36,34 @@ async function seQuery(sql: string, params?: any[]) {
 // GET /api/script-engine/status — overview dashboard data
 scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
   try {
-    // Runs
-    const runs = await seQuery(`
-      SELECT id, status, total_ideas, duplicates_removed, errors_count,
-        started_at, completed_at,
-        EXTRACT(EPOCH FROM (completed_at - started_at))::INTEGER as duration_sec
-      FROM runs ORDER BY id DESC LIMIT 10
-    `);
+    // Run ALL queries in parallel
+    const [runs, ideaStats, ideaSources, recentIdeas, briefStatsRows, recentBriefs, videoStatsRows, bugCount, redditCount, modCount, versionCount, wikiCount] = await Promise.all([
+      seQuery(`SELECT id, status, total_ideas, duplicates_removed, errors_count, started_at, completed_at, EXTRACT(EPOCH FROM (completed_at - started_at))::INTEGER as duration_sec FROM runs ORDER BY id DESC LIMIT 10`),
+      seQuery(`SELECT status, COUNT(*)::INTEGER as count FROM ideas GROUP BY status ORDER BY count DESC`),
+      seQuery(`SELECT source, COUNT(*)::INTEGER as count FROM ideas GROUP BY source ORDER BY count DESC`),
+      seQuery(`SELECT id, source, title, status, confidence, created_at FROM ideas ORDER BY id DESC LIMIT 15`),
+      seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE verdict = 'validated' OR verdict = 'greenlight' OR verdict = 'confirmed' OR verdict = 'approved')::INTEGER as validated, COUNT(*) FILTER (WHERE verdict = 'rejected')::INTEGER as rejected FROM research_briefs`),
+      seQuery(`SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at, i.title, i.source FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id ORDER BY rb.created_at DESC LIMIT 10`),
+      seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE is_short)::INTEGER as shorts, COUNT(*) FILTER (WHERE auto_captions IS NOT NULL AND is_short)::INTEGER as captions, COUNT(*) FILTER (WHERE gcs_path IS NOT NULL AND is_short)::INTEGER as in_gcs FROM videos WHERE channel IN ('camman18', 'DashPum4', 'Skip the Tutorial', 'TurbaneMC')`),
+      seQuery('SELECT COUNT(*)::INTEGER as c FROM bugs'),
+      seQuery('SELECT COUNT(*)::INTEGER as c FROM reddit_posts'),
+      seQuery('SELECT COUNT(*)::INTEGER as c FROM mods'),
+      seQuery('SELECT COUNT(*)::INTEGER as c FROM mc_versions'),
+      seQuery('SELECT COUNT(*)::INTEGER as c FROM wiki_pages'),
+    ]);
 
-    // Steps for latest run
+    // Steps for latest run (depends on runs result)
     const latestRunId = runs[0]?.id;
-    const steps = latestRunId ? await seQuery(`
-      SELECT agent, status, items_processed, ideas_generated, errors,
-        started_at, completed_at,
-        EXTRACT(EPOCH FROM (completed_at - started_at))::INTEGER as duration_sec
-      FROM run_steps WHERE run_id = $1 ORDER BY agent
-    `, [latestRunId]) : [];
+    const steps = latestRunId ? await seQuery(`SELECT agent, status, items_processed, ideas_generated, errors, started_at, completed_at, EXTRACT(EPOCH FROM (completed_at - started_at))::INTEGER as duration_sec FROM run_steps WHERE run_id = $1 ORDER BY agent`, [latestRunId]) : [];
 
-    // Ideas by status
-    const ideaStats = await seQuery(`
-      SELECT status, COUNT(*)::INTEGER as count FROM ideas GROUP BY status ORDER BY count DESC
-    `);
-
-    // Ideas by source
-    const ideaSources = await seQuery(`
-      SELECT source, COUNT(*)::INTEGER as count FROM ideas GROUP BY source ORDER BY count DESC
-    `);
-
-    // Recent ideas
-    const recentIdeas = await seQuery(`
-      SELECT id, source, title, status, confidence, created_at
-      FROM ideas ORDER BY id DESC LIMIT 15
-    `);
-
-    // Research briefs
-    const briefStats = await seQuery(`
-      SELECT COUNT(*)::INTEGER as total,
-        COUNT(*) FILTER (WHERE verdict = 'validated' OR verdict = 'greenlight' OR verdict = 'confirmed' OR verdict = 'approved')::INTEGER as validated,
-        COUNT(*) FILTER (WHERE verdict = 'rejected')::INTEGER as rejected
-      FROM research_briefs
-    `);
-
-    const recentBriefs = await seQuery(`
-      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at,
-        i.title, i.source
-      FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id
-      ORDER BY rb.created_at DESC LIMIT 10
-    `);
-
-    // Data collection stats (only relevant channels we download)
-    const videoStats = await seQuery(`
-      SELECT
-        COUNT(*)::INTEGER as total,
-        COUNT(*) FILTER (WHERE is_short)::INTEGER as shorts,
-        COUNT(*) FILTER (WHERE auto_captions IS NOT NULL AND is_short)::INTEGER as captions,
-        COUNT(*) FILTER (WHERE gcs_path IS NOT NULL AND is_short)::INTEGER as in_gcs
-      FROM videos
-      WHERE channel IN ('camman18', 'DashPum4', 'Skip the Tutorial', 'TurbaneMC')
-    `);
-
+    const videoStats = videoStatsRows;
+    const briefStats = briefStatsRows;
     const dataCounts = {
-      bugs: (await seQuery('SELECT COUNT(*)::INTEGER as c FROM bugs'))[0]?.c || 0,
-      reddit: (await seQuery('SELECT COUNT(*)::INTEGER as c FROM reddit_posts'))[0]?.c || 0,
-      mods: (await seQuery('SELECT COUNT(*)::INTEGER as c FROM mods'))[0]?.c || 0,
-      versions: (await seQuery('SELECT COUNT(*)::INTEGER as c FROM mc_versions'))[0]?.c || 0,
-      wiki: (await seQuery('SELECT COUNT(*)::INTEGER as c FROM wiki_pages'))[0]?.c || 0,
+      bugs: bugCount[0]?.c || 0,
+      reddit: redditCount[0]?.c || 0,
+      mods: modCount[0]?.c || 0,
+      versions: versionCount[0]?.c || 0,
+      wiki: wikiCount[0]?.c || 0,
     };
 
     res.json({
@@ -109,9 +72,9 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
       ideaStats,
       ideaSources,
       recentIdeas,
-      briefStats: briefStats[0],
+      briefStats: briefStats[0] || {},
       recentBriefs,
-      videoStats: videoStats[0],
+      videoStats: videoStats[0] || {},
       dataCounts,
     });
   } catch (error: any) {
