@@ -3,11 +3,11 @@ import { competitorAnalysisApi } from '../services/api';
 
 // ── Channel metadata ──────────────────────────────────────────────────────────
 
-const CHANNEL_META: Record<string, { displayName: string; mcUsername: string; color: string }> = {
-  'camman18':          { displayName: 'camman18',          mcUsername: 'camman18',     color: '#E05A4E' },
-  'DashPum4':          { displayName: 'DashPum4',          mcUsername: 'DashPum4',     color: '#4A9EDE' },
-  'Skip the Tutorial': { displayName: 'Skip the Tutorial', mcUsername: 'SkipTutorial', color: '#4ECB71' },
-  'TurbaneMC':         { displayName: 'TurbaneMC',         mcUsername: 'TurbaneMC',    color: '#9B72CF' },
+const CHANNEL_META: Record<string, { displayName: string; mcUsername: string }> = {
+  'camman18':          { displayName: 'camman18',          mcUsername: 'camman_18'    },
+  'DashPum4':          { displayName: 'DashPum4',          mcUsername: 'DashPum4'     },
+  'Skip the Tutorial': { displayName: 'Skip the Tutorial', mcUsername: 'skiptutorial' },
+  'TurbaneMC':         { displayName: 'TurbaneMC',         mcUsername: 'TurbaneMC'    },
 };
 
 function mcHeadUrl(mcUsername: string) {
@@ -251,7 +251,7 @@ function SessionView({
   channel: string;
   onBack: () => void;
 }) {
-  const meta = CHANNEL_META[channel] || { displayName: channel, mcUsername: channel, color: 'var(--gold)' };
+  const meta = CHANNEL_META[channel] || { displayName: channel, mcUsername: channel };
   const [video, setVideo] = useState<any>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
@@ -419,26 +419,25 @@ function SessionView({
   );
 }
 
-// ── Channel card ──────────────────────────────────────────────────────────────
+// ── Channel row ───────────────────────────────────────────────────────────────
 
-function ChannelCard({ ch, onStart }: { ch: any; onStart: () => void }) {
-  const meta = CHANNEL_META[ch.channel] || { displayName: ch.channel, mcUsername: ch.channel, color: 'var(--gold)' };
+function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
+  const meta = CHANNEL_META[ch.channel] || { displayName: ch.channel, mcUsername: ch.channel };
   const pct = ch.total > 0 ? Math.round((ch.reviewed / ch.total) * 100) : 0;
   const allDone = ch.reviewed >= ch.total;
 
   return (
     <div style={{
-      background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
-      borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px',
+      display: 'grid',
+      gridTemplateColumns: '220px 100px 100px 100px 120px 90px 140px',
+      alignItems: 'center',
+      gap: '0',
+      padding: '14px 18px',
+      borderBottom: '1px solid var(--border-subtle)',
     }}>
-      {/* Avatar + name */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: '8px', overflow: 'hidden',
-          background: 'var(--border-default)', flexShrink: 0,
-          border: `2px solid ${meta.color}`,
-          imageRendering: 'pixelated',
-        }}>
+      {/* Channel identity */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: 36, height: 36, borderRadius: '6px', overflow: 'hidden', background: 'var(--border-default)', flexShrink: 0 }}>
           <img
             src={mcHeadUrl(meta.mcUsername)}
             alt={meta.displayName}
@@ -446,48 +445,62 @@ function ChannelCard({ ch, onStart }: { ch: any; onStart: () => void }) {
             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
           />
         </div>
-        <div>
-          <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>{meta.displayName}</div>
-          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px' }}>{ch.total} videos downloaded</div>
-        </div>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{meta.displayName}</span>
       </div>
 
-      {/* Progress */}
+      {/* Avg views */}
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>Reviewed</span>
-          <span style={{ fontSize: '11px', fontWeight: 700, color: allDone ? '#2DC97A' : 'var(--text-primary)' }}>
-            {ch.reviewed} / {ch.total}
-          </span>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtViews(ch.avg_views)}</div>
+        <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>avg views</div>
+      </div>
+
+      {/* Median views */}
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtViews(ch.median_views)}</div>
+        <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>median</div>
+      </div>
+
+      {/* Best video */}
+      <div>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#2DC97A' }}>{fmtViews(ch.max_views)}</div>
+        <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>best video</div>
+      </div>
+
+      {/* Downloaded + reviewed progress */}
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{ch.reviewed}/{ch.total} reviewed</span>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: allDone ? '#2DC97A' : 'var(--text-secondary)' }}>{pct}%</span>
         </div>
-        <div style={{ height: '6px', background: 'var(--border-default)', borderRadius: '3px', overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', width: `${pct}%`, borderRadius: '3px',
-            background: allDone ? '#2DC97A' : meta.color,
-            transition: 'width 0.4s ease',
-          }} />
+        <div style={{ height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${pct}%`, borderRadius: '2px', background: allDone ? '#2DC97A' : 'var(--gold)', transition: 'width 0.4s ease' }} />
         </div>
       </div>
 
       {/* Accuracy */}
-      {ch.avg_error != null && ch.reviewed > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Avg accuracy</div>
-          <div style={{ fontSize: '13px', fontWeight: 800, color: accuracyColor(ch.avg_error), marginLeft: 'auto' }}>±{ch.avg_error} pts</div>
-        </div>
-      )}
+      <div>
+        {ch.avg_error != null && ch.reviewed > 0 ? (
+          <>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: accuracyColor(ch.avg_error) }}>±{ch.avg_error} pts</div>
+            <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>accuracy</div>
+          </>
+        ) : (
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>—</div>
+        )}
+      </div>
 
-      {/* Start button */}
+      {/* Action */}
       <button
         onClick={onStart}
         disabled={allDone}
         style={{
-          width: '100%', padding: '10px', borderRadius: '8px', border: 'none',
+          padding: '7px 14px', borderRadius: '6px', border: 'none',
           cursor: allDone ? 'default' : 'pointer',
-          background: allDone ? 'var(--border-default)' : meta.color,
-          color: allDone ? 'var(--text-muted)' : '#fff',
-          fontSize: '12px', fontWeight: 700, letterSpacing: '-0.01em',
-          opacity: allDone ? 0.6 : 1,
+          background: allDone ? 'var(--border-default)' : 'var(--gold)',
+          color: allDone ? 'var(--text-muted)' : 'var(--bg-primary)',
+          fontSize: '11px', fontWeight: 700, letterSpacing: '-0.01em',
+          opacity: allDone ? 0.5 : 1,
+          whiteSpace: 'nowrap',
         }}
       >
         {allDone ? 'All reviewed' : 'Start Session →'}
@@ -550,9 +563,22 @@ export default function CompetitorAnalysis() {
       )}
 
       {!loading && channels.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '14px' }}>
+        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', overflow: 'hidden' }}>
+          {/* Header */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '220px 100px 100px 100px 120px 90px 140px',
+            gap: '0',
+            padding: '8px 18px',
+            borderBottom: '1px solid var(--border-default)',
+            background: 'var(--bg-primary)',
+          }}>
+            {['Channel', 'Avg Views', 'Median', 'Best Video', 'Progress', 'Accuracy', ''].map(h => (
+              <div key={h} style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{h}</div>
+            ))}
+          </div>
           {channels.map(ch => (
-            <ChannelCard
+            <ChannelRow
               key={ch.channel}
               ch={ch}
               onStart={() => setActiveChannel(ch.channel)}

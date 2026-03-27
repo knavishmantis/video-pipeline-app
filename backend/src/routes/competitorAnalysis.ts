@@ -73,7 +73,7 @@ async function ensureTable() {
 ensureTable().catch(console.error);
 
 // GET /api/competitor-analysis/channels
-// Returns per-channel stats: total downloadeds, reviewed count, avg guess error
+// Returns per-channel stats with rich video metrics
 competitorAnalysisRouter.get('/channels', async (_req: Request, res: Response) => {
   try {
     const rows = await seQuery(`
@@ -91,12 +91,15 @@ competitorAnalysisRouter.get('/channels', async (_req: Request, res: Response) =
           cv.channel,
           COUNT(*)::INTEGER AS total,
           COUNT(cr.id)::INTEGER AS reviewed,
+          ROUND(AVG(cv.views))::BIGINT AS avg_views,
+          MAX(cv.views)::BIGINT AS max_views,
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY cv.views)::BIGINT AS median_views,
           ROUND(AVG(ABS(cr.percentile_guess - cv.actual_percentile)))::INTEGER AS avg_error
         FROM channel_videos cv
         LEFT JOIN competitor_reviews cr ON cr.video_id = cv.id
         GROUP BY cv.channel
       )
-      SELECT * FROM stats ORDER BY channel
+      SELECT * FROM stats ORDER BY avg_views DESC
     `);
     res.json(rows);
   } catch (e: any) {
