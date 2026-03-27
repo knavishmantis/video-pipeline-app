@@ -44,17 +44,29 @@ function extractBucketPath(gcsPath: string): string {
 }
 
 // Ensure competitor_reviews table exists in script_engine DB
+// video_id is INTEGER to match videos.id (SERIAL)
 async function ensureTable() {
   await seQuery(`
     CREATE TABLE IF NOT EXISTS competitor_reviews (
       id SERIAL PRIMARY KEY,
-      video_id TEXT NOT NULL,
+      video_id INTEGER NOT NULL,
       notes TEXT,
       percentile_guess INTEGER CHECK (percentile_guess >= 0 AND percentile_guess <= 100),
       rating INTEGER CHECK (rating >= 1 AND rating <= 10),
       reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE(video_id)
     )
+  `);
+  // Migrate TEXT → INTEGER if the table was created before this fix
+  await seQuery(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'competitor_reviews' AND column_name = 'video_id' AND data_type = 'text'
+      ) THEN
+        ALTER TABLE competitor_reviews ALTER COLUMN video_id TYPE INTEGER USING video_id::INTEGER;
+      END IF;
+    END $$;
   `);
 }
 
@@ -152,7 +164,7 @@ competitorAnalysisRouter.post('/videos/:id/review', async (req: Request, res: Re
         percentile_guess = EXCLUDED.percentile_guess,
         rating = COALESCE(EXCLUDED.rating, competitor_reviews.rating),
         reviewed_at = CURRENT_TIMESTAMP
-    `, [id, notes || null, percentile_guess ?? null, rating ?? null]);
+    `, [parseInt(id), notes || null, percentile_guess ?? null, rating ?? null]);
 
     res.json({ ok: true });
   } catch (e: any) {
@@ -183,7 +195,7 @@ competitorAnalysisRouter.get('/videos/:id/reveal', async (req: Request, res: Res
         )
         SELECT * FROM ranked WHERE id = $2
       `, [channel, id]),
-      seQuery('SELECT notes, percentile_guess, rating FROM competitor_reviews WHERE video_id = $1', [id]),
+      seQuery('SELECT notes, percentile_guess, rating FROM competitor_reviews WHERE video_id = $1', [parseInt(id)]),
     ]);
 
     if (revealRows.length === 0) return res.status(404).json({ error: 'Video not found in channel' });
