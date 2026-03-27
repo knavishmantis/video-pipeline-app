@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import { Storage } from '@google-cloud/storage';
 import { authenticateToken, requireRole } from '../middleware/auth';
-import { getSignedUrl } from '../services/gcpStorage';
 
 export const competitorAnalysisRouter = Router();
 
@@ -33,14 +33,33 @@ async function seQuery(sql: string, params?: any[]) {
   return result.rows;
 }
 
+// The script engine stores competitor videos in its own GCS bucket
+const SCRIPT_ENGINE_BUCKET = process.env.SCRIPT_ENGINE_GCS_BUCKET || 'knavishmantis-script-engine';
+
 // Strip gs://bucket-name/ prefix if present so we get just the bucket-relative path
-function extractBucketPath(gcsPath: string): string {
+function extractBucketPath(gcsPath: string): { bucket: string; path: string } {
   if (gcsPath.startsWith('gs://')) {
     const withoutScheme = gcsPath.slice(5);
     const slash = withoutScheme.indexOf('/');
-    return slash >= 0 ? withoutScheme.slice(slash + 1) : withoutScheme;
+    return slash >= 0
+      ? { bucket: withoutScheme.slice(0, slash), path: withoutScheme.slice(slash + 1) }
+      : { bucket: withoutScheme, path: '' };
   }
-  return gcsPath;
+  return { bucket: SCRIPT_ENGINE_BUCKET, path: gcsPath };
+}
+
+async function getCompetitorSignedUrl(gcsPath: string, expiresIn = 3600): Promise<string> {
+  const { bucket: bucketName, path: filePath } = extractBucketPath(gcsPath);
+  const storage = new Storage({ projectId: process.env.GCP_PROJECT_ID });
+  const file = storage.bucket(bucketName).file(filePath);
+  const [exists] = await file.exists();
+  if (!exists) throw new Error(`File not found in bucket: ${filePath}`);
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + expiresIn * 1000,
+    version: 'v4',
+  });
+  return url;
 }
 
 // Ensure competitor_reviews table exists in script_engine DB
@@ -144,8 +163,7 @@ competitorAnalysisRouter.get('/videos/:id/url', async (req: Request, res: Respon
     const gcsPath = rows[0].gcs_path;
     if (!gcsPath) return res.status(404).json({ error: 'No GCS path for this video' });
 
-    const bucketPath = extractBucketPath(gcsPath);
-    const url = await getSignedUrl(bucketPath, 3600);
+    const url = await getCompetitorSignedUrl(gcsPath, 3600);
     res.json({ url });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
