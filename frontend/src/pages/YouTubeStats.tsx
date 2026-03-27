@@ -556,8 +556,8 @@ export default function YouTubeStats() {
                       />
                       <Tooltip
                         contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '6px', fontSize: '11px', color: 'var(--text-primary)' }}
-                        formatter={(value: any, _name: string, props: any) => [`${value} total (+${props.payload.gained})`, 'Subs']}
-                        labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.title || ''}
+                        formatter={(value: any, _name: any, props: any) => [`${value} total (+${props.payload.gained})`, 'Subs']}
+                        labelFormatter={(_: any, payload: readonly any[]) => payload?.[0]?.payload?.title || ''}
                       />
                       <Area type="monotone" dataKey="cumSubs" stroke="var(--gold)" fill="var(--gold)" fillOpacity={0.15} strokeWidth={2} dot={false} activeDot={{ r: 4, fill: 'var(--gold)', stroke: 'none' }} />
                     </AreaChart>
@@ -590,7 +590,7 @@ export default function YouTubeStats() {
                       <Tooltip
                         contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '6px', fontSize: '11px', color: 'var(--text-primary)' }}
                         formatter={(v: any) => [`${(v as number).toFixed(1)}%`, 'Retention']}
-                        labelFormatter={(_: string, payload: any[]) => payload?.[0]?.payload?.title || ''}
+                        labelFormatter={(_: any, payload: readonly any[]) => payload?.[0]?.payload?.title || ''}
                       />
                       <Area type="monotone" dataKey="retention" stroke="#4A9EDE" fill="#4A9EDE" fillOpacity={0.12} strokeWidth={2} dot={{ r: 2.5, fill: '#4A9EDE', stroke: 'none' }} activeDot={{ r: 4, fill: '#4A9EDE', stroke: 'none' }} />
                     </AreaChart>
