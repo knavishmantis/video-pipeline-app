@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconBrandYoutube, IconTarget, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie, IconBolt } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie, IconBolt, IconChartBar } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -156,9 +156,9 @@ export function SidebarNav() {
       icon: <IconHelp className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
     {
-      label: "YouTube Stats",
-      href: "/youtube-stats",
-      icon: <IconBrandYoutube className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+      label: "Metrics",
+      href: "/metrics",
+      icon: <IconChartBar className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
     ...(isAdmin ? [{
       label: "Reflections",

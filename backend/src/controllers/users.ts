@@ -466,6 +466,40 @@ export const usersController = {
     }
   },
 
+  async getSubmissionStats(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const isAdmin = req.userRoles?.includes('admin') || req.userRole === 'admin';
+      if (!isAdmin) {
+        res.status(403).json({ error: 'Only admins can view submission stats' });
+        return;
+      }
+
+      const result = await query(
+        `SELECT user_id, role, COUNT(*) as total_assigned, COUNT(completed_at) as completed
+         FROM assignments
+         WHERE role IN ('clipper', 'editor')
+         GROUP BY user_id, role`,
+        []
+      );
+
+      // Structure as { userId: { role: { total, completed } } }
+      const stats: Record<number, Record<string, { total: number; completed: number }>> = {};
+      for (const row of result.rows) {
+        const uid = row.user_id;
+        if (!stats[uid]) stats[uid] = {};
+        stats[uid][row.role] = {
+          total: parseInt(row.total_assigned, 10),
+          completed: parseInt(row.completed, 10),
+        };
+      }
+
+      res.json(stats);
+    } catch (error) {
+      logger.error('Get submission stats error', { error });
+      res.status(500).json({ error: 'Failed to fetch submission stats' });
+    }
+  },
+
   async deleteIncentiveRule(req: AuthRequest, res: Response): Promise<void> {
     const { id, ruleId } = req.params;
     try {

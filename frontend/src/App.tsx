@@ -12,6 +12,7 @@ import Guide from './pages/Guide';
 import FlashbackReference from './pages/FlashbackReference';
 import EditingReference from './pages/EditingReference';
 import YouTubeStats from './pages/YouTubeStats';
+import Metrics from './pages/Metrics';
 import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
 import Research from './pages/Research';
@@ -135,10 +136,14 @@ function AppContent() {
           />
           <Route
             path="/youtube-stats"
+            element={<Navigate to="/metrics" replace />}
+          />
+          <Route
+            path="/metrics"
             element={
               <ProfileCheckRoute>
                 <AppLayout>
-                  <YouTubeStats />
+                  <Metrics />
                 </AppLayout>
               </ProfileCheckRoute>
             }

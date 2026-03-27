@@ -16,6 +16,7 @@ usersRouter.put('/:id', validate(updateUserSchema), usersController.update);
 usersRouter.use(requireProfileComplete);
 
 usersRouter.get('/', usersController.getAll);
+usersRouter.get('/submission-stats', usersController.getSubmissionStats);
 usersRouter.get('/:id', usersController.getById);
 usersRouter.get('/:id/rates', usersController.getUserRates);
 usersRouter.get('/:id/incentive-rules', usersController.getIncentiveRules);

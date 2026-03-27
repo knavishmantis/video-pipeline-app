@@ -349,6 +349,10 @@ export const usersApi = {
   deleteIncentiveRule: async (userId: number, ruleId: number): Promise<void> => {
     await api.delete(`/users/${userId}/incentive-rules/${ruleId}`);
   },
+  getSubmissionStats: async (): Promise<Record<number, Record<string, { total: number; completed: number }>>> => {
+    const response = await api.get('/users/submission-stats');
+    return response.data;
+  },
 };
 
 export const scenesApi = {
@@ -433,6 +437,13 @@ export const presetClipsApi = {
 export const teamMetricsApi = {
   get: async (): Promise<any> => {
     const response = await api.get('/team-metrics');
+    return response.data;
+  },
+};
+
+export const pipelineAnalyticsApi = {
+  get: async (): Promise<any> => {
+    const response = await api.get('/analytics/pipeline');
     return response.data;
   },
 };
@@ -560,6 +571,18 @@ export const scriptEngineApi = {
   },
   getBriefs: async (): Promise<any> => {
     const response = await api.get('/script-engine/briefs');
+    return response.data;
+  },
+  getScripts: async (): Promise<any> => {
+    const response = await api.get('/script-engine/scripts');
+    return response.data;
+  },
+  getScript: async (id: number): Promise<any> => {
+    const response = await api.get(`/script-engine/scripts/${id}`);
+    return response.data;
+  },
+  updateScriptStatus: async (id: number, status: string): Promise<any> => {
+    const response = await api.patch(`/script-engine/scripts/${id}/status`, { status });
     return response.data;
   },
 };
