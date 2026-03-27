@@ -325,6 +325,15 @@ function SessionView({
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }}>
+      <style>{`
+        @media (max-width: 700px) {
+          .competitor-session-grid { grid-template-columns: 1fr !important; }
+          .competitor-channel-table { overflow-x: auto; }
+          .competitor-channel-header { display: none !important; }
+          .competitor-channel-row { grid-template-columns: 1fr 80px !important; gap: 0; }
+          .competitor-channel-row > *:not(:first-child):not(:last-child) { display: none; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <button
@@ -375,7 +384,7 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '16px', alignItems: 'start' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '16px', alignItems: 'start' }}>
           {/* Video */}
           <div>
             <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', aspectRatio: '9/16', maxHeight: '65vh' }}>
@@ -474,7 +483,7 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
   const allDone = ch.reviewed >= ch.total;
 
   return (
-    <div style={{
+    <div className="competitor-channel-row" style={{
       display: 'grid',
       gridTemplateColumns: '220px 100px 100px 100px 120px 90px 140px',
       alignItems: 'center',
@@ -584,6 +593,14 @@ export default function CompetitorAnalysis() {
 
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', width: '100%' }}>
+      <style>{`
+        @media (max-width: 700px) {
+          .competitor-session-grid { grid-template-columns: 1fr !important; }
+          .competitor-channel-header { display: none !important; }
+          .competitor-channel-row { grid-template-columns: 1fr auto !important; padding: 12px 14px; }
+          .competitor-channel-row > *:not(:first-child):not(:last-child) { display: none; }
+        }
+      `}</style>
       <div style={{ marginBottom: '24px' }}>
         <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>
           Analytics
@@ -610,9 +627,9 @@ export default function CompetitorAnalysis() {
       )}
 
       {!loading && channels.length > 0 && (
-        <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', overflow: 'hidden' }}>
+        <div className="competitor-channel-table" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', overflow: 'hidden' }}>
           {/* Header */}
-          <div style={{
+          <div className="competitor-channel-header" style={{
             display: 'grid',
             gridTemplateColumns: '220px 100px 100px 100px 120px 90px 140px',
             gap: '0',
