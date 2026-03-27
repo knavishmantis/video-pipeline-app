@@ -152,6 +152,21 @@ scriptEngineRouter.get('/ideas/:id', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/script-engine/briefs — all research briefs
+scriptEngineRouter.get('/briefs', async (_req: Request, res: Response) => {
+  try {
+    const briefs = await seQuery(`
+      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at,
+        i.title, i.source
+      FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id
+      ORDER BY rb.created_at DESC
+    `);
+    res.json(briefs);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch briefs' });
+  }
+});
+
 // GET /api/script-engine/runs — run history
 scriptEngineRouter.get('/runs', async (_req: Request, res: Response) => {
   try {

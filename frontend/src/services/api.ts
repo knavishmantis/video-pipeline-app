@@ -558,5 +558,9 @@ export const scriptEngineApi = {
     const response = await api.get(`/script-engine/ideas/${id}`);
     return response.data;
   },
+  getBriefs: async (): Promise<any> => {
+    const response = await api.get('/script-engine/briefs');
+    return response.data;
+  },
 };
 

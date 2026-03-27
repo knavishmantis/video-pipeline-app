@@ -61,7 +61,7 @@ export default function ScriptEngine() {
   const [loading, setLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<any>(null);
   const [allIdeas, setAllIdeas] = useState<any[] | null>(null);
-  const [allBriefs, setAllBriefs] = useState(false);
+  const [allBriefs, setAllBriefs] = useState<any[] | null>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'ideas' | 'briefs'>('dashboard');
 
   useEffect(() => { loadData(); }, []);
@@ -73,6 +73,7 @@ export default function ScriptEngine() {
   };
   const loadIdea = async (id: number) => { try { setSelectedIdea(await scriptEngineApi.getIdea(id)); } catch (e) { console.error(e); } };
   const loadAllIdeas = async (status?: string) => { try { setAllIdeas(await scriptEngineApi.getIdeas(status)); } catch (e) { console.error(e); } };
+  const loadAllBriefs = async () => { try { setAllBriefs(await scriptEngineApi.getBriefs()); } catch (e) { console.error(e); } };
 
   const sparkData = useMemo(() => {
     if (!runs.length) return { ideas: [], duration: [], errors: [] };
@@ -150,11 +151,11 @@ export default function ScriptEngine() {
   if (viewMode === 'briefs') return (
     <div style={{ fontVariantNumeric: 'tabular-nums' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-        <button onClick={() => setViewMode('dashboard')} style={{ fontSize: '10px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>&larr; Dashboard</button>
-        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>All Research Briefs ({data.briefStats?.total || 0})</span>
+        <button onClick={() => { setViewMode('dashboard'); setAllBriefs(null); }} style={{ fontSize: '10px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>&larr; Dashboard</button>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>All Research Briefs ({allBriefs?.length || data.briefStats?.total || 0})</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-        {data.recentBriefs?.map((b: any) => (
+        {(allBriefs || data.recentBriefs)?.map((b: any) => (
           <div key={b.id} onClick={() => loadIdea(b.idea_id)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 8px', cursor: 'pointer', borderRadius: '4px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; }}>
@@ -196,6 +197,28 @@ export default function ScriptEngine() {
           </PNL>
         ) : (
           <div key={i} style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>→</div>
+        ))}
+      </div>
+
+      {/* ═══ EXTERNAL LINKS ═══ */}
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+        {[
+          { label: 'GitHub', url: 'https://github.com/knavishmantis/script-engine', icon: '⟨/⟩' },
+          { label: 'Vertex AI Tuning', url: 'https://console.cloud.google.com/vertex-ai/generative/language/locations/us-central1/tuning?project=knavishmantis', icon: '◆' },
+          { label: 'GCS Bucket', url: 'https://console.cloud.google.com/storage/browser/knavishmantis-script-engine?project=knavishmantis', icon: '▣' },
+          { label: 'Cloud SQL', url: 'https://console.cloud.google.com/sql/instances/video-pipeline-shared/databases?project=knavishmantis', icon: '⛁' },
+          { label: 'GCP Billing', url: 'https://console.cloud.google.com/billing?project=knavishmantis', icon: '$' },
+        ].map(link => (
+          <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer" style={{
+            fontSize: '9px', padding: '4px 10px', borderRadius: '4px', textDecoration: 'none',
+            background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+            color: 'var(--text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px',
+          }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; (e.currentTarget as HTMLElement).style.color = 'var(--gold)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+          >
+            <span>{link.icon}</span> {link.label}
+          </a>
         ))}
       </div>
 
@@ -323,7 +346,7 @@ export default function ScriptEngine() {
           <PNL style={{ flex: 1, maxHeight: '160px', overflow: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Research Briefs</span>
-              <button onClick={() => setViewMode('briefs')} style={{ fontSize: '8px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>View all {data.briefStats?.total || 0} →</button>
+              <button onClick={() => { setViewMode('briefs'); loadAllBriefs(); }} style={{ fontSize: '8px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>View all {data.briefStats?.total || 0} →</button>
             </div>
             {data.recentBriefs?.map((b: any) => (
               <div key={b.id} onClick={() => loadIdea(b.idea_id)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', cursor: 'pointer', borderBottom: '1px solid var(--border-subtle)' }}
