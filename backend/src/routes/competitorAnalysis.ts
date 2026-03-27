@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
-import { Storage } from '@google-cloud/storage';
 import { authenticateToken, requireRole } from '../middleware/auth';
+import { getSignedUrlFromBucket } from '../services/gcpStorage';
 
 export const competitorAnalysisRouter = Router();
 
@@ -50,16 +50,7 @@ function extractBucketPath(gcsPath: string): { bucket: string; path: string } {
 
 async function getCompetitorSignedUrl(gcsPath: string, expiresIn = 3600): Promise<string> {
   const { bucket: bucketName, path: filePath } = extractBucketPath(gcsPath);
-  const storage = new Storage({ projectId: process.env.GCP_PROJECT_ID });
-  const file = storage.bucket(bucketName).file(filePath);
-  const [exists] = await file.exists();
-  if (!exists) throw new Error(`File not found in bucket: ${filePath}`);
-  const [url] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + expiresIn * 1000,
-    version: 'v4',
-  });
-  return url;
+  return getSignedUrlFromBucket(bucketName, filePath, expiresIn);
 }
 
 // Ensure competitor_reviews table exists in script_engine DB

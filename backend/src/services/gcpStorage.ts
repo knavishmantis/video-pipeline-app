@@ -195,6 +195,19 @@ export async function getSignedUrl(bucketPath: string, expiresIn: number = 3600)
   }
 }
 
+export async function getSignedUrlFromBucket(bucketName: string, bucketPath: string, expiresIn: number = 3600): Promise<string> {
+  const storage = getStorage();
+  if (!storage) throw new Error('GCP Storage is not initialized. Check GCP_PROJECT_ID configuration.');
+  const file = storage.bucket(bucketName).file(bucketPath);
+  const [exists] = await file.exists();
+  if (!exists) throw new Error(`File not found in bucket: ${bucketPath}`);
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + expiresIn * 1000,
+  });
+  return url;
+}
+
 export async function getSignedUploadUrl(
   bucketPath: string,
   contentType: string,
