@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { scriptEngineApi } from '../services/api';
 
 const S: Record<string, string> = { researched: 'var(--green)', approved: 'var(--blue)', rejected: 'var(--red)', duplicate: 'var(--text-muted)', new: 'var(--gold)', scripted: 'var(--col-script)', published: 'var(--col-uploaded)' };
@@ -328,16 +329,31 @@ function IdeaDetail({ idea, onBack }: { idea: any; onBack: () => void }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <span style={{ fontSize: '8px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Research Brief</span>
               <span style={{ fontSize: '8px', fontWeight: 700, padding: '1px 6px', borderRadius: '3px', textTransform: 'uppercase', background: idea.brief.verdict === 'rejected' ? 'color-mix(in srgb, var(--red) 15%, transparent)' : 'color-mix(in srgb, var(--green) 15%, transparent)', color: idea.brief.verdict === 'rejected' ? 'var(--red)' : 'var(--green)' }}>{idea.brief.verdict}</span>
+              <span style={{ fontSize: '8px', color: 'var(--text-muted)', marginLeft: 'auto' }}>{idea.brief.full_brief?.length?.toLocaleString()} chars</span>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '12px' }}>{idea.brief.summary}</div>
-            <details>
-              <summary style={{ fontSize: '9px', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 700, padding: '6px 0', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                Full brief ({idea.brief.full_brief?.length?.toLocaleString()} chars)
-              </summary>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', marginTop: '8px', maxHeight: '500px', overflow: 'auto', padding: '12px', background: 'var(--bg-base)', borderRadius: '4px', border: '1px solid var(--border-default)', lineHeight: 1.6 }}>
-                {idea.brief.full_brief}
-              </div>
-            </details>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '14px', padding: '10px 12px', background: 'color-mix(in srgb, var(--gold) 4%, var(--bg-base))', borderRadius: '4px', border: '1px solid var(--gold-border)' }}>{idea.brief.summary}</div>
+            <div className="script-engine-md" style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7, padding: '16px', background: 'var(--bg-base)', borderRadius: '4px', border: '1px solid var(--border-default)', maxHeight: '600px', overflow: 'auto' }}>
+              <ReactMarkdown
+                components={{
+                  h1: ({children}) => <h1 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', margin: '16px 0 8px', letterSpacing: '-0.02em' }}>{children}</h1>,
+                  h2: ({children}) => <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold)', margin: '14px 0 6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{children}</h2>,
+                  h3: ({children}) => <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: '10px 0 4px' }}>{children}</h3>,
+                  p: ({children}) => <p style={{ margin: '4px 0', lineHeight: 1.7 }}>{children}</p>,
+                  li: ({children}) => <li style={{ margin: '2px 0', lineHeight: 1.6 }}>{children}</li>,
+                  code: ({children, className}) => className ? (
+                    <pre style={{ background: 'var(--bg-elevated)', padding: '8px 10px', borderRadius: '4px', overflow: 'auto', fontSize: '10px', border: '1px solid var(--border-default)', margin: '6px 0' }}><code>{children}</code></pre>
+                  ) : (
+                    <code style={{ background: 'var(--bg-elevated)', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', color: 'var(--gold)' }}>{children}</code>
+                  ),
+                  table: ({children}) => <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '10px', margin: '6px 0' }}>{children}</table>,
+                  th: ({children}) => <th style={{ textAlign: 'left', padding: '4px 8px', borderBottom: '1px solid var(--border-default)', color: 'var(--text-muted)', fontWeight: 700, fontSize: '9px', textTransform: 'uppercase' }}>{children}</th>,
+                  td: ({children}) => <td style={{ padding: '3px 8px', borderBottom: '1px solid var(--border-subtle)' }}>{children}</td>,
+                  strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
+                  a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
+                  blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--gold)', paddingLeft: '10px', margin: '6px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
+                }}
+              >{idea.brief.full_brief}</ReactMarkdown>
+            </div>
           </div>
         )}
       </PNL>
