@@ -124,13 +124,13 @@ function RevealPanel({
   hasMore,
 }: {
   reveal: any;
-  guess: number;
+  guess: number | null;
   onRate: (r: number) => void;
   onNext: () => void;
   hasMore: boolean;
 }) {
   const actual = reveal.actual_percentile as number;
-  const error = Math.abs(guess - actual);
+  const error = guess !== null ? Math.abs(guess - actual) : null;
   const [rating, setRating] = useState<number>(reveal.review?.rating || 0);
 
   function handleRate(r: number) {
@@ -143,43 +143,52 @@ function RevealPanel({
       {/* Accuracy */}
       <PNL>
         <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          {guess !== null && (
+            <>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Your guess</div>
+                <div style={{ fontSize: '32px', fontWeight: 800, color: percentileColor(guess), letterSpacing: '-0.05em', lineHeight: 1 }}>{guess}th</div>
+              </div>
+              <div style={{ fontSize: '22px', color: 'var(--text-muted)', fontWeight: 300 }}>→</div>
+            </>
+          )}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Your guess</div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: percentileColor(guess), letterSpacing: '-0.05em', lineHeight: 1 }}>{guess}th</div>
-          </div>
-          <div style={{ fontSize: '22px', color: 'var(--text-muted)', fontWeight: 300 }}>→</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Actual</div>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Actual percentile</div>
             <div style={{ fontSize: '32px', fontWeight: 800, color: percentileColor(actual), letterSpacing: '-0.05em', lineHeight: 1 }}>{actual}th</div>
             <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{percentileLabel(actual)}</div>
           </div>
-          <div style={{ flex: 1, textAlign: 'right' }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Error</div>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: accuracyColor(error), letterSpacing: '-0.05em', lineHeight: 1 }}>±{error}</div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>pts</div>
-          </div>
+          {error !== null ? (
+            <div style={{ flex: 1, textAlign: 'right' }}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Error</div>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: accuracyColor(error), letterSpacing: '-0.05em', lineHeight: 1 }}>±{error}</div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>pts</div>
+            </div>
+          ) : (
+            <div style={{ flex: 1, fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'right' }}>
+              Too recent — no guess tracked
+            </div>
+          )}
         </div>
 
         {/* Distribution bar */}
         <div style={{ marginTop: '14px' }}>
           <div style={{ position: 'relative', height: '20px', background: 'var(--border-default)', borderRadius: '10px', overflow: 'visible' }}>
-            {/* Gradient fill */}
             <div style={{
               position: 'absolute', inset: 0, borderRadius: '10px',
               background: 'linear-gradient(to right, #E05A4E 0%, #E8943A 25%, #B8922E 50%, #4ECB71 75%, #2DC97A 100%)',
               opacity: 0.3,
             }} />
-            {/* Guess marker */}
-            <div style={{
-              position: 'absolute', top: '-4px', bottom: '-4px',
-              left: `calc(${guess}% - 1px)`,
-              width: '2px', background: 'var(--text-muted)', borderRadius: '2px',
-            }}>
-              <div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', fontSize: '8px', color: 'var(--text-muted)', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                guess
+            {guess !== null && (
+              <div style={{
+                position: 'absolute', top: '-4px', bottom: '-4px',
+                left: `calc(${guess}% - 1px)`,
+                width: '2px', background: 'var(--text-muted)', borderRadius: '2px',
+              }}>
+                <div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', fontSize: '8px', color: 'var(--text-muted)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  guess
+                </div>
               </div>
-            </div>
-            {/* Actual marker */}
+            )}
             <div style={{
               position: 'absolute', top: '-6px', bottom: '-6px',
               left: `calc(${actual}% - 2px)`,
@@ -256,7 +265,8 @@ function SessionView({
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [guess, setGuess] = useState(50);
-  const [phase, setPhase] = useState<'loading' | 'watching' | 'revealed' | 'done'>('loading');
+  const [phase, setPhase] = useState<'loading' | 'watching' | 'revealed' | 'done' | 'error'>('loading');
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [reveal, setReveal] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -267,29 +277,46 @@ function SessionView({
     setGuess(50);
     setReveal(null);
     setVideoUrl(null);
+    setLoadError(null);
     try {
       const v = await competitorAnalysisApi.getNextVideo(channel);
       setVideo(v);
       const url = await competitorAnalysisApi.getVideoUrl(v.id);
       setVideoUrl(url);
       setPhase('watching');
-    } catch {
-      setHasMore(false);
-      setPhase('done');
+    } catch (e: any) {
+      if (e.response?.status === 404) {
+        setHasMore(false);
+        setPhase('done');
+      } else {
+        setLoadError(e.response?.data?.error || e.message || 'Failed to load video');
+        setPhase('error');
+      }
     }
   }, [channel]);
 
   useEffect(() => { loadNext(); }, [loadNext]);
 
+  const isTooRecent = video
+    ? (Date.now() - new Date(video.published_at).getTime()) < 7 * 24 * 60 * 60 * 1000
+    : false;
+
   async function handleReveal() {
-    await competitorAnalysisApi.saveReview(video.id, { notes, percentile_guess: guess });
+    await competitorAnalysisApi.saveReview(video.id, {
+      notes,
+      percentile_guess: isTooRecent ? undefined : guess,
+    });
     const data = await competitorAnalysisApi.getReveal(video.id);
     setReveal(data);
     setPhase('revealed');
   }
 
   async function handleRate(rating: number) {
-    await competitorAnalysisApi.saveReview(video.id, { notes, percentile_guess: guess, rating });
+    await competitorAnalysisApi.saveReview(video.id, {
+      notes,
+      percentile_guess: isTooRecent ? undefined : guess,
+      rating,
+    });
   }
 
   function handleNext() {
@@ -323,6 +350,17 @@ function SessionView({
       {phase === 'loading' && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-muted)', fontSize: '12px' }}>
           Loading video…
+        </div>
+      )}
+
+      {phase === 'error' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', gap: '12px' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: '#E05A4E' }}>Failed to load video</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '400px', textAlign: 'center' }}>{loadError}</div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={loadNext} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '12px', fontWeight: 700 }}>Retry</button>
+            <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border-default)', cursor: 'pointer', background: 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>Back to Channels</button>
+          </div>
         </div>
       )}
 
@@ -379,9 +417,18 @@ function SessionView({
                   />
                 </PNL>
 
-                <PNL>
-                  <PercentileSlider value={guess} onChange={setGuess} />
-                </PNL>
+                {isTooRecent ? (
+                  <PNL>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                      Disabled — video is less than 7 days old, views are still climbing.
+                    </div>
+                  </PNL>
+                ) : (
+                  <PNL>
+                    <PercentileSlider value={guess} onChange={setGuess} />
+                  </PNL>
+                )}
 
                 <button
                   onClick={handleReveal}
@@ -405,7 +452,7 @@ function SessionView({
                 )}
                 <RevealPanel
                   reveal={reveal}
-                  guess={guess}
+                  guess={isTooRecent ? null : guess}
                   onRate={handleRate}
                   onNext={handleNext}
                   hasMore={hasMore}
