@@ -307,6 +307,16 @@ export async function migrate(): Promise<void> {
         }
       }
 
+      // Add file_type column to scene_images
+      try {
+        await query(`ALTER TABLE scene_images ADD COLUMN IF NOT EXISTS file_type VARCHAR(20) NOT NULL DEFAULT 'image'`);
+        console.log('Added file_type column to scene_images');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add file_type column to scene_images:', error.message);
+        }
+      }
+
       // Add timestamp and youtube columns
       try {
         await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS entered_clip_changes_at TIMESTAMP');

@@ -218,12 +218,13 @@ scriptEngineRouter.get('/ideas/:id/critiques', async (req: Request, res: Respons
 scriptEngineRouter.get('/critiques', async (req: Request, res: Response) => {
   try {
     const decision = req.query.decision as string;
+    const humanStatus = req.query.human_status as string; // 'used' | 'not_used' | 'unmarked' | omit for default (unmarked only)
     // Only show the LATEST critique per idea (highest sc.id per idea_id)
     let sql = `
       SELECT sc.id, sc.script_id, sc.idea_id, sc.draft_number,
         sc.score_hook, sc.score_pivot, sc.score_pacing, sc.score_density,
         sc.score_voice, sc.score_ending, sc.score_accuracy, sc.score_competitive, sc.score_overall,
-        sc.decision, sc.critique, sc.rewrite_guidance, sc.created_at,
+        sc.decision, sc.critique, sc.rewrite_guidance, sc.created_at, sc.human_status,
         s.script_text, s.word_count, s.model_used, s.status as script_status,
         i.title, i.source, i.hook, i.angle, i.status as idea_status,
         rb.summary as brief_summary
@@ -236,10 +237,19 @@ scriptEngineRouter.get('/critiques', async (req: Request, res: Response) => {
       )
     `;
     const params: any[] = [];
+    let paramIdx = 1;
     if (decision) {
-      sql += ' AND sc.decision = $1';
+      sql += ` AND sc.decision = $${paramIdx++}`;
       params.push(decision);
     }
+    if (humanStatus === 'used' || humanStatus === 'not_used') {
+      sql += ` AND sc.human_status = $${paramIdx++}`;
+      params.push(humanStatus);
+    } else if (humanStatus === 'unmarked' || !humanStatus) {
+      // Default: hide marked scripts from main view
+      sql += ` AND sc.human_status IS NULL`;
+    }
+    // humanStatus === 'all' → no filter
     sql += ' ORDER BY sc.score_overall DESC, sc.created_at DESC';
     const critiques = await seQuery(sql, params);
     res.json(critiques);
@@ -299,6 +309,20 @@ scriptEngineRouter.patch('/critiques/:id/reject', async (req: Request, res: Resp
     res.json({ ok: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to reject' });
+  }
+});
+
+// PATCH /api/script-engine/critiques/:id/mark — mark human_status (used/not_used/null)
+scriptEngineRouter.patch('/critiques/:id/mark', async (req: Request, res: Response) => {
+  try {
+    const { human_status } = req.body;
+    if (human_status !== 'used' && human_status !== 'not_used' && human_status !== null) {
+      return res.status(400).json({ error: 'human_status must be "used", "not_used", or null' });
+    }
+    await seQuery('UPDATE script_critiques SET human_status = $1 WHERE id = $2', [human_status, req.params.id]);
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to mark critique' });
   }
 });
 

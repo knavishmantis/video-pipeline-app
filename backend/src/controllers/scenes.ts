@@ -214,7 +214,7 @@ export const scenesController = {
   // POST /api/shorts/:shortId/scenes/:id/images
   async addImage(req: AuthRequest, res: Response): Promise<void> {
     const { shortId, id } = req.params;
-    const { bucket_path } = req.body;
+    const { bucket_path, file_type = 'image' } = req.body;
     try {
       const sceneCheck = await query('SELECT id FROM scenes WHERE id = $1 AND short_id = $2', [id, shortId]);
       if (sceneCheck.rows.length === 0) {
@@ -222,8 +222,8 @@ export const scenesController = {
         return;
       }
       const result = await query(
-        'INSERT INTO scene_images (scene_id, bucket_path) VALUES ($1, $2) RETURNING *',
-        [id, bucket_path]
+        'INSERT INTO scene_images (scene_id, bucket_path, file_type) VALUES ($1, $2, $3) RETURNING *',
+        [id, bucket_path, file_type === 'video' ? 'video' : 'image']
       );
       res.status(201).json(result.rows[0]);
     } catch (error) {

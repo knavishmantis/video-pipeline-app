@@ -185,6 +185,7 @@ export interface SceneImage {
   id: number;
   scene_id: number;
   bucket_path: string;
+  file_type: 'image' | 'video';
   created_at: string;
 }
 

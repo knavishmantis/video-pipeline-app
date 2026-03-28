@@ -39,13 +39,14 @@ export default function CriticReview() {
   const [selected, setSelected] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('');
+  const [humanTab, setHumanTab] = useState<'unmarked' | 'used' | 'not_used'>('unmarked');
 
-  useEffect(() => { loadCritiques(); }, []);
+  useEffect(() => { loadCritiques(); }, [humanTab]);
 
-  const loadCritiques = async (decision?: string) => {
+  const loadCritiques = async () => {
     try {
       setLoading(true);
-      const data = await scriptEngineApi.getCritiques(decision || undefined);
+      const data = await scriptEngineApi.getCritiques(undefined, humanTab);
       setCritiques(data);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
@@ -70,6 +71,14 @@ export default function CriticReview() {
       await scriptEngineApi.rejectCritique(id);
       setSelected((prev: any) => prev ? { ...prev, script_status: 'rejected', idea_status: 'rejected' } : prev);
       setCritiques(prev => prev.map(c => c.id === id ? { ...c, script_status: 'rejected', idea_status: 'rejected' } : c));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleMark = async (id: number, status: 'used' | 'not_used' | null) => {
+    try {
+      await scriptEngineApi.markCritique(id, status);
+      setSelected((prev: any) => prev ? { ...prev, human_status: status } : prev);
+      setCritiques(prev => prev.filter(c => c.id !== id));
     } catch (e) { console.error(e); }
   };
 
@@ -103,6 +112,16 @@ export default function CriticReview() {
           )}
           {s.script_status === 'rejected' && (
             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--red)', padding: '5px 16px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', borderRadius: '4px' }}>REJECTED</span>
+          )}
+          <div style={{ width: '1px', height: '20px', background: 'var(--border-default)', margin: '0 4px' }} />
+          {s.human_status !== 'used' && (
+            <button onClick={() => handleMark(s.id, 'used')} style={{ padding: '5px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mark Used</button>
+          )}
+          {s.human_status !== 'not_used' && (
+            <button onClick={() => handleMark(s.id, 'not_used')} style={{ padding: '5px 14px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Not Used</button>
+          )}
+          {s.human_status && (
+            <button onClick={() => handleMark(s.id, null)} style={{ padding: '5px 10px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', borderRadius: '4px', fontSize: '9px', fontWeight: 600, cursor: 'pointer' }}>Unmark</button>
           )}
         </div>
 
@@ -210,8 +229,22 @@ export default function CriticReview() {
   return (
     <div style={{ fontVariantNumeric: 'tabular-nums', maxWidth: '960px', margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '12px' }}>
-        <h1 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>Critic Review</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0, marginRight: '8px' }}>Critic Review</h1>
+        {/* Human status tabs */}
+        {(['unmarked', 'used', 'not_used'] as const).map(tab => {
+          const label = tab === 'unmarked' ? 'New' : tab === 'used' ? 'Used' : 'Not Used';
+          const active = humanTab === tab;
+          const color = tab === 'used' ? 'var(--green)' : tab === 'not_used' ? 'var(--red)' : 'var(--text-primary)';
+          return (
+            <button key={tab} onClick={() => { setHumanTab(tab); setFilter(''); }} style={{
+              padding: '4px 12px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer',
+              border: active ? `1px solid ${color}` : '1px solid var(--border-default)',
+              background: active ? `color-mix(in srgb, ${color} 12%, var(--bg-elevated))` : 'var(--bg-elevated)',
+              color: active ? color : 'var(--text-muted)',
+            }}>{label}</button>
+          );
+        })}
         <div style={{ flex: 1 }} />
         {(['', 'needs_review', 'approved', 'rewrite'] as const).map(f => {
           const label = f === '' ? 'All' : f === 'needs_review' ? 'Needs Review' : f === 'approved' ? 'Approved' : 'Rewrites';
@@ -290,6 +323,13 @@ export default function CriticReview() {
               <span style={{ fontSize: '9px', color: 'var(--text-muted)', width: '24px', textAlign: 'center' }}>#{c.draft_number}</span>
               {/* Age */}
               <span style={{ fontSize: '9px', color: 'var(--text-muted)', width: '34px' }}>{ago(c.created_at)}</span>
+              {/* Mark buttons (inline, only on hover would be ideal but inline is simpler) */}
+              {humanTab === 'unmarked' && (
+                <div style={{ display: 'flex', gap: '4px' }} onClick={e => e.stopPropagation()}>
+                  <button onClick={() => handleMark(c.id, 'used')} style={{ padding: '2px 8px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 20%, transparent)', borderRadius: '3px', fontSize: '8px', fontWeight: 700, cursor: 'pointer' }}>Used</button>
+                  <button onClick={() => handleMark(c.id, 'not_used')} style={{ padding: '2px 8px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 15%, transparent)', borderRadius: '3px', fontSize: '8px', fontWeight: 700, cursor: 'pointer' }}>Skip</button>
+                </div>
+              )}
             </div>
           );
         })}

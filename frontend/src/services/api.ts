@@ -387,8 +387,8 @@ export const scenesApi = {
     const response = await api.get(`/shorts/${shortId}/scenes/${sceneId}/image-url`);
     return response.data.url;
   },
-  addImage: async (shortId: number, sceneId: number, bucketPath: string) => {
-    const response = await api.post(`/shorts/${shortId}/scenes/${sceneId}/images`, { bucket_path: bucketPath });
+  addImage: async (shortId: number, sceneId: number, bucketPath: string, fileType: 'image' | 'video' = 'image') => {
+    const response = await api.post(`/shorts/${shortId}/scenes/${sceneId}/images`, { bucket_path: bucketPath, file_type: fileType });
     return response.data;
   },
   deleteImage: async (shortId: number, sceneId: number, imageId: number): Promise<void> => {
@@ -585,8 +585,11 @@ export const scriptEngineApi = {
     const response = await api.patch(`/script-engine/scripts/${id}/status`, { status });
     return response.data;
   },
-  getCritiques: async (decision?: string): Promise<any> => {
-    const response = await api.get('/script-engine/critiques', { params: decision ? { decision } : {} });
+  getCritiques: async (decision?: string, humanStatus?: string): Promise<any> => {
+    const params: any = {};
+    if (decision) params.decision = decision;
+    if (humanStatus) params.human_status = humanStatus;
+    const response = await api.get('/script-engine/critiques', { params });
     return response.data;
   },
   getCritique: async (id: number): Promise<any> => {
@@ -599,6 +602,10 @@ export const scriptEngineApi = {
   },
   rejectCritique: async (id: number): Promise<any> => {
     const response = await api.patch(`/script-engine/critiques/${id}/reject`);
+    return response.data;
+  },
+  markCritique: async (id: number, human_status: 'used' | 'not_used' | null): Promise<any> => {
+    const response = await api.patch(`/script-engine/critiques/${id}/mark`, { human_status });
     return response.data;
   },
 };

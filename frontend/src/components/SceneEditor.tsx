@@ -186,16 +186,17 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   };
 
   const handleImageUpload = async (sceneId: number, file: File) => {
+    const isVideo = file.type === 'video/mp4' || file.name.endsWith('.mp4');
     try {
       const uploadUrlData = await filesApi.getUploadUrl(
         shortId,
-        'scene_image',
+        isVideo ? 'scene_video' : 'scene_image',
         file.name,
         file.size,
-        file.type
+        file.type || (isVideo ? 'video/mp4' : 'image/jpeg')
       );
       await filesApi.uploadDirectToGCS(uploadUrlData.upload_url, file);
-      const newImage: SceneImage = await scenesApi.addImage(shortId, sceneId, uploadUrlData.bucket_path);
+      const newImage: SceneImage = await scenesApi.addImage(shortId, sceneId, uploadUrlData.bucket_path, isVideo ? 'video' : 'image');
       setScenes(prev => prev.map(s =>
         s.id === sceneId ? { ...s, images: [...(s.images || []), newImage] } : s
       ));
@@ -203,7 +204,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
         .then(url => setImageSignedUrls(prev => ({ ...prev, [newImage.id]: url })))
         .catch(() => {});
     } catch (error) {
-      console.error('Failed to upload image:', error);
+      console.error('Failed to upload file:', error);
     }
   };
 
@@ -526,12 +527,16 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
     if ((scene.images?.length ?? 0) > 0) {
       sections.push(
         <div key="images" style={{ padding: '16px 24px' }}>
-          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Reference Images</label>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Reference Media</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             {scene.images!.map(img => (
               <div key={img.id} style={{ resize: 'both', overflow: 'hidden', height: '200px', minWidth: '80px', minHeight: '60px', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'inline-block' }}>
                 {imageSignedUrls[img.id] ? (
-                  <img src={imageSignedUrls[img.id]} alt="Scene reference" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                  img.file_type === 'video' ? (
+                    <video src={imageSignedUrls[img.id]} controls style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }} />
+                  ) : (
+                    <img src={imageSignedUrls[img.id]} alt="Scene reference" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }} />
+                  )
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>Loading...</div>
                 )}
@@ -1087,18 +1092,22 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                   {/* Scene Images */}
                   {((scene.images?.length ?? 0) > 0 || canEditScenes) && (
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Scene Images</label>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Scene Media</label>
                       {(scene.images?.length ?? 0) > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
                           {scene.images!.map(img => (
                             <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
                               {imageSignedUrls[img.id] ? (
                                 <div style={{ resize: 'both', overflow: 'hidden', width: '220px', minWidth: '80px', minHeight: '60px', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'inline-block' }}>
-                                  <img
-                                    src={imageSignedUrls[img.id]}
-                                    alt="Scene reference"
-                                    style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }}
-                                  />
+                                  {img.file_type === 'video' ? (
+                                    <video src={imageSignedUrls[img.id]} controls style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }} />
+                                  ) : (
+                                    <img
+                                      src={imageSignedUrls[img.id]}
+                                      alt="Scene reference"
+                                      style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }}
+                                    />
+                                  )}
                                 </div>
                               ) : (
                                 <div style={{ width: '120px', height: '90px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -1109,7 +1118,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                                 <button
                                   onClick={() => handleDeleteImage(scene.id, img.id)}
                                   style={{ position: 'absolute', top: '4px', right: '4px', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', lineHeight: 1 }}
-                                  title="Remove image"
+                                  title="Remove"
                                 >
                                   ×
                                 </button>
@@ -1136,10 +1145,10 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                             <polyline points="17 8 12 3 7 8" />
                             <line x1="12" y1="3" x2="12" y2="15" />
                           </svg>
-                          Add Image
+                          Add Image / Video
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/*,video/mp4"
                             style={{ display: 'none' }}
                             onChange={(e) => {
                               const file = e.target.files?.[0];
