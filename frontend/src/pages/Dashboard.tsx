@@ -183,9 +183,11 @@ export default function Dashboard() {
     };
 
     return [...filtered].sort((a, b) => {
-      // 0. Active cards always float to top
-      if (a.is_active && !b.is_active) return -1;
-      if (!a.is_active && b.is_active) return 1;
+      // 0. Active cards always float to top (script column only)
+      if (columnId === 'script') {
+        if (a.is_active && !b.is_active) return -1;
+        if (!a.is_active && b.is_active) return 1;
+      }
 
       const nameA = getAssigneeName(a);
       const nameB = getAssigneeName(b);
