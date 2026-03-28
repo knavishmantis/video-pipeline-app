@@ -82,6 +82,10 @@ export const shortsApi = {
   delete: async (id: number): Promise<void> => {
     await api.delete(`/shorts/${id}`);
   },
+  toggleActive: async (id: number): Promise<{ id: number; is_active: boolean }> => {
+    const response = await api.patch(`/shorts/${id}/toggle-active`);
+    return response.data;
+  },
   markClipsComplete: async (id: number): Promise<Short> => {
     const response = await api.post(`/shorts/${id}/mark-clips-complete`);
     return response.data;

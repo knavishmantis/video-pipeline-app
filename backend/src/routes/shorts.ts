@@ -17,6 +17,7 @@ shortsRouter.get('/:id', shortsController.getById);
 shortsRouter.post('/', validate(createShortSchema), shortsController.create);
 shortsRouter.put('/:id', validate(updateShortSchema), shortsController.update);
 shortsRouter.delete('/:id', shortsController.delete);
+shortsRouter.patch('/:id/toggle-active', requireRole('admin'), shortsController.toggleActive);
 shortsRouter.post('/:id/mark-clips-complete', requireRole('admin'), shortsController.markClipsComplete);
 shortsRouter.post('/:id/mark-editing-complete', requireRole('admin'), shortsController.markEditingComplete);
 

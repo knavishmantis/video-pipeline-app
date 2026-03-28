@@ -40,6 +40,7 @@ export interface Short {
   reflection_would_do_differently?: string | null;
   reflection_rating?: number | null;
   reflection_at?: string | null;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
   // Populated fields

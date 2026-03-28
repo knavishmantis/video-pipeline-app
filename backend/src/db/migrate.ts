@@ -307,6 +307,16 @@ export async function migrate(): Promise<void> {
         }
       }
 
+      // Add is_active column to shorts
+      try {
+        await query(`ALTER TABLE shorts ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT FALSE`);
+        console.log('Added is_active column to shorts');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add is_active column to shorts:', error.message);
+        }
+      }
+
       // Add file_type column to scene_images
       try {
         await query(`ALTER TABLE scene_images ADD COLUMN IF NOT EXISTS file_type VARCHAR(20) NOT NULL DEFAULT 'image'`);

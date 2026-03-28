@@ -482,6 +482,24 @@ export const shortsController = {
     }
   },
 
+  async toggleActive(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const result = await query(
+        'UPDATE shorts SET is_active = NOT is_active, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, is_active',
+        [id]
+      );
+      if (result.rows.length === 0) {
+        res.status(404).json({ error: 'Short not found' });
+        return;
+      }
+      res.json({ id: result.rows[0].id, is_active: result.rows[0].is_active });
+    } catch (error) {
+      logger.error('Toggle active error', { shortId: id, error });
+      res.status(500).json({ error: 'Failed to toggle active state' });
+    }
+  },
+
   async markClipsComplete(req: AuthRequest, res: Response): Promise<void> {
     const { id } = req.params;
     try {

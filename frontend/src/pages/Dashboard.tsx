@@ -183,6 +183,10 @@ export default function Dashboard() {
     };
 
     return [...filtered].sort((a, b) => {
+      // 0. Active cards always float to top
+      if (a.is_active && !b.is_active) return -1;
+      if (!a.is_active && b.is_active) return 1;
+
       const nameA = getAssigneeName(a);
       const nameB = getAssigneeName(b);
 
@@ -198,6 +202,13 @@ export default function Dashboard() {
       // 3. Same assignee (or both unassigned) — oldest first
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
+  };
+
+  const handleToggleActive = async (shortId: number) => {
+    try {
+      const { is_active } = await shortsApi.toggleActive(shortId);
+      setShorts(prev => prev.map(s => s.id === shortId ? { ...s, is_active } : s));
+    } catch (e) { console.error(e); }
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -790,6 +801,7 @@ export default function Dashboard() {
         onDragEnd={handleDragEnd}
         onCardClick={handleCardClick}
         onAssign={handleAssign}
+        onToggleActive={handleToggleActive}
         onCreateClick={handleCreateClick}
         navigate={navigate}
         getShortsForColumn={getShortsForColumn}

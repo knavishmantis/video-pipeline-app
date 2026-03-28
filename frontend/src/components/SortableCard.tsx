@@ -15,6 +15,7 @@ interface SortableCardProps {
   isAdmin: boolean;
   currentUserId?: number;
   onAssign: (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => void;
+  onToggleActive?: (shortId: number) => Promise<void>;
   navigate: (path: string) => void;
 }
 
@@ -27,6 +28,7 @@ export function SortableCard({
   isAdmin,
   currentUserId,
   onAssign,
+  onToggleActive,
   navigate,
 }: SortableCardProps) {
   const [showAssignMenu, setShowAssignMenu] = useState(false);
@@ -132,20 +134,22 @@ export function SortableCard({
     />
   );
 
+  const isActive = !!short.is_active;
+
   return (
     <div
       ref={setNodeRef}
       style={{
         ...style,
-        background: isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)',
-        border: '1px solid var(--border-default)',
-        borderLeft: `4px solid ${cfg.color}`,
+        background: isActive ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))' : isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)',
+        border: isActive ? '1px solid var(--gold-border)' : '1px solid var(--border-default)',
+        borderLeft: isActive ? '4px solid var(--gold)' : `4px solid ${cfg.color}`,
         borderRadius: '8px',
         padding: '11px 12px 34px',
         cursor: onClick ? 'pointer' : 'default',
         transition: isDragging ? 'none' : 'background 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.15s ease-out',
         position: 'relative',
-        boxShadow: 'var(--card-shadow)',
+        boxShadow: isActive ? '0 0 0 1px var(--gold-border), var(--card-shadow)' : 'var(--card-shadow)',
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
@@ -156,8 +160,10 @@ export function SortableCard({
       }}
       onMouseLeave={(e) => {
         if (!isDragging) {
-          e.currentTarget.style.background = isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)';
-          e.currentTarget.style.boxShadow = 'var(--card-shadow)';
+          e.currentTarget.style.background = isActive
+            ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))'
+            : isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)';
+          e.currentTarget.style.boxShadow = isActive ? '0 0 0 1px var(--gold-border), var(--card-shadow)' : 'var(--card-shadow)';
           e.currentTarget.style.transform = 'translateY(0)';
           setShowAssignMenu(false);
           setMenuPosition(null);
@@ -203,6 +209,44 @@ export function SortableCard({
         </button>
       )}
 
+      {/* Active toggle button */}
+      {isAdmin && onToggleActive && !isDragging && column.id === 'script' && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleActive(short.id); }}
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: '86px',
+            width: '22px',
+            height: '22px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: isActive ? 'color-mix(in srgb, var(--gold) 20%, transparent)' : 'transparent',
+            border: isActive ? '1px solid var(--gold-border)' : 'none',
+            borderRadius: '6px',
+            transition: 'all 0.15s ease',
+            zIndex: 2,
+            color: isActive ? 'var(--gold)' : 'var(--text-muted)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = isActive ? 'color-mix(in srgb, var(--gold) 30%, transparent)' : 'var(--border-subtle)';
+            e.currentTarget.style.color = 'var(--gold)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = isActive ? 'color-mix(in srgb, var(--gold) 20%, transparent)' : 'transparent';
+            e.currentTarget.style.color = isActive ? 'var(--gold)' : 'var(--text-muted)';
+          }}
+          title={isActive ? 'Mark as inactive' : 'Mark as active'}
+        >
+          {/* Bolt/lightning icon */}
+          <svg width="11" height="11" viewBox="0 0 24 24" fill={isActive ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </button>
+      )}
+
       {/* Drag handle */}
       {isAdmin && (
         <div
@@ -212,7 +256,7 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: !isDragging ? '34px' : '8px',
+            right: !isDragging ? '60px' : '8px',
             width: '22px',
             height: '22px',
             cursor: isDragging ? 'grabbing' : 'grab',
@@ -259,7 +303,7 @@ export function SortableCard({
             style={{
               position: 'absolute',
               top: '8px',
-              right: !isDragging ? '60px' : '36px',
+              right: !isDragging ? (column.id === 'script' ? '112px' : '86px') : '36px',
               width: '22px',
               height: '22px',
               cursor: 'pointer',
