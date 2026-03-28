@@ -230,7 +230,7 @@ scriptEngineRouter.get('/critiques', async (req: Request, res: Response) => {
       FROM script_critiques sc
       JOIN scripts s ON sc.script_id = s.id
       JOIN ideas i ON sc.idea_id = i.id
-      LEFT JOIN research_briefs rb ON rb.idea_id = i.id AND rb.verdict = 'validated'
+      LEFT JOIN research_briefs rb ON rb.id = (SELECT MAX(rb2.id) FROM research_briefs rb2 WHERE rb2.idea_id = i.id AND rb2.verdict != 'rejected')
       WHERE sc.id = (
         SELECT MAX(sc2.id) FROM script_critiques sc2 WHERE sc2.idea_id = sc.idea_id
       )
@@ -259,7 +259,7 @@ scriptEngineRouter.get('/critiques/:id', async (req: Request, res: Response) => 
       FROM script_critiques sc
       JOIN scripts s ON sc.script_id = s.id
       JOIN ideas i ON sc.idea_id = i.id
-      LEFT JOIN research_briefs rb ON rb.idea_id = i.id AND rb.verdict = 'validated'
+      LEFT JOIN research_briefs rb ON rb.id = (SELECT MAX(rb2.id) FROM research_briefs rb2 WHERE rb2.idea_id = i.id AND rb2.verdict != 'rejected')
       WHERE sc.id = $1
     `, [req.params.id]);
     if (!critique.length) return res.status(404).json({ error: 'Critique not found' });
