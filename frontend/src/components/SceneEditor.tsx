@@ -28,7 +28,10 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   // Preset clips state
   const [presetClips, setPresetClips] = useState<PresetClip[]>([]);
   const [presetVideoUrls, setPresetVideoUrls] = useState<Record<number, string>>({});
+  const [presetThumbnailUrls, setPresetThumbnailUrls] = useState<Record<number, string>>({});
+  const loadingPresetThumbs = useRef<Set<number>>(new Set());
   const [showPresetPicker, setShowPresetPicker] = useState<number | null>(null);
+  const [presetPickerFlipped, setPresetPickerFlipped] = useState(false);
 
   // Scroll view state — default to scroll view when short is past script stage
   const isScriptMode = !shortStatus || shortStatus === 'idea' || shortStatus === 'script';
@@ -116,6 +119,49 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
     presetClipsApi.getVideoUrl(presetId)
       .then(url => setPresetVideoUrls(prev => ({ ...prev, [presetId]: url })))
       .catch(() => {});
+  };
+
+  const loadPresetThumbnailUrl = (preset: PresetClip) => {
+    if (presetThumbnailUrls[preset.id] || loadingPresetThumbs.current.has(preset.id)) return;
+    loadingPresetThumbs.current.add(preset.id);
+    if (preset.thumbnail_path) {
+      presetClipsApi.getThumbnailUrl(preset.id)
+        .then(url => setPresetThumbnailUrls(prev => ({ ...prev, [preset.id]: url })))
+        .catch(() => {})
+        .finally(() => loadingPresetThumbs.current.delete(preset.id));
+    } else {
+      presetClipsApi.getVideoUrl(preset.id)
+        .then(url => setPresetThumbnailUrls(prev => ({ ...prev, [preset.id]: url })))
+        .catch(() => {})
+        .finally(() => loadingPresetThumbs.current.delete(preset.id));
+    }
+  };
+
+  interface PresetGroup {
+    label: string;
+    baseName: string;
+    nametag?: PresetClip;
+    noNametag?: PresetClip;
+    standalone?: PresetClip;
+  }
+
+  const groupPresets = (clips: PresetClip[]): PresetGroup[] => {
+    const groups: Record<string, PresetGroup> = {};
+    for (const clip of clips) {
+      const nameLower = clip.name.toLowerCase();
+      const isNametag = nameLower.includes('nametag') && !nameLower.includes('no nametag');
+      const isNoNametag = nameLower.includes('no nametag');
+      if (!isNametag && !isNoNametag) {
+        groups[clip.name] = { label: clip.label || '?', baseName: clip.name, standalone: clip };
+        continue;
+      }
+      const baseName = clip.name.replace(/\s*No\s+Nametag\s*/i, '').replace(/\s*Nametag\s*/i, '').trim();
+      const key = baseName.toLowerCase();
+      if (!groups[key]) groups[key] = { label: clip.label || '?', baseName };
+      if (isNoNametag) groups[key].noNametag = clip;
+      else groups[key].nametag = clip;
+    }
+    return Object.values(groups).sort((a, b) => (parseInt(a.label) || 999) - (parseInt(b.label) || 999));
   };
 
   const handleCreateSceneFromSelection = useCallback(() => {
@@ -324,11 +370,38 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   // Preset picker for expanded scene
   const renderPresetPicker = (sceneId: number) => {
     if (showPresetPicker !== sceneId) return null;
+    const groups = groupPresets(presetClips);
+    // Trigger thumbnail loads
+    presetClips.forEach(p => loadPresetThumbnailUrl(p));
+
+    const renderThumb = (preset: PresetClip, size = 64) => (
+      <div style={{
+        width: `${size}px`,
+        height: `${Math.round(size * 9 / 16)}px`,
+        borderRadius: '4px',
+        overflow: 'hidden',
+        background: 'var(--bg-surface)',
+        flexShrink: 0,
+      }}>
+        {presetThumbnailUrls[preset.id] ? (
+          preset.thumbnail_path ? (
+            <img src={presetThumbnailUrls[preset.id]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            <video src={presetThumbnailUrls[preset.id]} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted preload="metadata" />
+          )
+        ) : (
+          <div style={{ width: '100%', height: '100%', background: 'var(--border-subtle)' }} />
+        )}
+      </div>
+    );
+
     return (
       <div
         style={{
           position: 'absolute',
-          top: '100%',
+          ...(presetPickerFlipped
+            ? { bottom: '100%', marginBottom: '4px' }
+            : { top: '100%', marginTop: '4px' }),
           left: 0,
           right: 0,
           zIndex: 10,
@@ -336,44 +409,63 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
           border: '1px solid var(--border-default)',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          maxHeight: '200px',
+          maxHeight: '260px',
           overflowY: 'auto',
-          marginTop: '4px',
         }}
       >
-        {presetClips.length === 0 ? (
+        {groups.length === 0 ? (
           <div style={{ padding: '12px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
             No presets yet. Create some on the Presets page.
           </div>
         ) : (
-          presetClips.map(preset => (
-            <button
-              key={preset.id}
-              onClick={() => {
-                updateScene(sceneId, { preset_clip_id: preset.id });
-                setShowPresetPicker(null);
-              }}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '8px 12px',
-                textAlign: 'left',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                borderBottom: '1px solid var(--border-subtle)',
-                fontSize: '13px',
-                color: 'var(--text-primary)',
-              }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--gold-dim)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
-            >
-              <span style={{ fontWeight: '600' }}>{preset.label ? `${preset.label}. ` : ''}{preset.name}</span>
-              {preset.description && (
-                <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>{preset.description}</span>
-              )}
-            </button>
-          ))
+          groups.map((group, i) => {
+            const isPair = !!(group.nametag || group.noNametag) && !group.standalone;
+            return (
+              <div key={i} style={{ borderBottom: '1px solid var(--border-subtle)', padding: '8px 10px' }}>
+                {/* Group label + base name */}
+                <div style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  {group.label ? `${group.label}. ` : ''}{group.baseName}
+                </div>
+
+                {isPair ? (
+                  // Side-by-side nametag / no-nametag pair
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {[
+                      { preset: group.nametag, label: 'Nametag' },
+                      { preset: group.noNametag, label: 'No Nametag' },
+                    ].filter(v => v.preset).map(({ preset, label }) => (
+                      <button
+                        key={preset!.id}
+                        onClick={() => { updateScene(sceneId, { preset_clip_id: preset!.id }); setShowPresetPicker(null); }}
+                        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '6px', padding: '6px', cursor: 'pointer', transition: 'background 0.15s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                      >
+                        {renderThumb(preset!, 80)}
+                        <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--text-secondary)' }}>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  // Standalone
+                  <button
+                    onClick={() => { updateScene(sceneId, { preset_clip_id: group.standalone!.id }); setShowPresetPicker(null); }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'transparent', border: 'none', borderRadius: '6px', padding: '2px 4px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {renderThumb(group.standalone!, 64)}
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>{group.standalone!.name}</div>
+                      {group.standalone!.description && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{group.standalone!.description}</div>
+                      )}
+                    </div>
+                  </button>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
     );
@@ -417,7 +509,15 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
         ) : canEditScenes ? (
           <div style={{ position: 'relative' }}>
             <button
-              onClick={() => setShowPresetPicker(showPresetPicker === scene.id ? null : scene.id)}
+              onClick={(e) => {
+                if (showPresetPicker === scene.id) {
+                  setShowPresetPicker(null);
+                } else {
+                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setPresetPickerFlipped(rect.bottom + 210 > window.innerHeight);
+                  setShowPresetPicker(scene.id);
+                }
+              }}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
