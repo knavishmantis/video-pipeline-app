@@ -130,7 +130,7 @@ competitorAnalysisRouter.get('/channels/:channel/next', async (req: Request, res
         AND v.is_short = true
         AND v.gcs_path IS NOT NULL
         AND cr.id IS NULL
-      ORDER BY RANDOM()
+      ORDER BY (v.published_at >= NOW() - INTERVAL '6 months') DESC, RANDOM()
       LIMIT 1
     `, [channel]);
 
