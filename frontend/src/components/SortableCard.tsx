@@ -134,7 +134,7 @@ export function SortableCard({
     />
   );
 
-  const isActive = !!short.is_active;
+  const isActive = !!short.is_active && column.id === 'script';
 
   return (
     <div
