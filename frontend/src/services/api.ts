@@ -627,7 +627,7 @@ export const competitorAnalysisApi = {
     const response = await api.get(`/competitor-analysis/videos/${id}/url`);
     return response.data.url;
   },
-  saveReview: async (id: string, data: { notes?: string; percentile_guess?: number; rating?: number }): Promise<void> => {
+  saveReview: async (id: string, data: { notes?: string; percentile_guess?: number; rating?: number; hook_type?: string; topic_category?: string; steal_this?: string }): Promise<void> => {
     await api.post(`/competitor-analysis/videos/${id}/review`, data);
   },
   getReveal: async (id: string): Promise<any> => {

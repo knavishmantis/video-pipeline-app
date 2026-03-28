@@ -78,6 +78,20 @@ async function ensureTable() {
       END IF;
     END $$;
   `);
+  // Add structured analysis columns if missing
+  await seQuery(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'hook_type') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN hook_type TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'topic_category') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN topic_category TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'steal_this') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN steal_this TEXT;
+      END IF;
+    END $$;
+  `);
 }
 
 ensureTable().catch(console.error);
@@ -166,17 +180,20 @@ competitorAnalysisRouter.get('/videos/:id/url', async (req: Request, res: Respon
 competitorAnalysisRouter.post('/videos/:id/review', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { notes, percentile_guess, rating } = req.body;
+    const { notes, percentile_guess, rating, hook_type, topic_category, steal_this } = req.body;
 
     await seQuery(`
-      INSERT INTO competitor_reviews (video_id, notes, percentile_guess, rating, reviewed_at)
-      VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+      INSERT INTO competitor_reviews (video_id, notes, percentile_guess, rating, hook_type, topic_category, steal_this, reviewed_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
       ON CONFLICT (video_id) DO UPDATE SET
         notes = EXCLUDED.notes,
         percentile_guess = EXCLUDED.percentile_guess,
         rating = COALESCE(EXCLUDED.rating, competitor_reviews.rating),
+        hook_type = COALESCE(EXCLUDED.hook_type, competitor_reviews.hook_type),
+        topic_category = COALESCE(EXCLUDED.topic_category, competitor_reviews.topic_category),
+        steal_this = COALESCE(EXCLUDED.steal_this, competitor_reviews.steal_this),
         reviewed_at = CURRENT_TIMESTAMP
-    `, [parseInt(id), notes || null, percentile_guess ?? null, rating ?? null]);
+    `, [parseInt(id), notes || null, percentile_guess ?? null, rating ?? null, hook_type || null, topic_category || null, steal_this || null]);
 
     res.json({ ok: true });
   } catch (e: any) {
@@ -207,7 +224,7 @@ competitorAnalysisRouter.get('/videos/:id/reveal', async (req: Request, res: Res
         )
         SELECT * FROM ranked WHERE id = $2
       `, [channel, id]),
-      seQuery('SELECT notes, percentile_guess, rating FROM competitor_reviews WHERE video_id = $1', [parseInt(id)]),
+      seQuery('SELECT notes, percentile_guess, rating, hook_type, topic_category, steal_this FROM competitor_reviews WHERE video_id = $1', [parseInt(id)]),
     ]);
 
     if (revealRows.length === 0) return res.status(404).json({ error: 'Video not found in channel' });

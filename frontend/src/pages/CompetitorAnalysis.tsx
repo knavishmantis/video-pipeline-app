@@ -14,6 +14,28 @@ function mcHeadUrl(mcUsername: string) {
   return `https://mc-heads.net/avatar/${mcUsername}/64`;
 }
 
+// ── Structured analysis constants ────────────────────────────────────────────
+
+const HOOK_TYPES: { value: string; label: string; definition: string; primary?: boolean }[] = [
+  { value: 'question',          label: 'Question',          definition: 'Asks a question to plant curiosity directly in the viewer\'s mind.',                   primary: true  },
+  { value: 'contrarian',        label: 'Contrarian',        definition: 'Opens with a bold against-the-grain take — first sentence contradicts conventional wisdom.', primary: true  },
+  { value: 'secret_reveal',     label: 'Secret Reveal',     definition: 'Teases an unknown insight — "Google just released…" / "Nobody talks about this…"',       primary: true  },
+  { value: 'problem',           label: 'Problem',           definition: 'Opens by introducing a specific pain point the viewer already feels.',                  primary: true  },
+  { value: 'case_study',        label: 'Case Study',        definition: 'Highlights someone who achieved a surprising or unexpected result.',                     primary: false },
+  { value: 'comparison',        label: 'Comparison',        definition: 'Directly compares two versions, options, or states of something.',                       primary: false },
+  { value: 'education',         label: 'Education',         definition: 'Introduces a step-by-step process — viewer expects to learn a skill or method.',         primary: false },
+  { value: 'list',              label: 'List',              definition: 'Opens by introducing an ordered set of items (use sparingly — listicle format).',        primary: false },
+  { value: 'personal_experience', label: 'Personal Experience', definition: 'Opens with a personal story or firsthand account.',                                 primary: false },
+];
+
+const TOPIC_CATEGORIES: { value: string; label: string }[] = [
+  { value: 'mechanics',   label: 'Mechanics Deep Dive' },
+  { value: 'opinionated', label: 'Opinionated Take'    },
+  { value: 'history',     label: 'MC History / Business' },
+  { value: 'hypothetical', label: 'Hypothetical'        },
+  { value: 'practical',   label: 'Practical Guide'      },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtViews(n: number): string {
@@ -265,6 +287,9 @@ function SessionView({
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [guess, setGuess] = useState(50);
+  const [hookType, setHookType] = useState('');
+  const [topicCategory, setTopicCategory] = useState('');
+  const [stealThis, setStealThis] = useState('');
   const [phase, setPhase] = useState<'loading' | 'watching' | 'revealed' | 'done' | 'error'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reveal, setReveal] = useState<any>(null);
@@ -275,6 +300,9 @@ function SessionView({
     setPhase('loading');
     setNotes('');
     setGuess(50);
+    setHookType('');
+    setTopicCategory('');
+    setStealThis('');
     setReveal(null);
     setVideoUrl(null);
     setLoadError(null);
@@ -305,6 +333,9 @@ function SessionView({
     await competitorAnalysisApi.saveReview(video.id, {
       notes,
       percentile_guess: isTooRecent ? undefined : guess,
+      hook_type: hookType || undefined,
+      topic_category: topicCategory || undefined,
+      steal_this: stealThis || undefined,
     });
     const data = await competitorAnalysisApi.getReveal(video.id);
     setReveal(data);
@@ -316,6 +347,9 @@ function SessionView({
       notes,
       percentile_guess: isTooRecent ? undefined : guess,
       rating,
+      hook_type: hookType || undefined,
+      topic_category: topicCategory || undefined,
+      steal_this: stealThis || undefined,
     });
   }
 
@@ -426,6 +460,72 @@ function SessionView({
                   />
                 </PNL>
 
+                {/* Hook type */}
+                <PNL label="Hook type">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                      {HOOK_TYPES.map(h => (
+                        <button
+                          key={h.value}
+                          onClick={() => setHookType(hookType === h.value ? '' : h.value)}
+                          title={h.definition}
+                          style={{
+                            padding: '4px 9px', borderRadius: '5px', border: 'none', cursor: 'pointer',
+                            fontSize: '11px', fontWeight: 700,
+                            background: hookType === h.value ? 'var(--gold)' : h.primary ? 'var(--bg-primary)' : 'var(--border-subtle)',
+                            color: hookType === h.value ? 'var(--bg-primary)' : h.primary ? 'var(--text-secondary)' : 'var(--text-muted)',
+                            outline: hookType === h.value ? 'none' : h.primary ? '1px solid var(--border-default)' : 'none',
+                            transition: 'all 0.1s',
+                          }}
+                        >
+                          {h.label}
+                        </button>
+                      ))}
+                    </div>
+                    {hookType && (
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                        {HOOK_TYPES.find(h => h.value === hookType)?.definition}
+                      </div>
+                    )}
+                  </div>
+                </PNL>
+
+                {/* Topic category */}
+                <PNL label="Topic category">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                    {TOPIC_CATEGORIES.map(t => (
+                      <button
+                        key={t.value}
+                        onClick={() => setTopicCategory(topicCategory === t.value ? '' : t.value)}
+                        style={{
+                          padding: '4px 9px', borderRadius: '5px', border: '1px solid var(--border-default)', cursor: 'pointer',
+                          fontSize: '11px', fontWeight: 700,
+                          background: topicCategory === t.value ? 'var(--gold)' : 'transparent',
+                          color: topicCategory === t.value ? 'var(--bg-primary)' : 'var(--text-secondary)',
+                          transition: 'all 0.1s',
+                        }}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </PNL>
+
+                {/* Steal this */}
+                <PNL label="Steal this">
+                  <input
+                    type="text"
+                    value={stealThis}
+                    onChange={e => setStealThis(e.target.value)}
+                    placeholder="One concrete thing to replicate in our own videos…"
+                    style={{
+                      width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6,
+                      fontFamily: 'inherit',
+                    }}
+                  />
+                </PNL>
+
                 {isTooRecent ? (
                   <PNL>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
@@ -454,6 +554,32 @@ function SessionView({
 
             {phase === 'revealed' && reveal && (
               <>
+                {(hookType || topicCategory || stealThis) && (
+                  <PNL>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {(hookType || topicCategory) && (
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {hookType && (
+                            <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--gold)', color: 'var(--bg-primary)' }}>
+                              {HOOK_TYPES.find(h => h.value === hookType)?.label}
+                            </span>
+                          )}
+                          {topicCategory && (
+                            <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--border-default)', color: 'var(--text-secondary)' }}>
+                              {TOPIC_CATEGORIES.find(t => t.value === topicCategory)?.label}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {stealThis && (
+                        <div>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Steal this</div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5 }}>{stealThis}</div>
+                        </div>
+                      )}
+                    </div>
+                  </PNL>
+                )}
                 {notes && (
                   <PNL label="Your notes">
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{notes}</div>
