@@ -513,13 +513,13 @@ function SessionView({
 
                 {/* Steal this */}
                 <PNL label="Steal this">
-                  <input
-                    type="text"
+                  <textarea
                     value={stealThis}
                     onChange={e => setStealThis(e.target.value)}
                     placeholder="One concrete thing to replicate in our own videos…"
                     style={{
-                      width: '100%', background: 'transparent', border: 'none', outline: 'none',
+                      width: '100%', minHeight: '80px', background: 'transparent',
+                      border: 'none', outline: 'none', resize: 'vertical',
                       fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6,
                       fontFamily: 'inherit',
                     }}
