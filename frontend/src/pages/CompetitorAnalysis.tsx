@@ -226,13 +226,16 @@ function MyShortsStrip({ shorts }: { shorts: any[] }) {
         return (
           <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
             <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.3 }}>{s.title}</div>
-            {s.video_url && (
-              <video
-                src={s.video_url}
-                controls
-                playsInline
-                style={{ width: '100%', maxHeight: '320px', borderRadius: '6px', background: '#000', display: 'block', marginBottom: '8px' }}
-              />
+            {s.youtube_video_id && (
+              <div style={{ position: 'relative', paddingTop: '177.78%', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', background: '#000' }}>
+                <iframe
+                  src={`https://www.youtube.com/embed/${s.youtube_video_id}`}
+                  title={s.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+                />
+              </div>
             )}
             {s.reflection_what_worked && (
               <>

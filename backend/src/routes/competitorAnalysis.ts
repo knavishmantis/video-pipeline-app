@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { authenticateToken, requireRole } from '../middleware/auth';
-import { getSignedUrl, getSignedUrlFromBucket } from '../services/gcpStorage';
+import { getSignedUrlFromBucket } from '../services/gcpStorage';
 import { query } from '../db';
 
 export const competitorAnalysisRouter = Router();
@@ -164,27 +164,18 @@ competitorAnalysisRouter.get('/my-shorts', async (_req: Request, res: Response) 
         s.youtube_video_id,
         s.reflection_rating,
         s.reflection_what_worked,
-        COALESCE(ya.views, 0)::BIGINT AS views,
-        f.gcp_bucket_path AS video_bucket_path
+        COALESCE(ya.views, 0)::BIGINT AS views
       FROM shorts s
       LEFT JOIN youtube_video_analytics ya ON ya.video_id = s.youtube_video_id
-      LEFT JOIN files f ON f.short_id = s.id AND f.file_type = 'final_video'
       WHERE s.status = 'uploaded'
       ORDER BY COALESCE(s.editing_completed_at, s.updated_at) DESC
       LIMIT 10
     `);
-    // Pick top 5 by views from the last 10, attach signed URLs
+    // Pick top 5 by views from the last 10
     const top5 = result.rows
       .sort((a: any, b: any) => Number(b.views) - Number(a.views))
       .slice(0, 5);
-    const withUrls = await Promise.all(top5.map(async (row: any) => {
-      const { video_bucket_path, ...rest } = row;
-      if (video_bucket_path) {
-        rest.video_url = await getSignedUrl(video_bucket_path, 3600);
-      }
-      return rest;
-    }));
-    res.json(withUrls);
+    res.json(top5);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
