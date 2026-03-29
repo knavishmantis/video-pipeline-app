@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { getSignedUrlFromBucket } from '../services/gcpStorage';
+import { query } from '../db';
 
 export const competitorAnalysisRouter = Router();
 
@@ -78,7 +79,7 @@ async function ensureTable() {
       END IF;
     END $$;
   `);
-  // Add structured analysis columns if missing
+  // Add all structured analysis columns if missing
   await seQuery(`
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'hook_type') THEN
@@ -89,6 +90,27 @@ async function ensureTable() {
       END IF;
       IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'steal_this') THEN
         ALTER TABLE competitor_reviews ADD COLUMN steal_this TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'visual_verbal') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN visual_verbal TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'initial_analysis') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN initial_analysis TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'hook_notes') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN hook_notes TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'concept_notes') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN concept_notes TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'pacing_notes') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN pacing_notes TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'payoff_notes') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN payoff_notes TEXT;
+      END IF;
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'competitor_reviews' AND column_name = 'emotion') THEN
+        ALTER TABLE competitor_reviews ADD COLUMN emotion TEXT;
       END IF;
     END $$;
   `);
@@ -126,6 +148,34 @@ competitorAnalysisRouter.get('/channels', async (_req: Request, res: Response) =
       SELECT * FROM stats ORDER BY avg_views DESC
     `);
     res.json(rows);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/competitor-analysis/my-shorts
+// Returns best 5 (by views) of the last 10 uploaded shorts from the main DB
+competitorAnalysisRouter.get('/my-shorts', async (_req: Request, res: Response) => {
+  try {
+    const result = await query(`
+      SELECT
+        s.id,
+        s.title,
+        s.youtube_video_id,
+        s.reflection_rating,
+        s.reflection_what_worked,
+        COALESCE(ya.views, 0)::BIGINT AS views
+      FROM shorts s
+      LEFT JOIN youtube_video_analytics ya ON ya.video_id = s.youtube_video_id
+      WHERE s.status = 'uploaded'
+      ORDER BY COALESCE(s.editing_completed_at, s.updated_at) DESC
+      LIMIT 10
+    `);
+    // Pick top 5 by views from the last 10
+    const top5 = result.rows
+      .sort((a: any, b: any) => Number(b.views) - Number(a.views))
+      .slice(0, 5);
+    res.json(top5);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -176,24 +226,48 @@ competitorAnalysisRouter.get('/videos/:id/url', async (req: Request, res: Respon
 });
 
 // POST /api/competitor-analysis/videos/:id/review
-// Saves notes + percentile_guess (called when user clicks Reveal)
+// Saves all review fields (called on Reveal and on rating)
 competitorAnalysisRouter.post('/videos/:id/review', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { notes, percentile_guess, rating, hook_type, topic_category, steal_this } = req.body;
+    const {
+      notes, percentile_guess, rating,
+      hook_type, topic_category, steal_this,
+      visual_verbal, initial_analysis,
+      hook_notes, concept_notes, pacing_notes, payoff_notes, emotion,
+    } = req.body;
 
     await seQuery(`
-      INSERT INTO competitor_reviews (video_id, notes, percentile_guess, rating, hook_type, topic_category, steal_this, reviewed_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+      INSERT INTO competitor_reviews (
+        video_id, notes, percentile_guess, rating,
+        hook_type, topic_category, steal_this,
+        visual_verbal, initial_analysis,
+        hook_notes, concept_notes, pacing_notes, payoff_notes, emotion,
+        reviewed_at
+      )
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,CURRENT_TIMESTAMP)
       ON CONFLICT (video_id) DO UPDATE SET
-        notes = EXCLUDED.notes,
-        percentile_guess = EXCLUDED.percentile_guess,
-        rating = COALESCE(EXCLUDED.rating, competitor_reviews.rating),
-        hook_type = COALESCE(EXCLUDED.hook_type, competitor_reviews.hook_type),
-        topic_category = COALESCE(EXCLUDED.topic_category, competitor_reviews.topic_category),
-        steal_this = COALESCE(EXCLUDED.steal_this, competitor_reviews.steal_this),
-        reviewed_at = CURRENT_TIMESTAMP
-    `, [parseInt(id), notes || null, percentile_guess ?? null, rating ?? null, hook_type || null, topic_category || null, steal_this || null]);
+        notes               = EXCLUDED.notes,
+        percentile_guess    = EXCLUDED.percentile_guess,
+        rating              = COALESCE(EXCLUDED.rating, competitor_reviews.rating),
+        hook_type           = COALESCE(EXCLUDED.hook_type, competitor_reviews.hook_type),
+        topic_category      = COALESCE(EXCLUDED.topic_category, competitor_reviews.topic_category),
+        steal_this          = COALESCE(EXCLUDED.steal_this, competitor_reviews.steal_this),
+        visual_verbal       = COALESCE(EXCLUDED.visual_verbal, competitor_reviews.visual_verbal),
+        initial_analysis    = COALESCE(EXCLUDED.initial_analysis, competitor_reviews.initial_analysis),
+        hook_notes          = COALESCE(EXCLUDED.hook_notes, competitor_reviews.hook_notes),
+        concept_notes       = COALESCE(EXCLUDED.concept_notes, competitor_reviews.concept_notes),
+        pacing_notes        = COALESCE(EXCLUDED.pacing_notes, competitor_reviews.pacing_notes),
+        payoff_notes        = COALESCE(EXCLUDED.payoff_notes, competitor_reviews.payoff_notes),
+        emotion             = COALESCE(EXCLUDED.emotion, competitor_reviews.emotion),
+        reviewed_at         = CURRENT_TIMESTAMP
+    `, [
+      parseInt(id),
+      notes || null, percentile_guess ?? null, rating ?? null,
+      hook_type || null, topic_category || null, steal_this || null,
+      visual_verbal || null, initial_analysis || null,
+      hook_notes || null, concept_notes || null, pacing_notes || null, payoff_notes || null, emotion || null,
+    ]);
 
     res.json({ ok: true });
   } catch (e: any) {
@@ -224,7 +298,13 @@ competitorAnalysisRouter.get('/videos/:id/reveal', async (req: Request, res: Res
         )
         SELECT * FROM ranked WHERE id = $2
       `, [channel, id]),
-      seQuery('SELECT notes, percentile_guess, rating, hook_type, topic_category, steal_this FROM competitor_reviews WHERE video_id = $1', [parseInt(id)]),
+      seQuery(`
+        SELECT notes, percentile_guess, rating,
+               hook_type, topic_category, steal_this,
+               visual_verbal, initial_analysis,
+               hook_notes, concept_notes, pacing_notes, payoff_notes, emotion
+        FROM competitor_reviews WHERE video_id = $1
+      `, [parseInt(id)]),
     ]);
 
     if (revealRows.length === 0) return res.status(404).json({ error: 'Video not found in channel' });

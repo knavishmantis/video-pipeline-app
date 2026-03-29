@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { competitorAnalysisApi } from '../services/api';
+import { competitorAnalysisApi, CompetitorReviewData } from '../services/api';
 
 // ── Channel metadata ──────────────────────────────────────────────────────────
 
@@ -14,26 +14,35 @@ function mcHeadUrl(mcUsername: string) {
   return `https://mc-heads.net/avatar/${mcUsername}/64`;
 }
 
-// ── Structured analysis constants ────────────────────────────────────────────
+// ── Structured analysis constants ─────────────────────────────────────────────
 
 const HOOK_TYPES: { value: string; label: string; definition: string; primary?: boolean }[] = [
-  { value: 'question',          label: 'Question',          definition: 'Asks a question to plant curiosity directly in the viewer\'s mind.',                   primary: true  },
-  { value: 'contrarian',        label: 'Contrarian',        definition: 'Opens with a bold against-the-grain take — first sentence contradicts conventional wisdom.', primary: true  },
-  { value: 'secret_reveal',     label: 'Secret Reveal',     definition: 'Teases an unknown insight — "Google just released…" / "Nobody talks about this…"',       primary: true  },
-  { value: 'problem',           label: 'Problem',           definition: 'Opens by introducing a specific pain point the viewer already feels.',                  primary: true  },
-  { value: 'case_study',        label: 'Case Study',        definition: 'Highlights someone who achieved a surprising or unexpected result.',                     primary: false },
-  { value: 'comparison',        label: 'Comparison',        definition: 'Directly compares two versions, options, or states of something.',                       primary: false },
-  { value: 'education',         label: 'Education',         definition: 'Introduces a step-by-step process — viewer expects to learn a skill or method.',         primary: false },
-  { value: 'list',              label: 'List',              definition: 'Opens by introducing an ordered set of items (use sparingly — listicle format).',        primary: false },
-  { value: 'personal_experience', label: 'Personal Experience', definition: 'Opens with a personal story or firsthand account.',                                 primary: false },
+  { value: 'question',            label: 'Question',            definition: 'Asks a question to plant curiosity directly in the viewer\'s mind.',                        primary: true  },
+  { value: 'contrarian',          label: 'Contrarian',          definition: 'Opens with a bold against-the-grain take — first sentence contradicts conventional wisdom.', primary: true  },
+  { value: 'secret_reveal',       label: 'Secret Reveal',       definition: 'Teases an unknown insight — "Nobody talks about this…" / "Google just released…"',          primary: true  },
+  { value: 'problem',             label: 'Problem',             definition: 'Opens by introducing a specific pain point the viewer already feels.',                       primary: true  },
+  { value: 'case_study',          label: 'Case Study',          definition: 'Highlights someone who achieved a surprising or unexpected result.',                          primary: false },
+  { value: 'comparison',          label: 'Comparison',          definition: 'Directly compares two versions, options, or states of something.',                            primary: false },
+  { value: 'education',           label: 'Education',           definition: 'Introduces a step-by-step process — viewer expects to learn a skill or method.',              primary: false },
+  { value: 'list',                label: 'List',                definition: 'Opens by introducing an ordered set of items (use sparingly — listicle format).',             primary: false },
+  { value: 'personal_experience', label: 'Personal Experience', definition: 'Opens with a personal story or firsthand account.',                                           primary: false },
 ];
 
 const TOPIC_CATEGORIES: { value: string; label: string }[] = [
-  { value: 'mechanics',   label: 'Mechanics Deep Dive' },
-  { value: 'opinionated', label: 'Opinionated Take'    },
-  { value: 'history',     label: 'MC History / Business' },
-  { value: 'hypothetical', label: 'Hypothetical'        },
-  { value: 'practical',   label: 'Practical Guide'      },
+  { value: 'mechanics',    label: 'Mechanics Deep Dive'    },
+  { value: 'opinionated',  label: 'Opinionated Take'       },
+  { value: 'history',      label: 'MC History / Business'  },
+  { value: 'hypothetical', label: 'Hypothetical'           },
+  { value: 'practical',    label: 'Practical Guide'        },
+];
+
+const EMOTIONS: { value: string; label: string; color: string }[] = [
+  { value: 'curiosity',  label: 'Curiosity',  color: '#60A5FA' },
+  { value: 'humor',      label: 'Humor',      color: '#4ECB71' },
+  { value: 'surprise',   label: 'Surprise',   color: '#D4AF50' },
+  { value: 'stakes',     label: 'Stakes',     color: '#E05C4C' },
+  { value: 'awe',        label: 'Awe',        color: '#A78BFA' },
+  { value: 'nostalgia',  label: 'Nostalgia',  color: '#F59E0B' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -73,7 +82,7 @@ function accuracyColor(err: number): string {
   return '#E05A4E';
 }
 
-// ── Shared panel ─────────────────────────────────────────────────────────────
+// ── Shared panel ──────────────────────────────────────────────────────────────
 
 const PNL = ({ children, label, style }: { children: React.ReactNode; label?: string; style?: React.CSSProperties }) => (
   <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', padding: '14px 16px', ...style }}>
@@ -81,6 +90,45 @@ const PNL = ({ children, label, style }: { children: React.ReactNode; label?: st
     {children}
   </div>
 );
+
+// ── Small pill / toggle helpers ───────────────────────────────────────────────
+
+function PillGroup<T extends string>({
+  options,
+  value,
+  onChange,
+  getColor,
+}: {
+  options: { value: T; label: string; definition?: string; primary?: boolean; color?: string }[];
+  value: T | '';
+  onChange: (v: T | '') => void;
+  getColor?: (v: T) => string;
+}) {
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+      {options.map(opt => {
+        const active = value === opt.value;
+        const accentColor = getColor ? getColor(opt.value) : 'var(--gold)';
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(active ? '' : opt.value)}
+            title={opt.definition}
+            style={{
+              padding: '4px 9px', borderRadius: '5px', border: 'none', cursor: 'pointer',
+              fontSize: '11px', fontWeight: 700, transition: 'all 0.1s',
+              background: active ? accentColor : opt.primary === false ? 'var(--border-subtle)' : 'var(--bg-primary)',
+              color: active ? (opt.color ? '#fff' : 'var(--bg-primary)') : opt.primary === false ? 'var(--text-muted)' : 'var(--text-secondary)',
+              outline: (!active && opt.primary !== false) ? '1px solid var(--border-default)' : 'none',
+            }}
+          >
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // ── Percentile slider ─────────────────────────────────────────────────────────
 
@@ -106,7 +154,6 @@ function PercentileSlider({ value, onChange }: { value: number; onChange: (v: nu
         </span>
       </div>
       <div style={{ position: 'relative', marginBottom: '6px' }}>
-        {/* Track fill */}
         <div style={{
           position: 'absolute', top: '50%', left: 0,
           width: `${value}%`, height: '4px',
@@ -132,6 +179,151 @@ function PercentileSlider({ value, onChange }: { value: number; onChange: (v: nu
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ── My Shorts strip ───────────────────────────────────────────────────────────
+
+function MyShortsStrip({ shorts }: { shorts: any[] }) {
+  const [expanded, setExpanded] = useState<number | null>(null);
+  if (shorts.length === 0) return null;
+
+  return (
+    <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '14px', marginTop: '4px' }}>
+      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
+        My shorts — best 5 of last 10
+      </div>
+      <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+        {shorts.map(s => (
+          <div
+            key={s.id}
+            onClick={() => setExpanded(expanded === s.id ? null : s.id)}
+            style={{
+              flexShrink: 0, width: '130px', cursor: 'pointer',
+              background: expanded === s.id ? 'color-mix(in srgb, var(--gold) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
+              border: expanded === s.id ? '1px solid var(--gold-border)' : '1px solid var(--border-default)',
+              borderRadius: '8px', padding: '10px 10px 8px',
+              transition: 'all 0.15s',
+            }}
+          >
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: '5px',
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {s.title}
+            </div>
+            <div style={{ fontSize: '12px', fontWeight: 800, color: Number(s.views) > 100_000 ? '#2DC97A' : 'var(--gold)', letterSpacing: '-0.02em' }}>
+              {fmtViews(Number(s.views))}
+            </div>
+            {s.reflection_rating && (
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '3px' }}>rated {s.reflection_rating}/10</div>
+            )}
+          </div>
+        ))}
+      </div>
+      {expanded !== null && (() => {
+        const s = shorts.find(x => x.id === expanded);
+        if (!s?.reflection_what_worked) return null;
+        return (
+          <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>What worked</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{s.reflection_what_worked}</div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// ── Kallaway reference panel ──────────────────────────────────────────────────
+
+function KallawayReference() {
+  const [open, setOpen] = useState(false);
+
+  const sections = [
+    {
+      title: '3-Step Hook Formula',
+      content: [
+        '1. Context Lean-In — establish the topic + a surprising detail',
+        '2. Pattern Interrupt — contrast word ("But", "However") creates a gap',
+        '3. Contrarian Snapback — flip the narrative unexpectedly',
+      ],
+    },
+    {
+      title: '9 Hook Formats',
+      content: HOOK_TYPES.map(h => `${h.label}${h.primary ? ' ★' : ''} — ${h.definition}`),
+    },
+    {
+      title: 'But / Therefore Rule',
+      content: [
+        'Every beat must connect via BUT (conflict) or THEREFORE (consequence) — never "and then".',
+        '"And then" = no tension. "But" = obstacle. "Therefore/so" = consequence.',
+        'Kallaway uses "but" ~26× per video. It is the most important word in short-form scripting.',
+      ],
+    },
+    {
+      title: 'Setup / Rehook Dance',
+      content: [
+        'Hook → Setup/Rehook → Setup/Rehook → Outro',
+        'Each cycle: context → contrast word → reveal → open new loop.',
+        'For Shorts use ~2 rehooks. Phrases: "But that\'s not even the most interesting part." / "Here\'s what nobody talks about."',
+      ],
+    },
+    {
+      title: 'Dopamine Ladder',
+      content: [
+        '1. Stimulation (0–2s) — visual stun: color, motion, contrast',
+        '2. Captivation — curiosity from an open question',
+        '3. Anticipation — viewer guesses, you yank the answer away',
+        '4. Validation — close the loop with something non-obvious',
+        '5. Affection — viewer likes the creator/personality',
+        '6. Revelation — Pavlovian: dopamine just from seeing your name',
+      ],
+    },
+    {
+      title: 'Common Mistakes',
+      content: [
+        'Over-stuffing: one topic, one takeaway, get out.',
+        'Poor speed to value: bury value too late.',
+        'Fluff sentences: apply the $100-per-word test.',
+        'Three-hook misalignment: visual, spoken, and text must say the same thing.',
+        'Not curious enough: introduce topics relative to something they already know.',
+      ],
+    },
+  ];
+
+  return (
+    <div style={{ marginTop: '24px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', overflow: 'hidden' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: 'transparent', border: 'none', cursor: 'pointer',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Kallaway Frameworks</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Quick Reference</span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5"
+          style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{ borderTop: '1px solid var(--border-default)', padding: '16px 18px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+          {sections.map(sec => (
+            <div key={sec.title}>
+              <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>{sec.title}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {sec.content.map((line, i) => (
+                  <div key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{line}</div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -285,27 +477,51 @@ function SessionView({
   const meta = CHANNEL_META[channel] || { displayName: channel, mcUsername: channel };
   const [video, setVideo] = useState<any>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [notes, setNotes] = useState('');
-  const [guess, setGuess] = useState(50);
-  const [hookType, setHookType] = useState('');
-  const [topicCategory, setTopicCategory] = useState('');
-  const [stealThis, setStealThis] = useState('');
   const [phase, setPhase] = useState<'loading' | 'watching' | 'revealed' | 'done' | 'error'>('loading');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reveal, setReveal] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [myShorts, setMyShorts] = useState<any[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const loadNext = useCallback(async () => {
-    setPhase('loading');
-    setNotes('');
-    setGuess(50);
+  // Review form state
+  const [visualVerbal, setVisualVerbal] = useState<'visual' | 'verbal' | ''>('');
+  const [hookType, setHookType] = useState('');
+  const [topicCategory, setTopicCategory] = useState('');
+  const [initialAnalysis, setInitialAnalysis] = useState('');
+  const [hookNotes, setHookNotes] = useState('');
+  const [conceptNotes, setConceptNotes] = useState('');
+  const [pacingNotes, setPacingNotes] = useState('');
+  const [payoffNotes, setPayoffNotes] = useState('');
+  const [emotion, setEmotion] = useState('');
+  const [stealThis, setStealThis] = useState('');
+  const [guess, setGuess] = useState(50);
+
+  useEffect(() => {
+    competitorAnalysisApi.getMyShorts().then(setMyShorts).catch(() => {});
+  }, []);
+
+  const resetForm = () => {
+    setVisualVerbal('');
     setHookType('');
     setTopicCategory('');
+    setInitialAnalysis('');
+    setHookNotes('');
+    setConceptNotes('');
+    setPacingNotes('');
+    setPayoffNotes('');
+    setEmotion('');
     setStealThis('');
+    setGuess(50);
     setReveal(null);
     setVideoUrl(null);
     setLoadError(null);
+  };
+
+  const loadNext = useCallback(async () => {
+    setPhase('loading');
+    resetForm();
+    setVideo(null);
     try {
       const v = await competitorAnalysisApi.getNextVideo(channel);
       setVideo(v);
@@ -321,6 +537,7 @@ function SessionView({
         setPhase('error');
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel]);
 
   useEffect(() => { loadNext(); }, [loadNext]);
@@ -329,32 +546,29 @@ function SessionView({
     ? (Date.now() - new Date(video.published_at).getTime()) < 7 * 24 * 60 * 60 * 1000
     : false;
 
+  const buildReviewData = (): CompetitorReviewData => ({
+    visual_verbal: visualVerbal || undefined,
+    hook_type: hookType || undefined,
+    topic_category: topicCategory || undefined,
+    initial_analysis: initialAnalysis || undefined,
+    hook_notes: hookNotes || undefined,
+    concept_notes: conceptNotes || undefined,
+    pacing_notes: pacingNotes || undefined,
+    payoff_notes: payoffNotes || undefined,
+    emotion: emotion || undefined,
+    steal_this: stealThis || undefined,
+    percentile_guess: isTooRecent ? undefined : guess,
+  });
+
   async function handleReveal() {
-    await competitorAnalysisApi.saveReview(video.id, {
-      notes,
-      percentile_guess: isTooRecent ? undefined : guess,
-      hook_type: hookType || undefined,
-      topic_category: topicCategory || undefined,
-      steal_this: stealThis || undefined,
-    });
+    await competitorAnalysisApi.saveReview(video.id, buildReviewData());
     const data = await competitorAnalysisApi.getReveal(video.id);
     setReveal(data);
     setPhase('revealed');
   }
 
   async function handleRate(rating: number) {
-    await competitorAnalysisApi.saveReview(video.id, {
-      notes,
-      percentile_guess: isTooRecent ? undefined : guess,
-      rating,
-      hook_type: hookType || undefined,
-      topic_category: topicCategory || undefined,
-      steal_this: stealThis || undefined,
-    });
-  }
-
-  function handleNext() {
-    loadNext();
+    await competitorAnalysisApi.saveReview(video.id, { ...buildReviewData(), rating });
   }
 
   return (
@@ -362,12 +576,9 @@ function SessionView({
       <style>{`
         @media (max-width: 700px) {
           .competitor-session-grid { grid-template-columns: 1fr !important; }
-          .competitor-channel-table { overflow-x: auto; }
-          .competitor-channel-header { display: none !important; }
-          .competitor-channel-row { grid-template-columns: 1fr 80px !important; gap: 0; }
-          .competitor-channel-row > *:not(:first-child):not(:last-child) { display: none; }
         }
       `}</style>
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
         <button
@@ -418,7 +629,7 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '16px', alignItems: 'start' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '16px', alignItems: 'start' }}>
           {/* Video */}
           <div>
             <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', aspectRatio: '9/16', maxHeight: '65vh' }}>
@@ -436,96 +647,133 @@ function SessionView({
                 </div>
               )}
             </div>
-            {/* Title visible after reveal only */}
             {phase === 'revealed' && (
               <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{video.title}</div>
+            )}
+            {/* My shorts strip lives under the video */}
+            {myShorts.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <MyShortsStrip shorts={myShorts} />
+              </div>
             )}
           </div>
 
           {/* Side panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {phase === 'watching' && (
               <>
-                <PNL label="Your analysis">
+                {/* ── Quick classifiers ── */}
+                <PNL label="Delivery">
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {(['visual', 'verbal'] as const).map(v => (
+                      <button
+                        key={v}
+                        onClick={() => setVisualVerbal(visualVerbal === v ? '' : v)}
+                        style={{
+                          flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                          fontSize: '11px', fontWeight: 700, transition: 'all 0.1s',
+                          background: visualVerbal === v ? 'var(--gold)' : 'var(--border-default)',
+                          color: visualVerbal === v ? 'var(--bg-primary)' : 'var(--text-muted)',
+                        }}
+                      >
+                        {v === 'visual' ? 'Visual-first' : 'Verbal-first'}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.4 }}>
+                    Did the first frame show something happening, or did narration lead?
+                  </div>
+                </PNL>
+
+                <PNL label="Hook type">
+                  <PillGroup
+                    options={HOOK_TYPES}
+                    value={hookType as any}
+                    onChange={setHookType as any}
+                  />
+                  {hookType && (
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5, marginTop: '6px' }}>
+                      {HOOK_TYPES.find(h => h.value === hookType)?.definition}
+                    </div>
+                  )}
+                </PNL>
+
+                <PNL label="Topic category">
+                  <PillGroup
+                    options={TOPIC_CATEGORIES}
+                    value={topicCategory as any}
+                    onChange={setTopicCategory as any}
+                  />
+                </PNL>
+
+                {/* ── Initial analysis ── */}
+                <PNL label="Initial analysis">
                   <textarea
-                    value={notes}
-                    onChange={e => setNotes(e.target.value)}
-                    placeholder="What's working? Hook type? Pacing? Editing style? Thumbnail?"
+                    value={initialAnalysis}
+                    onChange={e => setInitialAnalysis(e.target.value)}
+                    placeholder="First impressions while watching — what stands out?"
                     style={{
-                      width: '100%', minHeight: '140px', background: 'transparent',
+                      width: '100%', minHeight: '80px', background: 'transparent',
                       border: 'none', outline: 'none', resize: 'vertical',
-                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6,
-                      fontFamily: 'inherit',
+                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
                     }}
                   />
                 </PNL>
 
-                {/* Hook type */}
-                <PNL label="Hook type">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                      {HOOK_TYPES.map(h => (
-                        <button
-                          key={h.value}
-                          onClick={() => setHookType(hookType === h.value ? '' : h.value)}
-                          title={h.definition}
+                {/* ── Rubric ── */}
+                <PNL>
+                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rubric</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      { label: 'Hook', value: hookNotes, set: setHookNotes, placeholder: 'Literal first frame + first line. Does it create immediate tension?' },
+                      { label: 'Concept', value: conceptNotes, set: setConceptNotes, placeholder: 'One sentence summary. Would you text this to a friend?' },
+                      { label: 'Pacing', value: pacingNotes, set: setPacingNotes, placeholder: 'Where did attention drift? Note the timestamp.' },
+                      { label: 'Payoff', value: payoffNotes, set: setPayoffNotes, placeholder: 'Does the ending feel earned? Make you want to rewatch?' },
+                    ].map(field => (
+                      <div key={field.label}>
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>{field.label}</div>
+                        <textarea
+                          value={field.value}
+                          onChange={e => field.set(e.target.value)}
+                          placeholder={field.placeholder}
                           style={{
-                            padding: '4px 9px', borderRadius: '5px', border: 'none', cursor: 'pointer',
-                            fontSize: '11px', fontWeight: 700,
-                            background: hookType === h.value ? 'var(--gold)' : h.primary ? 'var(--bg-primary)' : 'var(--border-subtle)',
-                            color: hookType === h.value ? 'var(--bg-primary)' : h.primary ? 'var(--text-secondary)' : 'var(--text-muted)',
-                            outline: hookType === h.value ? 'none' : h.primary ? '1px solid var(--border-default)' : 'none',
-                            transition: 'all 0.1s',
+                            width: '100%', minHeight: '52px', background: 'var(--bg-primary)',
+                            border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '6px 8px',
+                            outline: 'none', resize: 'vertical',
+                            fontSize: '11px', color: 'var(--text-primary)', lineHeight: 1.55, fontFamily: 'inherit',
                           }}
-                        >
-                          {h.label}
-                        </button>
-                      ))}
-                    </div>
-                    {hookType && (
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                        {HOOK_TYPES.find(h => h.value === hookType)?.definition}
+                        />
                       </div>
-                    )}
-                  </div>
-                </PNL>
-
-                {/* Topic category */}
-                <PNL label="Topic category">
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                    {TOPIC_CATEGORIES.map(t => (
-                      <button
-                        key={t.value}
-                        onClick={() => setTopicCategory(topicCategory === t.value ? '' : t.value)}
-                        style={{
-                          padding: '4px 9px', borderRadius: '5px', border: '1px solid var(--border-default)', cursor: 'pointer',
-                          fontSize: '11px', fontWeight: 700,
-                          background: topicCategory === t.value ? 'var(--gold)' : 'transparent',
-                          color: topicCategory === t.value ? 'var(--bg-primary)' : 'var(--text-secondary)',
-                          transition: 'all 0.1s',
-                        }}
-                      >
-                        {t.label}
-                      </button>
                     ))}
+
+                    {/* Emotion */}
+                    <div>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Emotion — primary feeling</div>
+                      <PillGroup
+                        options={EMOTIONS}
+                        value={emotion as any}
+                        onChange={setEmotion as any}
+                        getColor={v => EMOTIONS.find(e => e.value === v)?.color || 'var(--gold)'}
+                      />
+                    </div>
                   </div>
                 </PNL>
 
-                {/* Steal this */}
+                {/* ── Steal this ── */}
                 <PNL label="Steal this">
                   <textarea
                     value={stealThis}
                     onChange={e => setStealThis(e.target.value)}
-                    placeholder="One concrete thing to replicate in our own videos…"
+                    placeholder="One concrete technique to replicate in our own videos…"
                     style={{
                       width: '100%', minHeight: '80px', background: 'transparent',
                       border: 'none', outline: 'none', resize: 'vertical',
-                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6,
-                      fontFamily: 'inherit',
+                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
                     }}
                   />
                 </PNL>
 
+                {/* ── Percentile ── */}
                 {isTooRecent ? (
                   <PNL>
                     <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
@@ -554,42 +802,74 @@ function SessionView({
 
             {phase === 'revealed' && reveal && (
               <>
-                {(hookType || topicCategory || stealThis) && (
+                {/* Summary of filled fields */}
+                {(visualVerbal || hookType || topicCategory || emotion) && (
                   <PNL>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {(hookType || topicCategory) && (
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          {hookType && (
-                            <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--gold)', color: 'var(--bg-primary)' }}>
-                              {HOOK_TYPES.find(h => h.value === hookType)?.label}
-                            </span>
-                          )}
-                          {topicCategory && (
-                            <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--border-default)', color: 'var(--text-secondary)' }}>
-                              {TOPIC_CATEGORIES.find(t => t.value === topicCategory)?.label}
-                            </span>
-                          )}
-                        </div>
+                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
+                      {visualVerbal && (
+                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--border-default)', color: 'var(--text-secondary)' }}>
+                          {visualVerbal === 'visual' ? 'Visual-first' : 'Verbal-first'}
+                        </span>
                       )}
-                      {stealThis && (
-                        <div>
-                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '3px' }}>Steal this</div>
-                          <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5 }}>{stealThis}</div>
-                        </div>
+                      {hookType && (
+                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--gold)', color: 'var(--bg-primary)' }}>
+                          {HOOK_TYPES.find(h => h.value === hookType)?.label}
+                        </span>
                       )}
+                      {topicCategory && (
+                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--border-default)', color: 'var(--text-secondary)' }}>
+                          {TOPIC_CATEGORIES.find(t => t.value === topicCategory)?.label}
+                        </span>
+                      )}
+                      {emotion && (() => {
+                        const em = EMOTIONS.find(e => e.value === emotion);
+                        return em ? (
+                          <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: em.color, color: '#fff' }}>
+                            {em.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </div>
                   </PNL>
                 )}
-                {notes && (
-                  <PNL label="Your notes">
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{notes}</div>
+
+                {/* Rubric summary */}
+                {(hookNotes || conceptNotes || pacingNotes || payoffNotes) && (
+                  <PNL>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Rubric</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {[
+                        { label: 'Hook', value: hookNotes },
+                        { label: 'Concept', value: conceptNotes },
+                        { label: 'Pacing', value: pacingNotes },
+                        { label: 'Payoff', value: payoffNotes },
+                      ].filter(f => f.value).map(f => (
+                        <div key={f.label}>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{f.label}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{f.value}</div>
+                        </div>
+                      ))}
+                    </div>
                   </PNL>
                 )}
+
+                {initialAnalysis && (
+                  <PNL label="Initial analysis">
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{initialAnalysis}</div>
+                  </PNL>
+                )}
+
+                {stealThis && (
+                  <PNL label="Steal this">
+                    <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5 }}>{stealThis}</div>
+                  </PNL>
+                )}
+
                 <RevealPanel
                   reveal={reveal}
                   guess={isTooRecent ? null : guess}
                   onRate={handleRate}
-                  onNext={handleNext}
+                  onNext={loadNext}
                   hasMore={hasMore}
                 />
               </>
@@ -617,7 +897,6 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
       padding: '14px 18px',
       borderBottom: '1px solid var(--border-subtle)',
     }}>
-      {/* Channel identity */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div style={{ width: 36, height: 36, borderRadius: '6px', overflow: 'hidden', background: 'var(--border-default)', flexShrink: 0 }}>
           <img
@@ -629,26 +908,18 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
         </div>
         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{meta.displayName}</span>
       </div>
-
-      {/* Avg views */}
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtViews(ch.avg_views)}</div>
         <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>avg views</div>
       </div>
-
-      {/* Median views */}
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{fmtViews(ch.median_views)}</div>
         <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>median</div>
       </div>
-
-      {/* Best video */}
       <div>
         <div style={{ fontSize: '13px', fontWeight: 700, color: '#2DC97A' }}>{fmtViews(ch.max_views)}</div>
         <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '1px' }}>best video</div>
       </div>
-
-      {/* Downloaded + reviewed progress */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
           <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{ch.reviewed}/{ch.total} reviewed</span>
@@ -658,8 +929,6 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
           <div style={{ height: '100%', width: `${pct}%`, borderRadius: '2px', background: allDone ? '#2DC97A' : 'var(--gold)', transition: 'width 0.4s ease' }} />
         </div>
       </div>
-
-      {/* Accuracy */}
       <div style={{ paddingLeft: '12px' }}>
         {ch.avg_error != null && ch.reviewed > 0 ? (
           <>
@@ -670,8 +939,6 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>—</div>
         )}
       </div>
-
-      {/* Action */}
       <button
         onClick={onStart}
         disabled={allDone}
@@ -700,7 +967,7 @@ export default function CompetitorAnalysis() {
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (activeChannel) return; // Don't reload while in session
+    if (activeChannel) return;
     setLoading(true);
     competitorAnalysisApi.getChannels()
       .then(setChannels)
@@ -754,7 +1021,6 @@ export default function CompetitorAnalysis() {
 
       {!loading && channels.length > 0 && (
         <div className="competitor-channel-table" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', overflow: 'hidden' }}>
-          {/* Header */}
           <div className="competitor-channel-header" style={{
             display: 'grid',
             gridTemplateColumns: '220px 100px 100px 100px 120px 90px 140px',
@@ -776,6 +1042,8 @@ export default function CompetitorAnalysis() {
           ))}
         </div>
       )}
+
+      <KallawayReference />
     </div>
   );
 }

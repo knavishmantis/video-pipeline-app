@@ -614,9 +614,29 @@ export const scriptEngineApi = {
   },
 };
 
+export interface CompetitorReviewData {
+  notes?: string;
+  percentile_guess?: number;
+  rating?: number;
+  hook_type?: string;
+  topic_category?: string;
+  steal_this?: string;
+  visual_verbal?: string;
+  initial_analysis?: string;
+  hook_notes?: string;
+  concept_notes?: string;
+  pacing_notes?: string;
+  payoff_notes?: string;
+  emotion?: string;
+}
+
 export const competitorAnalysisApi = {
   getChannels: async (): Promise<any[]> => {
     const response = await api.get('/competitor-analysis/channels');
+    return response.data;
+  },
+  getMyShorts: async (): Promise<any[]> => {
+    const response = await api.get('/competitor-analysis/my-shorts');
     return response.data;
   },
   getNextVideo: async (channel: string): Promise<any> => {
@@ -627,7 +647,7 @@ export const competitorAnalysisApi = {
     const response = await api.get(`/competitor-analysis/videos/${id}/url`);
     return response.data.url;
   },
-  saveReview: async (id: string, data: { notes?: string; percentile_guess?: number; rating?: number; hook_type?: string; topic_category?: string; steal_this?: string }): Promise<void> => {
+  saveReview: async (id: string, data: CompetitorReviewData): Promise<void> => {
     await api.post(`/competitor-analysis/videos/${id}/review`, data);
   },
   getReveal: async (id: string): Promise<any> => {
