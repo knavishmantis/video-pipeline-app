@@ -222,11 +222,24 @@ function MyShortsStrip({ shorts }: { shorts: any[] }) {
       </div>
       {expanded !== null && (() => {
         const s = shorts.find(x => x.id === expanded);
-        if (!s?.reflection_what_worked) return null;
+        if (!s) return null;
         return (
           <div style={{ marginTop: '10px', padding: '10px 12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>What worked</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{s.reflection_what_worked}</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.3 }}>{s.title}</div>
+            {s.video_url && (
+              <video
+                src={s.video_url}
+                controls
+                playsInline
+                style={{ width: '100%', maxHeight: '320px', borderRadius: '6px', background: '#000', display: 'block', marginBottom: '8px' }}
+              />
+            )}
+            {s.reflection_what_worked && (
+              <>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>What worked</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{s.reflection_what_worked}</div>
+              </>
+            )}
           </div>
         );
       })()}
