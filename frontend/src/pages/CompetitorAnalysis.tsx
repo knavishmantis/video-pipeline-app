@@ -653,10 +653,10 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'min(340px, 32%) 1fr', gap: '20px', alignItems: 'start' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'min(340px, 32%) 1fr', gap: '20px', alignItems: 'stretch', minHeight: '85vh' }}>
           {/* Video */}
-          <div>
-            <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', aspectRatio: '9/16', maxHeight: '65vh' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1, minHeight: '300px' }}>
               {videoUrl ? (
                 <video
                   ref={videoRef}
@@ -741,56 +741,16 @@ function SessionView({
                   </PNL>
                 </div>
 
-                {/* ── Right col: text analysis ── */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <PNL label="Initial analysis">
+                {/* ── Right col: analysis ── */}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <PNL label="Analysis" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <textarea
                       value={initialAnalysis}
                       onChange={e => setInitialAnalysis(e.target.value)}
-                      placeholder="First impressions while watching — what stands out?"
+                      placeholder="Notes while watching…"
                       style={{
-                        width: '100%', minHeight: '80px', background: 'transparent',
-                        border: 'none', outline: 'none', resize: 'vertical',
-                        fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
-                      }}
-                    />
-                  </PNL>
-
-                  <PNL>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rubric</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {[
-                        { label: 'Hook', value: hookNotes, set: setHookNotes, placeholder: 'Literal first frame + first line. Does it create immediate tension?' },
-                        { label: 'Concept', value: conceptNotes, set: setConceptNotes, placeholder: 'One sentence summary. Would you text this to a friend?' },
-                        { label: 'Pacing', value: pacingNotes, set: setPacingNotes, placeholder: 'Where did attention drift? Note the timestamp.' },
-                        { label: 'Payoff', value: payoffNotes, set: setPayoffNotes, placeholder: 'Does the ending feel earned? Make you want to rewatch?' },
-                      ].map(field => (
-                        <div key={field.label}>
-                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>{field.label}</div>
-                          <textarea
-                            value={field.value}
-                            onChange={e => field.set(e.target.value)}
-                            placeholder={field.placeholder}
-                            style={{
-                              width: '100%', minHeight: '52px', background: 'var(--bg-primary)',
-                              border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '6px 8px',
-                              outline: 'none', resize: 'vertical',
-                              fontSize: '11px', color: 'var(--text-primary)', lineHeight: 1.55, fontFamily: 'inherit',
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </PNL>
-
-                  <PNL label="Steal this">
-                    <textarea
-                      value={stealThis}
-                      onChange={e => setStealThis(e.target.value)}
-                      placeholder="Why is it better than my videos / What can I take from this and use myself"
-                      style={{
-                        width: '100%', minHeight: '80px', background: 'transparent',
-                        border: 'none', outline: 'none', resize: 'vertical',
+                        flex: 1, width: '100%', minHeight: '200px', background: 'transparent',
+                        border: 'none', outline: 'none', resize: 'none',
                         fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
                       }}
                     />
@@ -859,35 +819,9 @@ function SessionView({
                   </PNL>
                 )}
 
-                {/* Rubric summary */}
-                {(hookNotes || conceptNotes || pacingNotes || payoffNotes) && (
-                  <PNL>
-                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>Rubric</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {[
-                        { label: 'Hook', value: hookNotes },
-                        { label: 'Concept', value: conceptNotes },
-                        { label: 'Pacing', value: pacingNotes },
-                        { label: 'Payoff', value: payoffNotes },
-                      ].filter(f => f.value).map(f => (
-                        <div key={f.label}>
-                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '2px' }}>{f.label}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{f.value}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </PNL>
-                )}
-
                 {initialAnalysis && (
-                  <PNL label="Initial analysis">
+                  <PNL label="Analysis">
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{initialAnalysis}</div>
-                  </PNL>
-                )}
-
-                {stealThis && (
-                  <PNL label="Steal this">
-                    <div style={{ fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.5 }}>{stealThis}</div>
                   </PNL>
                 )}
 
