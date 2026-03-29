@@ -651,7 +651,7 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(85vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '85vh' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '78vh' }}>
           {/* Video column */}
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>
@@ -686,7 +686,7 @@ function SessionView({
                 {/* Classifiers + Analysis — row that fills remaining height */}
                 <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
                   {/* Classifiers — fixed narrow column */}
-                  <div style={{ width: '210px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+                  <div style={{ width: '250px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
                     <PNL label="Delivery">
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {(['visual', 'verbal'] as const).map(v => (
