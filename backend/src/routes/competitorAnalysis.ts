@@ -1,13 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
+import jwt from 'jsonwebtoken';
 import { authenticateToken, requireRole } from '../middleware/auth';
-import { getSignedUrlFromBucket } from '../services/gcpStorage';
+import { getSignedUrlFromBucket, getStorage } from '../services/gcpStorage';
 import { query } from '../db';
+import { config } from '../config/env';
 
 export const competitorAnalysisRouter = Router();
-
-competitorAnalysisRouter.use(authenticateToken);
-competitorAnalysisRouter.use(requireRole('admin'));
 
 // Reuse script_engine DB — same host, different database
 let sePool: Pool | null = null;
@@ -61,6 +60,60 @@ async function getCompetitorSignedUrl(gcsPath: string, expiresIn = 3600): Promis
   const contentType = inferContentType(filePath);
   return getSignedUrlFromBucket(bucketName, filePath, expiresIn, contentType);
 }
+
+// GET /api/competitor-analysis/videos/:id/stream
+// Proxy the GCS video through the backend with proper headers for iOS Safari.
+// Accepts JWT via ?token= query param since <video> elements can't send Bearer headers.
+// Registered BEFORE the auth middleware so the video element URL works without custom headers.
+competitorAnalysisRouter.get('/videos/:id/stream', async (req: Request, res: Response) => {
+  const token = req.query.token as string;
+  if (!token) { res.status(401).end(); return; }
+  try { jwt.verify(token, config.jwtSecret); } catch { res.status(401).end(); return; }
+
+  try {
+    const { id } = req.params;
+    const rows = await seQuery('SELECT gcs_path FROM videos WHERE id = $1', [id]);
+    if (!rows.length || !rows[0].gcs_path) { res.status(404).end(); return; }
+
+    const { bucket: bucketName, path: filePath } = extractBucketPath(rows[0].gcs_path);
+    const storage = getStorage();
+    const file = storage.bucket(bucketName).file(filePath);
+
+    const [metadata] = await file.getMetadata();
+    const fileSize = parseInt(metadata.size as string, 10);
+    const contentType = inferContentType(filePath);
+
+    const rangeHeader = req.headers['range'];
+    if (rangeHeader) {
+      const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
+      if (match) {
+        const start = parseInt(match[1], 10);
+        const end = match[2] ? parseInt(match[2], 10) : Math.min(start + 2 * 1024 * 1024 - 1, fileSize - 1);
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': end - start + 1,
+          'Content-Type': contentType,
+        });
+        file.createReadStream({ start, end }).pipe(res);
+        return;
+      }
+    }
+
+    res.writeHead(200, {
+      'Content-Length': fileSize,
+      'Content-Type': contentType,
+      'Accept-Ranges': 'bytes',
+    });
+    file.createReadStream().pipe(res);
+  } catch (e: any) {
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
+// All routes below require admin auth
+competitorAnalysisRouter.use(authenticateToken);
+competitorAnalysisRouter.use(requireRole('admin'));
 
 // Ensure competitor_reviews table exists in script_engine DB
 // video_id is INTEGER to match videos.id (SERIAL)

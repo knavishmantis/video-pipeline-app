@@ -20,7 +20,7 @@ export function generateBucketPath(
 
 let storage: Storage | null = null;
 
-function getStorage(): Storage {
+export function getStorage(): Storage {
   if (!storage) {
     const projectId = process.env.GCP_PROJECT_ID;
     const keyFilename = process.env.GCP_KEY_FILE;

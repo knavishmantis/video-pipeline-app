@@ -644,8 +644,11 @@ export const competitorAnalysisApi = {
     return response.data;
   },
   getVideoUrl: async (id: string): Promise<string> => {
-    const response = await api.get(`/competitor-analysis/videos/${id}/url`);
-    return response.data.url;
+    // Use backend streaming proxy instead of direct GCS signed URL.
+    // iOS Safari requires proper Content-Type + Range request support, which
+    // GCS signed URLs don't reliably provide. The proxy handles this correctly.
+    const token = localStorage.getItem('token') || '';
+    return `${API_URL}/competitor-analysis/videos/${id}/stream?token=${encodeURIComponent(token)}`;
   },
   saveReview: async (id: string, data: CompetitorReviewData): Promise<void> => {
     await api.post(`/competitor-analysis/videos/${id}/review`, data);
