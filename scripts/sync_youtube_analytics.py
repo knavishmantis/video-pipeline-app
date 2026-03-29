@@ -180,26 +180,35 @@ def main():
 
     print("Fetching video list...")
     video_ids, titles = get_all_video_ids(yt, channel_id)
+    print(f"  → {len(video_ids)} videos found on channel")
 
     print("Fetching analytics data...")
     analytics = fetch_video_analytics(yt_anal, channel_id)
+    print(f"  → {len(analytics)} videos returned by Analytics API")
 
     print("Fetching video details...")
     details = fetch_video_details(yt, video_ids)
+    print(f"  → {len(details)} videos with full details")
 
     # Merge analytics with details, filtering out private/unlisted junk
     now = datetime.datetime.utcnow().isoformat() + "Z"
     videos = []
-    skipped = 0
+    skipped_no_title = 0
+    skipped_low_views = 0
+    shorts_count = 0
+    longform_count = 0
+
     for a in analytics:
         vid = a["video"]
         d = details.get(vid, {})
         title = d.get("title", titles.get(vid, ""))
         views = a.get("views", 0) or 0
 
-        # Skip private/unlisted videos (no title) and low view videos
-        if not title or views < 1000:
-            skipped += 1
+        if not title:
+            skipped_no_title += 1
+            continue
+        if views < 1000:
+            skipped_low_views += 1
             continue
 
         likes = a.get("likes", 0) or 0
@@ -209,10 +218,14 @@ def main():
         subs_lost = a.get("subscribersLost", 0) or 0
         duration_sec = d.get("duration_sec")
 
-        safe_views = views if views > 0 else 1  # avoid division by zero
+        safe_views = views if views > 0 else 1
 
         # Shorts are <= 180s (YouTube's current limit); long-form is > 180s
         is_short = (duration_sec or 0) <= 180
+        if is_short:
+            shorts_count += 1
+        else:
+            longform_count += 1
 
         videos.append({
             "video_id": vid,
@@ -238,7 +251,14 @@ def main():
             "fetched_at": now,
         })
 
-    print(f"Processed {len(videos)} videos (skipped {skipped} private/unlisted)")
+    print(f"Processed {len(videos)} videos — {shorts_count} shorts, {longform_count} long-form")
+    print(f"  Skipped: {skipped_no_title} private/unlisted, {skipped_low_views} under 1k views")
+    if videos:
+        top = sorted(videos, key=lambda v: v["views"], reverse=True)[:5]
+        print("  Top 5 by views:")
+        for v in top:
+            kind = "short" if v["is_short"] else "long"
+            print(f"    {v['views']:>9,}  [{kind}]  {v['title']}")
 
     # Output JSON
     payload = {"videos": videos}
@@ -269,13 +289,25 @@ def main():
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 result = json.loads(resp.read().decode())
-                print(f"Backend sync result: {result}")
+                print(f"Backend sync: {result.get('message')}")
+                if result.get('auto_linked', 0) > 0:
+                    print(f"  Auto-linked {result['auto_linked']} shorts:")
+                    for d in result.get('auto_link_details', []):
+                        print(f"    {d}")
+                if result.get('milestones_created', 0) > 0:
+                    print(f"  Created {result['milestones_created']} milestone payments:")
+                    for d in result.get('milestone_details', []):
+                        print(f"    {d}")
         except Exception as e:
-            print(f"WARNING: Failed to sync to backend: {e}")
-            print("Data was saved to file. You can manually import it.")
+            print(f"ERROR: Failed to sync to backend: {e}")
+            sys.exit(1)
     else:
-        print("BACKEND_URL or SYNC_API_KEY not set — skipping backend sync")
-        print("Data saved to file only.")
+        missing = []
+        if not backend_url: missing.append("BACKEND_URL")
+        if not sync_api_key: missing.append("SYNC_API_KEY")
+        print(f"ERROR: {', '.join(missing)} not set — cannot sync to backend")
+        print("Set these as GitHub secrets to enable syncing.")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

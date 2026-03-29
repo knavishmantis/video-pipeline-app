@@ -21,6 +21,7 @@ export const config = {
   jwtSecret: requireEnv('JWT_SECRET'),
   jwtExpiresIn: requireEnvOr('JWT_EXPIRES_IN', '7d'),
   frontendUrl: requireEnv('FRONTEND_URL'),
+  syncApiKey: process.env.SYNC_API_KEY || null,
   gcp: {
     projectId: process.env.GCP_PROJECT_ID,
     bucketName: process.env.GCP_BUCKET_NAME,
