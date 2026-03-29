@@ -651,7 +651,7 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '78vh' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '88vh' }}>
           {/* Video column */}
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>
