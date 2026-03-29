@@ -16,6 +16,7 @@
     "emoji-picker-react": "^4.16.1",
     "framer-motion": "^12.23.26",
     "jspdf": "^2.5.2",
+    "jszip": "^3.10.1",
     "ogl": "^1.0.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

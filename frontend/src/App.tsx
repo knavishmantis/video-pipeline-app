@@ -20,6 +20,7 @@ import CriticReview from './pages/CriticReview';
 import CompetitorAnalysis from './pages/CompetitorAnalysis';
 import SceneEditorPage from './pages/SceneEditorPage';
 import Presets from './pages/Presets';
+import Assets from './pages/Assets';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -175,6 +176,16 @@ function AppContent() {
               <ProfileCheckRoute>
                 <AppLayout>
                   <Presets />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/assets"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <Assets />
                 </AppLayout>
               </ProfileCheckRoute>
             }
