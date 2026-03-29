@@ -49,9 +49,17 @@ function extractBucketPath(gcsPath: string): { bucket: string; path: string } {
   return { bucket: SCRIPT_ENGINE_BUCKET, path: gcsPath };
 }
 
+function inferContentType(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase();
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'mkv') return 'video/x-matroska';
+  return 'video/mp4';
+}
+
 async function getCompetitorSignedUrl(gcsPath: string, expiresIn = 3600): Promise<string> {
   const { bucket: bucketName, path: filePath } = extractBucketPath(gcsPath);
-  return getSignedUrlFromBucket(bucketName, filePath, expiresIn);
+  const contentType = inferContentType(filePath);
+  return getSignedUrlFromBucket(bucketName, filePath, expiresIn, contentType);
 }
 
 // Ensure competitor_reviews table exists in script_engine DB

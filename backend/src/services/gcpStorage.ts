@@ -195,7 +195,7 @@ export async function getSignedUrl(bucketPath: string, expiresIn: number = 3600)
   }
 }
 
-export async function getSignedUrlFromBucket(bucketName: string, bucketPath: string, expiresIn: number = 3600): Promise<string> {
+export async function getSignedUrlFromBucket(bucketName: string, bucketPath: string, expiresIn: number = 3600, responseContentType?: string): Promise<string> {
   const storage = getStorage();
   if (!storage) throw new Error('GCP Storage is not initialized. Check GCP_PROJECT_ID configuration.');
   const file = storage.bucket(bucketName).file(bucketPath);
@@ -204,6 +204,7 @@ export async function getSignedUrlFromBucket(bucketName: string, bucketPath: str
   const [url] = await file.getSignedUrl({
     action: 'read',
     expires: Date.now() + expiresIn * 1000,
+    ...(responseContentType ? { responseType: responseContentType } : {}),
   });
   return url;
 }

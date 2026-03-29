@@ -84,8 +84,8 @@ function accuracyColor(err: number): string {
 
 // ── Shared panel ──────────────────────────────────────────────────────────────
 
-const PNL = ({ children, label, style }: { children: React.ReactNode; label?: string; style?: React.CSSProperties }) => (
-  <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', padding: '14px 16px', ...style }}>
+const PNL = ({ children, label, style, className }: { children: React.ReactNode; label?: string; style?: React.CSSProperties; className?: string }) => (
+  <div className={className} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', padding: '14px 16px', ...style }}>
     {label && <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>{label}</div>}
     {children}
   </div>
@@ -229,7 +229,7 @@ function MyShortsStrip({ shorts }: { shorts: any[] }) {
             {s.youtube_video_id && (
               <div style={{ position: 'relative', paddingTop: '177.78%', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px', background: '#000' }}>
                 <iframe
-                  src={`https://www.youtube.com/embed/${s.youtube_video_id}`}
+                  src={`https://www.youtube.com/embed/${s.youtube_video_id}?playsinline=1`}
                   title={s.title}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -598,6 +598,14 @@ function SessionView({
       <style>{`
         @media (max-width: 900px) {
           .competitor-session-grid { grid-template-columns: 1fr !important; height: auto !important; }
+          .competitor-video-col { overflow: visible !important; }
+          .competitor-video-box { flex: none !important; aspect-ratio: 9 / 16 !important; max-height: 65vh !important; width: 100% !important; }
+          .competitor-my-shorts { display: none !important; }
+          .competitor-form-col { height: auto !important; overflow: visible !important; }
+          .competitor-classifiers-row { flex-direction: column !important; }
+          .competitor-analysis-pnl { order: -1 !important; min-height: 160px !important; }
+          .competitor-analysis-pnl textarea { min-height: 120px !important; }
+          .competitor-classifiers-panel { width: 100% !important; overflow-y: visible !important; }
         }
       `}</style>
 
@@ -653,8 +661,8 @@ function SessionView({
       {(phase === 'watching' || phase === 'revealed') && video && (
         <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '88vh' }}>
           {/* Video column */}
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>
+          <div className="competitor-video-col" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="competitor-video-box" style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>
               {videoUrl ? (
                 <video
                   ref={videoRef}
@@ -673,20 +681,20 @@ function SessionView({
               <div style={{ flexShrink: 0, marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{video.title}</div>
             )}
             {myShorts.length > 0 && (
-              <div style={{ flexShrink: 0, marginTop: '10px' }}>
+              <div className="competitor-my-shorts" style={{ flexShrink: 0, marginTop: '10px' }}>
                 <MyShortsStrip shorts={myShorts} />
               </div>
             )}
           </div>
 
           {/* Form column — flex column filling full height */}
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', overflow: 'hidden' }}>
+          <div className="competitor-form-col" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', overflow: 'hidden' }}>
             {phase === 'watching' && (
               <>
                 {/* Classifiers + Analysis — row that fills remaining height */}
-                <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
+                <div className="competitor-classifiers-row" style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
                   {/* Classifiers — fixed narrow column */}
-                  <div style={{ width: '250px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+                  <div className="competitor-classifiers-panel" style={{ width: '250px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
                     <PNL label="Delivery">
                       <div style={{ display: 'flex', gap: '6px' }}>
                         {(['visual', 'verbal'] as const).map(v => (
@@ -741,7 +749,7 @@ function SessionView({
                   </div>
 
                   {/* Analysis — fills all remaining width and height */}
-                  <PNL label="Analysis" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <PNL label="Analysis" style={{ flex: 1, display: 'flex', flexDirection: 'column' }} className="competitor-analysis-pnl">
                     <textarea
                       value={initialAnalysis}
                       onChange={e => setInitialAnalysis(e.target.value)}
