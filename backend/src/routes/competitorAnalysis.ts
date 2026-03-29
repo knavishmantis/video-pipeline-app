@@ -80,33 +80,47 @@ competitorAnalysisRouter.get('/videos/:id/stream', async (req: Request, res: Res
     const file = storage.bucket(bucketName).file(filePath);
 
     const [metadata] = await file.getMetadata();
-    const fileSize = parseInt(metadata.size as string, 10);
+    const fileSize = parseInt(String(metadata.size), 10);
     const contentType = inferContentType(filePath);
 
     const rangeHeader = req.headers['range'];
+    let start = 0;
+    let end = fileSize - 1;
+    let statusCode = 200;
+
     if (rangeHeader) {
       const match = rangeHeader.match(/bytes=(\d+)-(\d*)/);
       if (match) {
-        const start = parseInt(match[1], 10);
-        const end = match[2] ? parseInt(match[2], 10) : Math.min(start + 2 * 1024 * 1024 - 1, fileSize - 1);
-        res.writeHead(206, {
-          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': end - start + 1,
-          'Content-Type': contentType,
-        });
-        file.createReadStream({ start, end }).pipe(res);
-        return;
+        start = parseInt(match[1], 10);
+        end = match[2] ? parseInt(match[2], 10) : fileSize - 1;
+        statusCode = 206;
       }
     }
 
-    res.writeHead(200, {
-      'Content-Length': fileSize,
+    const headers: Record<string, string | number> = {
       'Content-Type': contentType,
+      'Content-Length': end - start + 1,
       'Accept-Ranges': 'bytes',
+      'Cache-Control': 'no-cache',
+    };
+    if (statusCode === 206) {
+      headers['Content-Range'] = `bytes ${start}-${end}/${fileSize}`;
+    }
+
+    res.writeHead(statusCode, headers);
+
+    const readStream = file.createReadStream({ start, end });
+
+    readStream.on('error', (err) => {
+      console.error('GCS stream error for video', id, err.message);
+      if (!res.writableEnded) res.end();
     });
-    file.createReadStream().pipe(res);
+
+    req.on('close', () => readStream.destroy());
+
+    readStream.pipe(res, { end: true });
   } catch (e: any) {
+    console.error('Stream handler error for video', req.params.id, e.message);
     if (!res.headersSent) res.status(500).json({ error: e.message });
   }
 });
