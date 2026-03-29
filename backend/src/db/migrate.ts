@@ -338,6 +338,16 @@ export async function migrate(): Promise<void> {
       } catch (error: any) {
         console.warn('Could not add columns (may already exist):', error.message);
       }
+
+      // Add needs_rework flag to scenes
+      try {
+        await query(`ALTER TABLE scenes ADD COLUMN IF NOT EXISTS needs_rework BOOLEAN NOT NULL DEFAULT FALSE`);
+        console.log('Added needs_rework column to scenes');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add needs_rework column:', error.message);
+        }
+      }
     }
     
     console.log('Database migration completed successfully');

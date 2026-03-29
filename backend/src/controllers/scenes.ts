@@ -140,6 +140,10 @@ export const scenesController = {
         updates.push(`preset_clip_id = $${paramCount++}`);
         params.push(input.preset_clip_id);
       }
+      if (input.needs_rework !== undefined) {
+        updates.push(`needs_rework = $${paramCount++}`);
+        params.push(input.needs_rework);
+      }
 
       if (updates.length === 0) {
         res.status(400).json({ error: 'No fields to update' });

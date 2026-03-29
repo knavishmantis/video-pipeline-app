@@ -202,6 +202,7 @@ export interface Scene {
   preset_clip_id?: number | null;
   preset_clip?: PresetClip | null;
   images?: SceneImage[];
+  needs_rework?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -224,6 +225,7 @@ export interface UpdateSceneInput {
   scene_order?: number;
   image_url?: string | null;
   preset_clip_id?: number | null;
+  needs_rework?: boolean;
 }
 
 export interface BulkCreateScenesInput {

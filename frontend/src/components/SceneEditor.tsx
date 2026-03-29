@@ -973,6 +973,11 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                       {saving === scene.id && (
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
                       )}
+                      {scene.needs_rework && (
+                        <span style={{ fontSize: '11px', color: '#fff', fontWeight: 700, background: '#E05A4E', padding: '1px 6px', borderRadius: '4px' }} title="Flagged for rework">
+                          REWORK
+                        </span>
+                      )}
                       {scene.preset_clip && (
                         <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: '600' }} title={`Preset ${scene.preset_clip.label || ''}: ${scene.preset_clip.name}`}>
                           PRESET {scene.preset_clip.label || ''}
@@ -1055,6 +1060,19 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       {saving === scene.id && (
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saving...</span>
+                      )}
+                      {canEditScenes && (
+                        <button
+                          onClick={() => updateScene(scene.id, { needs_rework: !scene.needs_rework })}
+                          title={scene.needs_rework ? 'Clear rework flag' : 'Flag for rework by Claude'}
+                          style={{
+                            fontSize: '12px', fontWeight: 700, padding: '3px 8px', borderRadius: '5px', border: 'none', cursor: 'pointer',
+                            background: scene.needs_rework ? '#E05A4E' : 'var(--border-default)',
+                            color: scene.needs_rework ? '#fff' : 'var(--text-muted)',
+                          }}
+                        >
+                          {scene.needs_rework ? '⚑ Flagged' : '⚑ Flag'}
+                        </button>
                       )}
                       {canEditScenes && (
                         <button
