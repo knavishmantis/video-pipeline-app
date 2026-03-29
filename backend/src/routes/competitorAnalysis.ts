@@ -162,6 +162,7 @@ competitorAnalysisRouter.get('/my-shorts', async (_req: Request, res: Response) 
         s.id,
         s.title,
         s.youtube_video_id,
+        s.script_content,
         s.reflection_rating,
         s.reflection_what_worked,
         COALESCE(ya.views, 0)::BIGINT AS views

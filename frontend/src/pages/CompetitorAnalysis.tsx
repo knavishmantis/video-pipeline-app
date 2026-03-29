@@ -237,6 +237,12 @@ function MyShortsStrip({ shorts }: { shorts: any[] }) {
                 />
               </div>
             )}
+            {s.script_content && (
+              <div style={{ marginBottom: '10px' }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>Script</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: '180px', overflowY: 'auto', padding: '8px', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-subtle)' }}>{s.script_content}</div>
+              </div>
+            )}
             {s.reflection_what_worked && (
               <>
                 <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>What worked</div>
@@ -588,10 +594,12 @@ function SessionView({
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%' }}>
+    <div style={{ width: '100%' }}>
       <style>{`
-        @media (max-width: 700px) {
+        @media (max-width: 900px) {
           .competitor-session-grid { grid-template-columns: 1fr !important; }
+          .analysis-form-cols { grid-template-columns: 1fr !important; }
+          .analysis-form-fullrow { grid-column: 1 !important; }
         }
       `}</style>
 
@@ -645,7 +653,7 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '16px', alignItems: 'start' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'min(340px, 32%) 1fr', gap: '20px', alignItems: 'start' }}>
           {/* Video */}
           <div>
             <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', aspectRatio: '9/16', maxHeight: '65vh' }}>
@@ -674,150 +682,152 @@ function SessionView({
             )}
           </div>
 
-          {/* Side panel */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Side panel — 2-column grid on desktop */}
+          <div className="analysis-form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'start' }}>
             {phase === 'watching' && (
               <>
-                {/* ── Quick classifiers ── */}
-                <PNL label="Delivery">
-                  <div style={{ display: 'flex', gap: '6px' }}>
-                    {(['visual', 'verbal'] as const).map(v => (
-                      <button
-                        key={v}
-                        onClick={() => setVisualVerbal(visualVerbal === v ? '' : v)}
-                        style={{
-                          flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                          fontSize: '11px', fontWeight: 700, transition: 'all 0.1s',
-                          background: visualVerbal === v ? 'var(--gold)' : 'var(--border-default)',
-                          color: visualVerbal === v ? 'var(--bg-primary)' : 'var(--text-muted)',
-                        }}
-                      >
-                        {v === 'visual' ? 'Visual-first' : 'Verbal-first'}
-                      </button>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.4 }}>
-                    Did the first frame show something happening, or did narration lead?
-                  </div>
-                </PNL>
-
-                <PNL label="Hook type">
-                  <PillGroup
-                    options={HOOK_TYPES}
-                    value={hookType as any}
-                    onChange={setHookType as any}
-                  />
-                  {hookType && (
-                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5, marginTop: '6px' }}>
-                      {HOOK_TYPES.find(h => h.value === hookType)?.definition}
-                    </div>
-                  )}
-                </PNL>
-
-                <PNL label="Topic category">
-                  <PillGroup
-                    options={TOPIC_CATEGORIES}
-                    value={topicCategory as any}
-                    onChange={setTopicCategory as any}
-                  />
-                </PNL>
-
-                {/* ── Initial analysis ── */}
-                <PNL label="Initial analysis">
-                  <textarea
-                    value={initialAnalysis}
-                    onChange={e => setInitialAnalysis(e.target.value)}
-                    placeholder="First impressions while watching — what stands out?"
-                    style={{
-                      width: '100%', minHeight: '80px', background: 'transparent',
-                      border: 'none', outline: 'none', resize: 'vertical',
-                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
-                    }}
-                  />
-                </PNL>
-
-                {/* ── Rubric ── */}
-                <PNL>
-                  <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rubric</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { label: 'Hook', value: hookNotes, set: setHookNotes, placeholder: 'Literal first frame + first line. Does it create immediate tension?' },
-                      { label: 'Concept', value: conceptNotes, set: setConceptNotes, placeholder: 'One sentence summary. Would you text this to a friend?' },
-                      { label: 'Pacing', value: pacingNotes, set: setPacingNotes, placeholder: 'Where did attention drift? Note the timestamp.' },
-                      { label: 'Payoff', value: payoffNotes, set: setPayoffNotes, placeholder: 'Does the ending feel earned? Make you want to rewatch?' },
-                    ].map(field => (
-                      <div key={field.label}>
-                        <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>{field.label}</div>
-                        <textarea
-                          value={field.value}
-                          onChange={e => field.set(e.target.value)}
-                          placeholder={field.placeholder}
+                {/* ── Left col: quick classifiers ── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <PNL label="Delivery">
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {(['visual', 'verbal'] as const).map(v => (
+                        <button
+                          key={v}
+                          onClick={() => setVisualVerbal(visualVerbal === v ? '' : v)}
                           style={{
-                            width: '100%', minHeight: '52px', background: 'var(--bg-primary)',
-                            border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '6px 8px',
-                            outline: 'none', resize: 'vertical',
-                            fontSize: '11px', color: 'var(--text-primary)', lineHeight: 1.55, fontFamily: 'inherit',
+                            flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                            fontSize: '11px', fontWeight: 700, transition: 'all 0.1s',
+                            background: visualVerbal === v ? 'var(--gold)' : 'var(--border-default)',
+                            color: visualVerbal === v ? 'var(--bg-primary)' : 'var(--text-muted)',
                           }}
-                        />
+                        >
+                          {v === 'visual' ? 'Visual-first' : 'Verbal-first'}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.4 }}>
+                      Did the first frame show something happening, or did narration lead?
+                    </div>
+                  </PNL>
+
+                  <PNL label="Hook type">
+                    <PillGroup
+                      options={HOOK_TYPES}
+                      value={hookType as any}
+                      onChange={setHookType as any}
+                    />
+                    {hookType && (
+                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5, marginTop: '6px' }}>
+                        {HOOK_TYPES.find(h => h.value === hookType)?.definition}
                       </div>
-                    ))}
+                    )}
+                  </PNL>
 
-                    {/* Emotion */}
-                    <div>
-                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Emotion — primary feeling</div>
-                      <PillGroup
-                        options={EMOTIONS}
-                        value={emotion as any}
-                        onChange={setEmotion as any}
-                        getColor={v => EMOTIONS.find(e => e.value === v)?.color || 'var(--gold)'}
-                      />
+                  <PNL label="Topic category">
+                    <PillGroup
+                      options={TOPIC_CATEGORIES}
+                      value={topicCategory as any}
+                      onChange={setTopicCategory as any}
+                    />
+                  </PNL>
+
+                  <PNL label="Emotion — primary feeling">
+                    <PillGroup
+                      options={EMOTIONS}
+                      value={emotion as any}
+                      onChange={setEmotion as any}
+                      getColor={v => EMOTIONS.find(e => e.value === v)?.color || 'var(--gold)'}
+                    />
+                  </PNL>
+                </div>
+
+                {/* ── Right col: text analysis ── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <PNL label="Initial analysis">
+                    <textarea
+                      value={initialAnalysis}
+                      onChange={e => setInitialAnalysis(e.target.value)}
+                      placeholder="First impressions while watching — what stands out?"
+                      style={{
+                        width: '100%', minHeight: '80px', background: 'transparent',
+                        border: 'none', outline: 'none', resize: 'vertical',
+                        fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
+                      }}
+                    />
+                  </PNL>
+
+                  <PNL>
+                    <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '12px' }}>Rubric</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {[
+                        { label: 'Hook', value: hookNotes, set: setHookNotes, placeholder: 'Literal first frame + first line. Does it create immediate tension?' },
+                        { label: 'Concept', value: conceptNotes, set: setConceptNotes, placeholder: 'One sentence summary. Would you text this to a friend?' },
+                        { label: 'Pacing', value: pacingNotes, set: setPacingNotes, placeholder: 'Where did attention drift? Note the timestamp.' },
+                        { label: 'Payoff', value: payoffNotes, set: setPayoffNotes, placeholder: 'Does the ending feel earned? Make you want to rewatch?' },
+                      ].map(field => (
+                        <div key={field.label}>
+                          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>{field.label}</div>
+                          <textarea
+                            value={field.value}
+                            onChange={e => field.set(e.target.value)}
+                            placeholder={field.placeholder}
+                            style={{
+                              width: '100%', minHeight: '52px', background: 'var(--bg-primary)',
+                              border: '1px solid var(--border-subtle)', borderRadius: '6px', padding: '6px 8px',
+                              outline: 'none', resize: 'vertical',
+                              fontSize: '11px', color: 'var(--text-primary)', lineHeight: 1.55, fontFamily: 'inherit',
+                            }}
+                          />
+                        </div>
+                      ))}
                     </div>
-                  </div>
-                </PNL>
+                  </PNL>
 
-                {/* ── Steal this ── */}
-                <PNL label="Steal this">
-                  <textarea
-                    value={stealThis}
-                    onChange={e => setStealThis(e.target.value)}
-                    placeholder="One concrete technique to replicate in our own videos…"
+                  <PNL label="Steal this">
+                    <textarea
+                      value={stealThis}
+                      onChange={e => setStealThis(e.target.value)}
+                      placeholder="Why is it better than my videos / What can I take from this and use myself"
+                      style={{
+                        width: '100%', minHeight: '80px', background: 'transparent',
+                        border: 'none', outline: 'none', resize: 'vertical',
+                        fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
+                      }}
+                    />
+                  </PNL>
+                </div>
+
+                {/* ── Full width: percentile + button ── */}
+                <div className="analysis-form-fullrow" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {isTooRecent ? (
+                    <PNL>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                        Disabled — video is less than 7 days old, views are still climbing.
+                      </div>
+                    </PNL>
+                  ) : (
+                    <PNL>
+                      <PercentileSlider value={guess} onChange={setGuess} />
+                    </PNL>
+                  )}
+
+                  <button
+                    onClick={handleReveal}
                     style={{
-                      width: '100%', minHeight: '80px', background: 'transparent',
-                      border: 'none', outline: 'none', resize: 'vertical',
-                      fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
+                      width: '100%', padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                      background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '13px', fontWeight: 700,
+                      letterSpacing: '-0.01em',
                     }}
-                  />
-                </PNL>
-
-                {/* ── Percentile ── */}
-                {isTooRecent ? (
-                  <PNL>
-                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                      Disabled — video is less than 7 days old, views are still climbing.
-                    </div>
-                  </PNL>
-                ) : (
-                  <PNL>
-                    <PercentileSlider value={guess} onChange={setGuess} />
-                  </PNL>
-                )}
-
-                <button
-                  onClick={handleReveal}
-                  style={{
-                    width: '100%', padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                    background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '13px', fontWeight: 700,
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  Reveal Stats
-                </button>
+                  >
+                    Reveal Stats
+                  </button>
+                </div>
               </>
             )}
 
             {phase === 'revealed' && reveal && (
-              <>
+              <div className="analysis-form-fullrow" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {/* Summary of filled fields */}
                 {(visualVerbal || hookType || topicCategory || emotion) && (
                   <PNL>
@@ -888,7 +898,7 @@ function SessionView({
                   onNext={loadNext}
                   hasMore={hasMore}
                 />
-              </>
+              </div>
             )}
           </div>
         </div>
