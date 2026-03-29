@@ -597,9 +597,7 @@ function SessionView({
     <div style={{ width: '100%' }}>
       <style>{`
         @media (max-width: 900px) {
-          .competitor-session-grid { grid-template-columns: 1fr !important; }
-          .analysis-form-cols { grid-template-columns: 1fr !important; }
-          .analysis-form-fullrow { grid-column: 1 !important; }
+          .competitor-session-grid { grid-template-columns: 1fr !important; height: auto !important; }
         }
       `}</style>
 
@@ -653,10 +651,10 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'min(340px, 32%) 1fr', gap: '20px', alignItems: 'stretch', minHeight: '85vh' }}>
-          {/* Video */}
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1, minHeight: '300px' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(85vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '85vh' }}>
+          {/* Video column */}
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>
               {videoUrl ? (
                 <video
                   ref={videoRef}
@@ -672,84 +670,84 @@ function SessionView({
               )}
             </div>
             {phase === 'revealed' && (
-              <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{video.title}</div>
+              <div style={{ flexShrink: 0, marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{video.title}</div>
             )}
-            {/* My shorts strip lives under the video */}
             {myShorts.length > 0 && (
-              <div style={{ marginTop: '16px' }}>
+              <div style={{ flexShrink: 0, marginTop: '10px' }}>
                 <MyShortsStrip shorts={myShorts} />
               </div>
             )}
           </div>
 
-          {/* Side panel — 2-column grid on desktop */}
-          <div className="analysis-form-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', alignItems: 'start' }}>
+          {/* Form column — flex column filling full height */}
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', overflow: 'hidden' }}>
             {phase === 'watching' && (
               <>
-                {/* ── Left col: quick classifiers ── */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <PNL label="Delivery">
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {(['visual', 'verbal'] as const).map(v => (
-                        <button
-                          key={v}
-                          onClick={() => setVisualVerbal(visualVerbal === v ? '' : v)}
-                          style={{
-                            flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                            fontSize: '11px', fontWeight: 700, transition: 'all 0.1s',
-                            background: visualVerbal === v ? 'var(--gold)' : 'var(--border-default)',
-                            color: visualVerbal === v ? 'var(--bg-primary)' : 'var(--text-muted)',
-                          }}
-                        >
-                          {v === 'visual' ? 'Visual-first' : 'Verbal-first'}
-                        </button>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.4 }}>
-                      Did the first frame show something happening, or did narration lead?
-                    </div>
-                  </PNL>
-
-                  <PNL label="Hook type">
-                    <PillGroup
-                      options={HOOK_TYPES}
-                      value={hookType as any}
-                      onChange={setHookType as any}
-                    />
-                    {hookType && (
-                      <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5, marginTop: '6px' }}>
-                        {HOOK_TYPES.find(h => h.value === hookType)?.definition}
+                {/* Classifiers + Analysis — row that fills remaining height */}
+                <div style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
+                  {/* Classifiers — fixed narrow column */}
+                  <div style={{ width: '210px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
+                    <PNL label="Delivery">
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        {(['visual', 'verbal'] as const).map(v => (
+                          <button
+                            key={v}
+                            onClick={() => setVisualVerbal(visualVerbal === v ? '' : v)}
+                            style={{
+                              flex: 1, padding: '6px 0', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                              fontSize: '11px', fontWeight: 700, transition: 'all 0.1s',
+                              background: visualVerbal === v ? 'var(--gold)' : 'var(--border-default)',
+                              color: visualVerbal === v ? 'var(--bg-primary)' : 'var(--text-muted)',
+                            }}
+                          >
+                            {v === 'visual' ? 'Visual-first' : 'Verbal-first'}
+                          </button>
+                        ))}
                       </div>
-                    )}
-                  </PNL>
+                      <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.4 }}>
+                        Did the first frame show something happening, or did narration lead?
+                      </div>
+                    </PNL>
 
-                  <PNL label="Topic category">
-                    <PillGroup
-                      options={TOPIC_CATEGORIES}
-                      value={topicCategory as any}
-                      onChange={setTopicCategory as any}
-                    />
-                  </PNL>
+                    <PNL label="Hook type">
+                      <PillGroup
+                        options={HOOK_TYPES}
+                        value={hookType as any}
+                        onChange={setHookType as any}
+                      />
+                      {hookType && (
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.5, marginTop: '6px' }}>
+                          {HOOK_TYPES.find(h => h.value === hookType)?.definition}
+                        </div>
+                      )}
+                    </PNL>
 
-                  <PNL label="Emotion — primary feeling">
-                    <PillGroup
-                      options={EMOTIONS}
-                      value={emotion as any}
-                      onChange={setEmotion as any}
-                      getColor={v => EMOTIONS.find(e => e.value === v)?.color || 'var(--gold)'}
-                    />
-                  </PNL>
-                </div>
+                    <PNL label="Topic category">
+                      <PillGroup
+                        options={TOPIC_CATEGORIES}
+                        value={topicCategory as any}
+                        onChange={setTopicCategory as any}
+                      />
+                    </PNL>
 
-                {/* ── Right col: analysis ── */}
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <PNL label="Emotion">
+                      <PillGroup
+                        options={EMOTIONS}
+                        value={emotion as any}
+                        onChange={setEmotion as any}
+                        getColor={v => EMOTIONS.find(e => e.value === v)?.color || 'var(--gold)'}
+                      />
+                    </PNL>
+                  </div>
+
+                  {/* Analysis — fills all remaining width and height */}
                   <PNL label="Analysis" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                     <textarea
                       value={initialAnalysis}
                       onChange={e => setInitialAnalysis(e.target.value)}
                       placeholder="Notes while watching…"
                       style={{
-                        flex: 1, width: '100%', minHeight: '200px', background: 'transparent',
+                        flex: 1, width: '100%', minHeight: 0, background: 'transparent',
                         border: 'none', outline: 'none', resize: 'none',
                         fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
                       }}
@@ -757,8 +755,8 @@ function SessionView({
                   </PNL>
                 </div>
 
-                {/* ── Full width: percentile + button ── */}
-                <div className="analysis-form-fullrow" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {/* Percentile + button — fixed bottom */}
+                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {isTooRecent ? (
                     <PNL>
                       <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
@@ -771,7 +769,6 @@ function SessionView({
                       <PercentileSlider value={guess} onChange={setGuess} />
                     </PNL>
                   )}
-
                   <button
                     onClick={handleReveal}
                     style={{
@@ -787,8 +784,7 @@ function SessionView({
             )}
 
             {phase === 'revealed' && reveal && (
-              <div className="analysis-form-fullrow" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {/* Summary of filled fields */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1 }}>
                 {(visualVerbal || hookType || topicCategory || emotion) && (
                   <PNL>
                     <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
