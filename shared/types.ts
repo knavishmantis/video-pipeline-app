@@ -203,6 +203,8 @@ export interface Scene {
   preset_clip?: PresetClip | null;
   images?: SceneImage[];
   needs_rework?: boolean;
+  clipper_checked?: boolean;
+  link_group?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -226,6 +228,8 @@ export interface UpdateSceneInput {
   image_url?: string | null;
   preset_clip_id?: number | null;
   needs_rework?: boolean;
+  clipper_checked?: boolean;
+  link_group?: string | null;
 }
 
 export interface BulkCreateScenesInput {

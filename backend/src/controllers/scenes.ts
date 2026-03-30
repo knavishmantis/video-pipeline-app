@@ -144,6 +144,14 @@ export const scenesController = {
         updates.push(`needs_rework = $${paramCount++}`);
         params.push(input.needs_rework);
       }
+      if (input.clipper_checked !== undefined) {
+        updates.push(`clipper_checked = $${paramCount++}`);
+        params.push(input.clipper_checked);
+      }
+      if (input.link_group !== undefined) {
+        updates.push(`link_group = $${paramCount++}`);
+        params.push(input.link_group);
+      }
 
       if (updates.length === 0) {
         res.status(400).json({ error: 'No fields to update' });

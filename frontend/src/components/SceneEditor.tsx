@@ -32,6 +32,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   const loadingPresetThumbs = useRef<Set<number>>(new Set());
   const [showPresetPicker, setShowPresetPicker] = useState<number | null>(null);
   const [presetPickerFlipped, setPresetPickerFlipped] = useState(false);
+  const [presetSearch, setPresetSearch] = useState('');
 
   // Scroll view state — default to scroll view when short is past script stage
   const isScriptMode = !shortStatus || shortStatus === 'idea' || shortStatus === 'script';
@@ -39,6 +40,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   const [scrollIndex, setScrollIndex] = useState(0);
 
   const canEditScenes = isAdmin || user?.roles?.includes('script_writer') || false;
+  const canClipperCheck = isAdmin || user?.roles?.includes('clipper') || user?.roles?.includes('script_writer') || false;
+  const isClippingStage = shortStatus === 'clipping';
 
   useEffect(() => {
     loadScenes();
@@ -135,6 +138,13 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
         .catch(() => {})
         .finally(() => loadingPresetThumbs.current.delete(preset.id));
     }
+  };
+
+  const LINK_COLORS = ['#FF7043','#42A5F5','#66BB6A','#AB47BC','#FFCA28','#26C6DA'];
+  const getLinkGroupColor = (group: string) => {
+    let h = 0;
+    for (let i = 0; i < group.length; i++) h = (h * 31 + group.charCodeAt(i)) & 0xFFFF;
+    return LINK_COLORS[h % LINK_COLORS.length];
   };
 
   interface PresetGroup {
@@ -370,7 +380,9 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   // Preset picker for expanded scene
   const renderPresetPicker = (sceneId: number) => {
     if (showPresetPicker !== sceneId) return null;
-    const groups = groupPresets(presetClips);
+    const q = presetSearch.trim().toLowerCase();
+    const filtered = q ? presetClips.filter(p => p.name.toLowerCase().includes(q) || (p.label || '').toLowerCase().includes(q)) : presetClips;
+    const groups = groupPresets(filtered);
     // Trigger thumbnail loads
     presetClips.forEach(p => loadPresetThumbnailUrl(p));
 
@@ -409,10 +421,28 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
           border: '1px solid var(--border-default)',
           borderRadius: '8px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          maxHeight: '260px',
-          overflowY: 'auto',
+          maxHeight: '480px',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
+        {/* Search */}
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search presets…"
+            value={presetSearch}
+            onChange={e => setPresetSearch(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', padding: '6px 10px', borderRadius: '6px',
+              border: '1px solid var(--border-default)', background: 'var(--bg-base)',
+              color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1 }}>
         {groups.length === 0 ? (
           <div style={{ padding: '12px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
             No presets yet. Create some on the Presets page.
@@ -436,7 +466,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                     ].filter(v => v.preset).map(({ preset, label }) => (
                       <button
                         key={preset!.id}
-                        onClick={() => { updateScene(sceneId, { preset_clip_id: preset!.id }); setShowPresetPicker(null); }}
+                        onClick={() => { updateScene(sceneId, { preset_clip_id: preset!.id }); setShowPresetPicker(null); setPresetSearch(''); }}
                         style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '6px', padding: '6px', cursor: 'pointer', transition: 'background 0.15s' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
@@ -449,7 +479,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                 ) : (
                   // Standalone
                   <button
-                    onClick={() => { updateScene(sceneId, { preset_clip_id: group.standalone!.id }); setShowPresetPicker(null); }}
+                    onClick={() => { updateScene(sceneId, { preset_clip_id: group.standalone!.id }); setShowPresetPicker(null); setPresetSearch(''); }}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'transparent', border: 'none', borderRadius: '6px', padding: '2px 4px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -467,6 +497,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
             );
           })
         )}
+        </div>
       </div>
     );
   };
@@ -497,6 +528,29 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{preset.description}</p>
               )}
             </div>
+            {presetVideoUrls[preset.id] && (
+              <a
+                href={presetVideoUrls[preset.id]}
+                download={`${preset.name}.mp4`}
+                onClick={e => {
+                  e.stopPropagation();
+                  const url = presetVideoUrls[preset.id];
+                  fetch(url).then(r => r.blob()).then(blob => {
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${preset.name}.mp4`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  });
+                  e.preventDefault();
+                }}
+                style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="Download preset MP4"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download
+              </a>
+            )}
             {canEditScenes && (
               <button
                 onClick={() => updateScene(scene.id, { preset_clip_id: null })}
@@ -953,6 +1007,9 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                       : expandedScene === scene.id
                         ? '1px solid var(--gold)'
                         : '1px solid var(--border-default)',
+                    borderLeft: scene.link_group && expandedScene !== scene.id && dragOverScene !== scene.id
+                      ? `3px solid ${getLinkGroupColor(scene.link_group)}`
+                      : undefined,
                     opacity: draggedScene === scene.id ? 0.5 : 1,
                     cursor: 'pointer',
                     padding: '10px 12px',
@@ -972,6 +1029,25 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {saving === scene.id && (
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Saving...</span>
+                      )}
+                      {isClippingStage && canClipperCheck && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const val = !scene.clipper_checked;
+                            setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, clipper_checked: val } : s));
+                            try { await scenesApi.update(shortId, scene.id, { clipper_checked: val }); }
+                            catch { loadScenes(); }
+                          }}
+                          title={scene.clipper_checked ? 'Mark incomplete' : 'Mark complete'}
+                          style={{
+                            fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 1,
+                            color: scene.clipper_checked ? '#66BB6A' : 'var(--border-strong)',
+                            opacity: scene.clipper_checked ? 1 : 0.5,
+                          }}
+                        >
+                          {scene.clipper_checked ? '✓' : '○'}
+                        </button>
                       )}
                       {scene.needs_rework && (
                         <span style={{ fontSize: '11px', color: '#fff', fontWeight: 700, background: '#E05A4E', padding: '1px 6px', borderRadius: '4px' }} title="Flagged for rework">
@@ -1063,8 +1139,13 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                       )}
                       {canEditScenes && (
                         <button
-                          onClick={() => updateScene(scene.id, { needs_rework: !scene.needs_rework })}
-                          title={scene.needs_rework ? 'Clear rework flag' : 'Flag for rework by Claude'}
+                          onClick={async () => {
+                            const val = !scene.needs_rework;
+                            setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, needs_rework: val } : s));
+                            try { await scenesApi.update(shortId, scene.id, { needs_rework: val }); }
+                            catch { loadScenes(); }
+                          }}
+                          title={scene.needs_rework ? 'Clear rework flag' : 'Flag for rework'}
                           style={{
                             fontSize: '12px', fontWeight: 700, padding: '3px 8px', borderRadius: '5px', border: 'none', cursor: 'pointer',
                             background: scene.needs_rework ? '#E05A4E' : 'var(--border-default)',
@@ -1201,6 +1282,25 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                       <p style={{ fontSize: '15px', lineHeight: '1.5', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>
                         {scene.editor_notes || <span style={{ color: 'var(--text-muted)' }}>No notes yet</span>}
                       </p>
+                    )}
+                  </div>
+
+                  {/* Link Group */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Link Group
+                      {scene.link_group && <span style={{ marginLeft: '8px', display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', background: getLinkGroupColor(scene.link_group), verticalAlign: 'middle' }} />}
+                    </label>
+                    {canEditScenes ? (
+                      <input
+                        type="text"
+                        value={scene.link_group || ''}
+                        onChange={e => updateScene(scene.id, { link_group: e.target.value || null })}
+                        placeholder="e.g. forest, cave, spawn — scenes with the same label share a color"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: '13px', color: scene.link_group ? 'var(--text-primary)' : 'var(--text-muted)' }}>{scene.link_group || 'None'}</span>
                     )}
                   </div>
 

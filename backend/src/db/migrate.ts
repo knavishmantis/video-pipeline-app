@@ -348,6 +348,17 @@ export async function migrate(): Promise<void> {
           console.warn('Could not add needs_rework column:', error.message);
         }
       }
+
+      // Add clipper_checked and link_group to scenes
+      try {
+        await query(`ALTER TABLE scenes ADD COLUMN IF NOT EXISTS clipper_checked BOOLEAN NOT NULL DEFAULT FALSE`);
+        await query(`ALTER TABLE scenes ADD COLUMN IF NOT EXISTS link_group TEXT`);
+        console.log('Added clipper_checked and link_group columns to scenes');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add clipper_checked/link_group columns:', error.message);
+        }
+      }
     }
     
     console.log('Database migration completed successfully');
