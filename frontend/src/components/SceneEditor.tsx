@@ -142,6 +142,32 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
     }
   };
 
+  const getNametagVariant = (name: string): 'nametag' | 'no-nametag' | null => {
+    const lower = name.toLowerCase();
+    if (lower.includes('no nametag')) return 'no-nametag';
+    if (lower.includes('nametag')) return 'nametag';
+    return null;
+  };
+  const getBaseName = (name: string) =>
+    name.replace(/\s*No\s+Nametag\s*/i, '').replace(/\s*Nametag\s*/i, '').trim();
+
+  const NametagBadge = ({ name }: { name: string }) => {
+    const variant = getNametagVariant(name);
+    if (!variant) return null;
+    return (
+      <span style={{
+        fontSize: '9px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase',
+        padding: '2px 6px', borderRadius: '4px', fontFamily: 'monospace',
+        background: variant === 'nametag' ? 'color-mix(in srgb, #42A5F5 15%, transparent)' : 'color-mix(in srgb, #FF7043 15%, transparent)',
+        color: variant === 'nametag' ? '#42A5F5' : '#FF7043',
+        border: `1px solid ${variant === 'nametag' ? '#42A5F5' : '#FF7043'}`,
+        flexShrink: 0,
+      }}>
+        {variant === 'nametag' ? 'NAMETAG' : 'NO NAMETAG'}
+      </span>
+    );
+  };
+
   const LINK_COLORS = ['#FF7043','#42A5F5','#66BB6A','#AB47BC','#FFCA28','#26C6DA'];
   const getLinkGroupColor = (group: string) => {
     let h = 0;
@@ -525,7 +551,10 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               />
             )}
             <div style={{ flex: 1 }}>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.label ? `${preset.label}. ` : ''}{preset.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.label ? `${preset.label}. ` : ''}{getBaseName(preset.name)}</span>
+                <NametagBadge name={preset.name} />
+              </div>
               {preset.description && (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{preset.description}</p>
               )}
@@ -669,7 +698,10 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               />
             )}
             <div>
-              <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{scene.preset_clip.label ? `${scene.preset_clip.label}. ` : ''}{scene.preset_clip.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{scene.preset_clip.label ? `${scene.preset_clip.label}. ` : ''}{getBaseName(scene.preset_clip.name)}</span>
+                <NametagBadge name={scene.preset_clip.name} />
+              </div>
               {scene.preset_clip.description && (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{scene.preset_clip.description}</p>
               )}
@@ -1090,8 +1122,11 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                         </span>
                       )}
                       {scene.preset_clip && (
-                        <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: '600' }} title={`Preset ${scene.preset_clip.label || ''}: ${scene.preset_clip.name}`}>
-                          PRESET {scene.preset_clip.label || ''}
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: '600' }} title={scene.preset_clip.name}>
+                            PRESET {scene.preset_clip.label || ''}
+                          </span>
+                          <NametagBadge name={scene.preset_clip.name} />
                         </span>
                       )}
                       {(scene.images?.length ?? 0) > 0 && (
