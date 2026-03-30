@@ -35,6 +35,9 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   const [presetSearch, setPresetSearch] = useState('');
   const [autoLinking, setAutoLinking] = useState(false);
   const [autoLinkResult, setAutoLinkResult] = useState<string | null>(null);
+  const [linkingFromId, setLinkingFromId] = useState<number | null>(null);
+  const [awaitingLinkName, setAwaitingLinkName] = useState<{ a: number; b: number } | null>(null);
+  const [newLinkGroupName, setNewLinkGroupName] = useState('');
 
   // Scroll view state — default to scroll view when short is past script stage
   const isScriptMode = !shortStatus || shortStatus === 'idea' || shortStatus === 'script';
@@ -301,6 +304,29 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
       setImageSignedUrls(prev => { const next = { ...prev }; delete next[imageId]; return next; });
     } catch (error) {
       console.error('Failed to delete image:', error);
+    }
+  };
+
+  const saveLinkGroup = async (sceneId: number, group: string | null) => {
+    setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, link_group: group } : s));
+    try { await scenesApi.update(shortId, sceneId, { link_group: group }); }
+    catch { loadScenes(); }
+  };
+
+  const handleLinkClick = async (sceneId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (linkingFromId === sceneId) { setLinkingFromId(null); return; }
+    if (linkingFromId === null) { setLinkingFromId(sceneId); return; }
+    const sceneA = scenes.find(s => s.id === linkingFromId)!;
+    const sceneB = scenes.find(s => s.id === sceneId)!;
+    setLinkingFromId(null);
+    if (sceneA.link_group) {
+      await saveLinkGroup(sceneB.id, sceneA.link_group);
+    } else if (sceneB.link_group) {
+      await saveLinkGroup(sceneA.id, sceneB.link_group);
+    } else {
+      setAwaitingLinkName({ a: sceneA.id, b: sceneB.id });
+      setNewLinkGroupName('');
     }
   };
 
@@ -1051,6 +1077,53 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
           renderScrollView()
         ) : (
           <>
+            {/* Linking banner */}
+            {linkingFromId !== null && (
+              <div style={{ marginBottom: '10px', padding: '8px 14px', borderRadius: '8px', background: 'color-mix(in srgb, var(--gold) 10%, var(--bg-elevated))', border: '1px solid var(--gold)', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                </svg>
+                <span>Click another scene's link icon to group it with Scene {scenes.findIndex(s => s.id === linkingFromId) + 1}</span>
+                <button onClick={() => setLinkingFromId(null)} style={{ marginLeft: 'auto', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '5px', background: 'transparent', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            )}
+            {/* Name prompt */}
+            {awaitingLinkName && (
+              <div style={{ marginBottom: '10px', padding: '10px 14px', borderRadius: '8px', background: 'var(--bg-elevated)', border: '1px solid var(--gold)', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                <span style={{ fontWeight: 600 }}>Name this location group:</span>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newLinkGroupName}
+                  onChange={e => setNewLinkGroupName(e.target.value)}
+                  onKeyDown={async e => {
+                    if (e.key === 'Enter') {
+                      const name = newLinkGroupName.trim().toLowerCase().replace(/\s+/g, '_');
+                      if (!name) return;
+                      await saveLinkGroup(awaitingLinkName.a, name);
+                      await saveLinkGroup(awaitingLinkName.b, name);
+                      setAwaitingLinkName(null); setNewLinkGroupName('');
+                    } else if (e.key === 'Escape') {
+                      setAwaitingLinkName(null);
+                    }
+                  }}
+                  placeholder="e.g. nether, gamerule_menu"
+                  style={{ flex: 1, minWidth: '160px', padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'var(--bg-base)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none' }}
+                />
+                <button
+                  onClick={async () => {
+                    const name = newLinkGroupName.trim().toLowerCase().replace(/\s+/g, '_');
+                    if (!name) return;
+                    await saveLinkGroup(awaitingLinkName.a, name);
+                    await saveLinkGroup(awaitingLinkName.b, name);
+                    setAwaitingLinkName(null); setNewLinkGroupName('');
+                  }}
+                  style={{ padding: '5px 12px', borderRadius: '6px', border: 'none', background: 'var(--gold)', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >Link</button>
+                <button onClick={() => setAwaitingLinkName(null)} style={{ padding: '5px 10px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+              </div>
+            )}
             {/* Grid of scene cards */}
             <div style={{
               display: 'grid',
@@ -1069,15 +1142,17 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                   className="rounded-lg transition-all"
                   style={{
                     background: expandedScene === scene.id ? 'color-mix(in srgb, var(--gold) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
-                    border: dragOverScene === scene.id
-                      ? '2px solid var(--gold)'
-                      : expandedScene === scene.id
-                        ? '1px solid var(--gold)'
-                        : '1px solid var(--border-default)',
-                    borderLeft: scene.link_group && expandedScene !== scene.id && dragOverScene !== scene.id
+                    border: linkingFromId === scene.id
+                      ? '2px dashed var(--gold)'
+                      : dragOverScene === scene.id
+                        ? '2px solid var(--gold)'
+                        : expandedScene === scene.id
+                          ? '1px solid var(--gold)'
+                          : '1px solid var(--border-default)',
+                    borderLeft: scene.link_group && linkingFromId !== scene.id && expandedScene !== scene.id && dragOverScene !== scene.id
                       ? `3px solid ${getLinkGroupColor(scene.link_group)}`
                       : undefined,
-                    opacity: draggedScene === scene.id ? 0.5 : 1,
+                    opacity: draggedScene === scene.id ? 0.5 : (linkingFromId !== null && linkingFromId !== scene.id) ? 0.75 : 1,
                     cursor: 'pointer',
                     padding: '10px 12px',
                     minHeight: '80px',
@@ -1133,6 +1208,43 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                         <span style={{ fontSize: '11px', color: 'var(--green)' }} title={`${scene.images!.length} image${scene.images!.length > 1 ? 's' : ''}`}>
                           IMG{scene.images!.length > 1 ? ` ×${scene.images!.length}` : ''}
                         </span>
+                      )}
+                      {/* Link group label */}
+                      {scene.link_group && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          <span style={{
+                            fontSize: '9px', fontWeight: 700, padding: '1px 5px', borderRadius: '4px', letterSpacing: '0.04em',
+                            background: `color-mix(in srgb, ${getLinkGroupColor(scene.link_group)} 18%, transparent)`,
+                            color: getLinkGroupColor(scene.link_group),
+                            border: `1px solid ${getLinkGroupColor(scene.link_group)}`,
+                          }}>
+                            {scene.link_group}
+                          </span>
+                          {canEditScenes && (
+                            <button
+                              onClick={async (e) => { e.stopPropagation(); await saveLinkGroup(scene.id, null); }}
+                              title="Remove from group"
+                              style={{ fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 1px', lineHeight: 1 }}
+                            >×</button>
+                          )}
+                        </div>
+                      )}
+                      {/* Link icon */}
+                      {canEditScenes && (
+                        <button
+                          onClick={(e) => handleLinkClick(scene.id, e)}
+                          title={linkingFromId === scene.id ? 'Cancel' : linkingFromId !== null ? 'Link to this scene' : 'Link with another scene'}
+                          style={{
+                            background: 'none', border: 'none', cursor: 'pointer', padding: '1px 2px', lineHeight: 1,
+                            color: linkingFromId === scene.id ? 'var(--gold)' : linkingFromId !== null ? 'var(--text-secondary)' : 'var(--text-muted)',
+                            opacity: linkingFromId !== null && linkingFromId !== scene.id ? 1 : undefined,
+                          }}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                          </svg>
+                        </button>
                       )}
                     </div>
                   </div>
