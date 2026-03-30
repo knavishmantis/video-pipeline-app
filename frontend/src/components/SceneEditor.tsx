@@ -33,6 +33,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   const [showPresetPicker, setShowPresetPicker] = useState<number | null>(null);
   const [presetPickerFlipped, setPresetPickerFlipped] = useState(false);
   const [presetSearch, setPresetSearch] = useState('');
+  const [autoLinking, setAutoLinking] = useState(false);
+  const [autoLinkResult, setAutoLinkResult] = useState<string | null>(null);
 
   // Scroll view state — default to scroll view when short is past script stage
   const isScriptMode = !shortStatus || shortStatus === 'idea' || shortStatus === 'script';
@@ -962,6 +964,36 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                 </button>
               </div>
             )}
+            {canEditScenes && scenes.length > 1 && (
+              <button
+                onClick={async () => {
+                  setAutoLinking(true);
+                  setAutoLinkResult(null);
+                  try {
+                    const { applied } = await scenesApi.autoLinkGroups(shortId);
+                    if (applied.length === 0) {
+                      setAutoLinkResult('No shared locations found.');
+                    } else {
+                      setScenes(prev => prev.map(s => {
+                        const suggestion = applied.find(a => a.scene_id === s.id);
+                        return suggestion ? { ...s, link_group: suggestion.link_group } : s;
+                      }));
+                      const groups = [...new Set(applied.map(a => a.link_group))];
+                      setAutoLinkResult(`Labeled ${applied.length} scenes across ${groups.length} group${groups.length > 1 ? 's' : ''}: ${groups.join(', ')}`);
+                    }
+                  } catch {
+                    setAutoLinkResult('AI labeling failed — check backend logs.');
+                  } finally {
+                    setAutoLinking(false);
+                  }
+                }}
+                disabled={autoLinking}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ background: 'var(--bg-elevated)', color: 'var(--gold)', border: '1px solid var(--gold-border, var(--border-default))', cursor: autoLinking ? 'default' : 'pointer', opacity: autoLinking ? 0.6 : 1 }}
+              >
+                {autoLinking ? '✦ Labeling…' : '✦ Auto-label'}
+              </button>
+            )}
             {canEditScenes && (
               <button
                 onClick={() => createScene({ script_line: '', direction: '' })}
@@ -970,6 +1002,9 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               >
                 + Add Empty Scene
               </button>
+            )}
+            {autoLinkResult && (
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', maxWidth: '300px' }}>{autoLinkResult}</span>
             )}
           </div>
         </div>

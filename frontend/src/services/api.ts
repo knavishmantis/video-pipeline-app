@@ -402,6 +402,10 @@ export const scenesApi = {
     const response = await api.get(`/shorts/${shortId}/scenes/${sceneId}/images/${imageId}/url`);
     return response.data.url;
   },
+  autoLinkGroups: async (shortId: number): Promise<{ applied: { scene_id: number; link_group: string }[] }> => {
+    const response = await api.post(`/shorts/${shortId}/scenes/auto-link-groups`);
+    return response.data;
+  },
 };
 
 export const presetClipsApi = {

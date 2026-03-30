@@ -13,6 +13,19 @@ const API_ENDPOINT = `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/proj
 // Cache for grading criteria (read once, reuse)
 let cachedCriteria: string | null = null;
 
+export interface SceneForGrouping {
+  id: number;
+  scene_order: number;
+  script_line: string;
+  direction: string;
+  clipper_notes?: string | null;
+}
+
+export interface LinkGroupSuggestion {
+  scene_id: number;
+  link_group: string;
+}
+
 /**
  * Load the script grading criteria from markdown file
  */
@@ -54,6 +67,58 @@ export function loadGradingCriteria(): string {
     });
     throw new Error(`Failed to load grading criteria file from ${criteriaPath}: ${error.message}`);
   }
+}
+
+/**
+ * Suggest link groups for scenes using Vertex AI Gemini.
+ * Returns suggestions only for scenes where 2+ scenes share the same context.
+ */
+export async function suggestLinkGroups(scenes: SceneForGrouping[]): Promise<LinkGroupSuggestion[]> {
+  const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+  const client = await auth.getClient();
+  const accessToken = await client.getAccessToken();
+  if (!accessToken.token) throw new Error('Failed to get access token');
+
+  const sceneList = scenes.map(s =>
+    `Scene ${s.scene_order} (id=${s.id}):\n  Script: ${s.script_line || '—'}\n  Direction: ${s.direction || '—'}${s.clipper_notes ? `\n  Clipper notes: ${s.clipper_notes}` : ''}`
+  ).join('\n\n');
+
+  const prompt = `You are analyzing the scenes of a Minecraft YouTube Short to identify which scenes share the same in-game location, UI screen, or mechanic context so a clipper knows which clips can be reused or filmed together.
+
+Here are all the scenes:
+
+${sceneList}
+
+Task: Group scenes that clearly share the same visual context — e.g. "gamerule menu", "nether", "inventory screen", "end dimension", "desert biome". Only create a group if 2 or more scenes share the same context. Give each group a short lowercase label (2-4 words max, use underscores for spaces).
+
+Return ONLY a JSON array. Each element is an object with scene_id (number) and link_group (string). Only include scenes that belong to a group (skip solo scenes). Example:
+[{"scene_id":3,"link_group":"gamerule_menu"},{"scene_id":7,"link_group":"gamerule_menu"},{"scene_id":5,"link_group":"nether"}]`;
+
+  const response = await fetch(API_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken.token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 2048,
+        responseMimeType: 'application/json',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Vertex AI error: ${response.status} - ${errText.substring(0, 300)}`);
+  }
+
+  const data = await response.json() as any;
+  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const jsonText = text.trim().replace(/^```json\n?/s, '').replace(/\n?```\s*$/s, '').trim();
+  return JSON.parse(jsonText) as LinkGroupSuggestion[];
 }
 
 /**
