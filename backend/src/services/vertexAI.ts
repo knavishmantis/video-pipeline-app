@@ -83,15 +83,31 @@ export async function suggestLinkGroups(scenes: SceneForGrouping[]): Promise<Lin
     `Scene ${s.scene_order} (id=${s.id}):\n  Script: ${s.script_line || '—'}\n  Direction: ${s.direction || '—'}${s.clipper_notes ? `\n  Clipper notes: ${s.clipper_notes}` : ''}`
   ).join('\n\n');
 
-  const prompt = `You are analyzing the scenes of a Minecraft YouTube Short to identify which scenes share the same in-game location, UI screen, or mechanic context so a clipper knows which clips can be reused or filmed together.
+  const prompt = `You are analyzing the scenes of a Minecraft YouTube Short to identify which scenes a clipper should film together — because they require the same physical setup, world state, or dimension that takes effort to get into.
 
 Here are all the scenes:
 
 ${sceneList}
 
-Task: Group scenes that clearly share the same visual context — e.g. "gamerule menu", "nether", "inventory screen", "end dimension", "desert biome". Only create a group if 2 or more scenes share the same context. Give each group a short lowercase label (2-4 words max, use underscores for spaces).
+GROUPING RULES:
+A group is ONLY useful if recording the scenes together saves real work. Ask: "Would the clipper need to travel somewhere, build something, or set up a specific world state to record this?"
 
-Return ONLY a JSON array. Each element is an object with scene_id (number) and link_group (string). Only include scenes that belong to a group (skip solo scenes). Example:
+GOOD groups (same physical setup required):
+- Same dimension (nether, end) — clipper must travel there
+- Same specific biome or structure (jungle temple, ocean monument)
+- Same menu that requires world configuration (gamerule menu, world settings)
+- Same constructed build or specific location in the world
+- Same mob/boss encounter that requires setup
+
+BAD groups (do NOT create these — accessible from anywhere, no setup needed):
+- Inventory screen — can open inventory anywhere
+- Crafting table UI — can place a crafting table anywhere
+- Generic overworld — too broad, not a specific location
+- Any UI/menu the player can access from their current position without travelling
+
+Only create a group if 2+ scenes share a context that requires real clipper effort to set up. Give each group a short lowercase label (2-4 words max, use underscores). Skip scenes that don't belong to any useful group.
+
+Return ONLY a JSON array. Each element: scene_id (number) and link_group (string). Example:
 [{"scene_id":3,"link_group":"gamerule_menu"},{"scene_id":7,"link_group":"gamerule_menu"},{"scene_id":5,"link_group":"nether"}]`;
 
   const response = await fetch(API_ENDPOINT, {
