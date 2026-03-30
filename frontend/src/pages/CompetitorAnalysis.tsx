@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { competitorAnalysisApi, CompetitorReviewData } from '../services/api';
 
 // ── Channel metadata ──────────────────────────────────────────────────────────
@@ -487,6 +489,113 @@ function RevealPanel({
   );
 }
 
+// ── Channel research notes ────────────────────────────────────────────────────
+
+function ChannelNotes({ channel }: { channel: string }) {
+  const [open, setOpen] = useState(false);
+  const [notes, setNotes] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    competitorAnalysisApi.getChannelNotes(channel).then(n => setNotes(n));
+  }, [channel]);
+
+  function handleEdit() {
+    setDraft(notes ?? '');
+    setEditing(true);
+    setOpen(true);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      await competitorAnalysisApi.saveChannelNotes(channel, draft);
+      setNotes(draft);
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleCancel() {
+    setEditing(false);
+    setDraft('');
+  }
+
+  return (
+    <div style={{ marginTop: '16px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '14px 18px', gap: '10px' }}>
+        <button
+          onClick={() => setOpen(o => !o)}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Channel Research Notes</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{channel}</span>
+          </div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2.5"
+            style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        {editing ? (
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+            <button
+              onClick={handleCancel}
+              style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleEdit}
+            style={{ flexShrink: 0, padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Edit
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div style={{ borderTop: '1px solid var(--border-default)', padding: '16px 18px' }}>
+          {editing ? (
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              autoFocus
+              placeholder={`Research notes for ${channel}…`}
+              style={{
+                width: '100%', minHeight: '220px', background: 'var(--bg-primary)',
+                border: '1px solid var(--border-default)', borderRadius: '6px',
+                padding: '10px 12px', fontSize: '12px', color: 'var(--text-primary)',
+                lineHeight: 1.6, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+          ) : notes ? (
+            <div className="channel-notes-md" style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{notes}</ReactMarkdown>
+            </div>
+          ) : (
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              No notes yet — click Edit to add research notes for {channel}.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Session view ──────────────────────────────────────────────────────────────
 
 function SessionView({
@@ -607,6 +716,17 @@ function SessionView({
           .competitor-analysis-pnl textarea { min-height: 120px !important; }
           .competitor-classifiers-panel { width: 100% !important; overflow-y: visible !important; }
         }
+        .channel-notes-md h1,.channel-notes-md h2,.channel-notes-md h3 { color: var(--text-primary); font-weight: 700; margin: 12px 0 6px; letter-spacing: -0.02em; }
+        .channel-notes-md h1 { font-size: 15px; }
+        .channel-notes-md h2 { font-size: 13px; }
+        .channel-notes-md h3 { font-size: 12px; }
+        .channel-notes-md p { margin: 0 0 8px; }
+        .channel-notes-md ul,.channel-notes-md ol { padding-left: 18px; margin: 0 0 8px; }
+        .channel-notes-md li { margin-bottom: 3px; }
+        .channel-notes-md strong { color: var(--text-primary); font-weight: 700; }
+        .channel-notes-md code { background: var(--bg-primary); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+        .channel-notes-md blockquote { border-left: 3px solid var(--gold); padding-left: 10px; margin: 8px 0; color: var(--text-muted); }
+        .channel-notes-md hr { border: none; border-top: 1px solid var(--border-default); margin: 12px 0; }
       `}</style>
 
       {/* Header */}
@@ -658,8 +778,12 @@ function SessionView({
         </div>
       )}
 
+      {(phase === 'watching' || phase === 'revealed' || phase === 'loading' || phase === 'error') && (
+        <ChannelNotes channel={channel} />
+      )}
+
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '88vh' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '88vh', marginTop: '16px' }}>
           {/* Video column */}
           <div className="competitor-video-col" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div className="competitor-video-box" style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>

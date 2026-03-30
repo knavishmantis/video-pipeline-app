@@ -657,5 +657,12 @@ export const competitorAnalysisApi = {
     const response = await api.get(`/competitor-analysis/videos/${id}/reveal`);
     return response.data;
   },
+  getChannelNotes: async (channel: string): Promise<string> => {
+    const response = await api.get(`/competitor-analysis/channels/${encodeURIComponent(channel)}/notes`);
+    return response.data.notes_md ?? '';
+  },
+  saveChannelNotes: async (channel: string, notes_md: string): Promise<void> => {
+    await api.put(`/competitor-analysis/channels/${encodeURIComponent(channel)}/notes`, { notes_md });
+  },
 };
 

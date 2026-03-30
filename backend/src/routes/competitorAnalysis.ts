@@ -189,6 +189,13 @@ async function ensureTable() {
       END IF;
     END $$;
   `);
+  await seQuery(`
+    CREATE TABLE IF NOT EXISTS channel_notes (
+      channel TEXT PRIMARY KEY,
+      notes_md TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 ensureTable().catch(console.error);
@@ -389,6 +396,33 @@ competitorAnalysisRouter.get('/videos/:id/reveal', async (req: Request, res: Res
       ...revealRows[0],
       review: reviewRows[0] || null,
     });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/competitor-analysis/channels/:channel/notes
+competitorAnalysisRouter.get('/channels/:channel/notes', async (req: Request, res: Response) => {
+  try {
+    const { channel } = req.params;
+    const rows = await seQuery('SELECT notes_md FROM channel_notes WHERE channel = $1', [channel]);
+    res.json({ notes_md: rows[0]?.notes_md ?? '' });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /api/competitor-analysis/channels/:channel/notes
+competitorAnalysisRouter.put('/channels/:channel/notes', async (req: Request, res: Response) => {
+  try {
+    const { channel } = req.params;
+    const { notes_md } = req.body;
+    await seQuery(`
+      INSERT INTO channel_notes (channel, notes_md, updated_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (channel) DO UPDATE SET notes_md = EXCLUDED.notes_md, updated_at = CURRENT_TIMESTAMP
+    `, [channel, notes_md ?? '']);
+    res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
