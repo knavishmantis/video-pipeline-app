@@ -15,6 +15,7 @@ interface SortableCardProps {
   isAdmin: boolean;
   currentUserId?: number;
   onAssign: (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => void;
+  onUnassign?: (shortId: number, role: 'clipper' | 'editor' | 'script_writer') => void;
   onToggleActive?: (shortId: number) => Promise<void>;
   navigate: (path: string) => void;
 }
@@ -28,6 +29,7 @@ export function SortableCard({
   isAdmin,
   currentUserId,
   onAssign,
+  onUnassign,
   onToggleActive,
   navigate,
 }: SortableCardProps) {
@@ -408,6 +410,33 @@ export function SortableCard({
                     </div>
                   ))}
               </div>
+              {onUnassign && ((column.id === 'script' && scripter) || (column.id === 'clips' && clipper) || (column.id === 'editing' && editor)) && (
+                <>
+                  <div style={{ height: '1px', background: 'var(--border-default)', margin: '8px 0' }} />
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const role = column.id === 'script' ? 'script_writer' : column.id === 'clips' ? 'clipper' : 'editor';
+                      onUnassign(short.id, role);
+                      setShowAssignMenu(false);
+                      setMenuPosition(null);
+                    }}
+                    style={{
+                      padding: '7px 8px',
+                      cursor: 'pointer',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: 'var(--col-changes)',
+                      transition: 'background 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--col-changes-dim)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    Unassign
+                  </div>
+                </>
+              )}
             </div>,
             document.body
           )}

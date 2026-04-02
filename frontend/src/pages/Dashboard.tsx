@@ -131,6 +131,26 @@ export default function Dashboard() {
     }
   };
   
+  const handleUnassign = async (shortId: number, role: 'clipper' | 'editor' | 'script_writer') => {
+    try {
+      if (role === 'script_writer') {
+        await shortsApi.update(shortId, { script_writer_id: null });
+      } else {
+        const existingAssignment = assignments.find(
+          a => a.short_id === shortId && a.role === role
+        );
+        if (existingAssignment) {
+          await assignmentsApi.delete(existingAssignment.id);
+        }
+      }
+      await loadData();
+      showToast('Assignment removed', 'success');
+    } catch (error: unknown) {
+      console.error('Failed to unassign:', error);
+      showAlert(getErrorMessage(error, 'Failed to unassign'), { type: 'error' });
+    }
+  };
+
   const handleAssign = async (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => {
     try {
       if (role === 'script_writer') {
@@ -803,6 +823,7 @@ export default function Dashboard() {
         onDragEnd={handleDragEnd}
         onCardClick={handleCardClick}
         onAssign={handleAssign}
+        onUnassign={handleUnassign}
         onToggleActive={handleToggleActive}
         onCreateClick={handleCreateClick}
         navigate={navigate}

@@ -86,6 +86,7 @@ interface KanbanBoardProps {
   onDragEnd: (event: DragEndEvent) => Promise<void>;
   onCardClick: (short: Short, column: Column) => Promise<void>;
   onAssign: (shortId: number, role: 'clipper' | 'editor' | 'script_writer', userId: number) => Promise<void>;
+  onUnassign: (shortId: number, role: 'clipper' | 'editor' | 'script_writer') => Promise<void>;
   onToggleActive: (shortId: number) => Promise<void>;
   onCreateClick: (columnId: ColumnType) => void;
   navigate: (path: string) => void;
@@ -107,6 +108,7 @@ export function KanbanBoard({
   onDragEnd,
   onCardClick,
   onAssign,
+  onUnassign,
   onToggleActive,
   onCreateClick,
   navigate,
@@ -233,6 +235,7 @@ export function KanbanBoard({
                             isAdmin={isAdmin}
                             currentUserId={currentUserId}
                             onAssign={onAssign}
+                            onUnassign={onUnassign}
                             onToggleActive={onToggleActive}
                             navigate={navigate}
                           />
