@@ -1115,9 +1115,6 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                         : isClippingStage && scene.clipper_checked
                           ? '1px solid color-mix(in srgb, #66BB6A 40%, transparent)'
                           : '1px solid var(--border-default)',
-                    boxShadow: scene.link_group && linkingFromId !== scene.id && expandedScene !== scene.id
-                      ? `inset 3px 0 0 ${getLinkGroupColor(scene.link_group)}`
-                      : undefined,
                     opacity: (linkingFromId !== null && linkingFromId !== scene.id) ? 0.75 : 1,
                     cursor: 'pointer',
                     padding: '6px 8px',
@@ -1192,13 +1189,6 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                           }}>
                             {scene.link_group}
                           </span>
-                          {canEditScenes && (
-                            <button
-                              onClick={async (e) => { e.stopPropagation(); await saveLinkGroup(scene.id, null); }}
-                              title="Remove from group"
-                              style={{ fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '0 1px', lineHeight: 1 }}
-                            >×</button>
-                          )}
                         </div>
                       )}
                       {/* Link icon — hidden until hover (CSS), always visible when actively linking */}
