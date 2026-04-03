@@ -960,6 +960,21 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
             <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
               Scenes ({scenes.length})
             </h3>
+            {isClippingStage && scenes.length > 0 && (() => {
+              const done = scenes.filter(s => s.clipper_checked).length;
+              const total = scenes.length;
+              const pct = Math.round((done / total) * 100);
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '80px', height: '4px', borderRadius: '2px', background: 'var(--border-default)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: '#66BB6A', borderRadius: '2px', transition: 'width 0.3s' }} />
+                  </div>
+                  <span style={{ fontSize: '11px', fontWeight: 600, color: done === total ? '#66BB6A' : 'var(--text-muted)' }}>
+                    {done}/{total}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
           <div className="flex items-center gap-2">
             {/* Generate Scenes button — disabled pending prompt review
@@ -1096,12 +1111,18 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                   onClick={() => setExpandedScene(expandedScene === scene.id ? null : scene.id)}
                   className="rounded-lg transition-all scene-card"
                   style={{
-                    background: expandedScene === scene.id ? 'color-mix(in srgb, var(--gold) 8%, var(--bg-elevated))' : 'var(--bg-elevated)',
+                    background: expandedScene === scene.id
+                      ? 'color-mix(in srgb, var(--gold) 8%, var(--bg-elevated))'
+                      : isClippingStage && scene.clipper_checked
+                        ? 'color-mix(in srgb, #66BB6A 8%, var(--bg-elevated))'
+                        : 'var(--bg-elevated)',
                     border: linkingFromId === scene.id
                       ? '2px dashed var(--gold)'
                       : expandedScene === scene.id
                         ? '1px solid var(--gold)'
-                        : '1px solid var(--border-default)',
+                        : isClippingStage && scene.clipper_checked
+                          ? '1px solid color-mix(in srgb, #66BB6A 40%, transparent)'
+                          : '1px solid var(--border-default)',
                     boxShadow: scene.link_group && linkingFromId !== scene.id && expandedScene !== scene.id
                       ? `inset 3px 0 0 ${getLinkGroupColor(scene.link_group)}`
                       : undefined,
@@ -1139,11 +1160,13 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                             try { await scenesApi.update(shortId, scene.id, { clipper_checked: val }); }
                             catch { loadScenes(); }
                           }}
-                          title={scene.clipper_checked ? 'Mark incomplete' : 'Mark complete'}
+                          title={scene.clipper_checked ? 'Mark not clipped' : 'Mark clipped'}
                           style={{
-                            fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 1,
-                            color: scene.clipper_checked ? '#66BB6A' : 'var(--border-strong)',
-                            opacity: scene.clipper_checked ? 1 : 0.5,
+                            fontSize: '13px', fontWeight: 700, background: scene.clipper_checked ? '#66BB6A' : 'transparent',
+                            border: `1px solid ${scene.clipper_checked ? '#66BB6A' : 'var(--border-strong)'}`,
+                            borderRadius: '4px', cursor: 'pointer', padding: '1px 5px', lineHeight: 1,
+                            color: scene.clipper_checked ? '#fff' : 'var(--text-muted)',
+                            transition: 'all 0.15s',
                           }}
                         >
                           {scene.clipper_checked ? '✓' : '○'}
@@ -1281,6 +1304,24 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 {saving === scene.id && (
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saving...</span>
+                )}
+                {isClippingStage && canClipperCheck && (
+                  <button
+                    onClick={async () => {
+                      const val = !scene.clipper_checked;
+                      setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, clipper_checked: val } : s));
+                      try { await scenesApi.update(shortId, scene.id, { clipper_checked: val }); }
+                      catch { loadScenes(); }
+                    }}
+                    style={{
+                      fontSize: '12px', fontWeight: 700, padding: '3px 8px', borderRadius: '5px', border: 'none', cursor: 'pointer',
+                      background: scene.clipper_checked ? '#66BB6A' : 'var(--border-default)',
+                      color: scene.clipper_checked ? '#fff' : 'var(--text-muted)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {scene.clipper_checked ? '✓ Clipped' : '○ Not clipped'}
+                  </button>
                 )}
                 {canEditScenes && (
                   <button
