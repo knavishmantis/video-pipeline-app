@@ -1316,7 +1316,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                       transition: 'all 0.15s',
                     }}
                   >
-                    {scene.clipper_checked ? '✓' : '○'}
+                    {scene.clipper_checked ? 'Uncheck' : 'Check'}
                   </button>
                 )}
                 {canEditScenes && (
