@@ -801,18 +801,18 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   };
 
 
-  const generateSegments = async () => {
-    setGeneratingSegments(true);
-    try {
-      const segments = await scenesApi.generateSegments(shortId);
-      const created = await scenesApi.bulkCreate(shortId, segments.map(s => ({ script_line: s, direction: '' })));
-      setScenes(created);
-    } catch (e: any) {
-      alert('Segment generation failed: ' + (e?.response?.data?.error ?? e.message));
-    } finally {
-      setGeneratingSegments(false);
-    }
-  };
+  // const generateSegments = async () => {
+  //   setGeneratingSegments(true);
+  //   try {
+  //     const segments = await scenesApi.generateSegments(shortId);
+  //     const created = await scenesApi.bulkCreate(shortId, segments.map(s => ({ script_line: s, direction: '' })));
+  //     setScenes(created);
+  //   } catch (e: any) {
+  //     alert('Segment generation failed: ' + (e?.response?.data?.error ?? e.message));
+  //   } finally {
+  //     setGeneratingSegments(false);
+  //   }
+  // };
 
   const handleBoundaryUpdate = (aboveId: number, belowId: number, a: string, b: string) =>
     setLocalScriptLines(prev => ({ ...prev, [aboveId]: a, [belowId]: b }));
