@@ -201,12 +201,12 @@ function InteractiveScriptView({
                 style={{
                   background: isActive
                     ? 'color-mix(in srgb, var(--gold) 40%, transparent)'
-                    : isClippingStage && seg.scene!.clipper_checked
+                    : seg.scene!.clipper_checked
                       ? 'color-mix(in srgb, #66BB6A 18%, transparent)'
                       : 'color-mix(in srgb, var(--gold) 14%, transparent)',
                   borderBottom: isActive
                     ? '2px solid var(--gold)'
-                    : isClippingStage && seg.scene!.clipper_checked
+                    : seg.scene!.clipper_checked
                       ? '1px solid color-mix(in srgb, #66BB6A 55%, transparent)'
                       : '1px solid color-mix(in srgb, var(--gold) 45%, transparent)',
                   borderRadius: '2px',
@@ -214,7 +214,7 @@ function InteractiveScriptView({
                   transition: 'background 0.2s, border-color 0.2s',
                   cursor: 'pointer',
                 }}>
-                <span style={{ fontSize: '8px', fontWeight: 800, color: isClippingStage && seg.scene!.clipper_checked ? '#66BB6A' : 'var(--gold)', verticalAlign: 'super', userSelect: 'none', marginRight: '1px', lineHeight: 1 }}>
+                <span style={{ fontSize: '8px', fontWeight: 800, color: seg.scene!.clipper_checked ? '#66BB6A' : 'var(--gold)', verticalAlign: 'super', userSelect: 'none', marginRight: '1px', lineHeight: 1 }}>
                   S{sceneIdx + 1}
                 </span>
                 {seg.text}
@@ -850,7 +850,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
     .scene-card:hover .quick-delete { opacity: 1; }
     .quick-delete:hover { color: #c0392b !important; }
     .scene-link-btn:hover { color: var(--text-primary) !important; }
-    .clip-check:hover { color: #66BB6A !important; }
+    .clip-check-empty:hover { color: #66BB6A !important; }
 
     .sidebar-field {
       width: 100%; background: transparent; border: none;
@@ -967,21 +967,6 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
             <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
               Scenes ({scenes.length})
             </h3>
-            {canClipperCheck && scenes.length > 0 && (() => {
-              const done = scenes.filter(s => s.clipper_checked).length;
-              const total = scenes.length;
-              const pct = Math.round((done / total) * 100);
-              return (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <div style={{ width: '80px', height: '4px', borderRadius: '2px', background: 'var(--border-default)', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: '#66BB6A', borderRadius: '2px', transition: 'width 0.3s' }} />
-                  </div>
-                  <span style={{ fontSize: '11px', fontWeight: 600, color: done === total ? '#66BB6A' : 'var(--text-muted)' }}>
-                    {done}/{total}
-                  </span>
-                </div>
-              );
-            })()}
           </div>
           <div className="flex items-center gap-2">
             {/* Generate Scenes button — disabled pending prompt review
@@ -1155,7 +1140,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                             catch { loadScenes(); }
                           }}
                           title={scene.clipper_checked ? 'Mark not clipped' : 'Mark clipped'}
-                          className="clip-check"
+                          className={scene.clipper_checked ? 'clip-check' : 'clip-check clip-check-empty'}
                           style={{
                             fontSize: '10px', fontWeight: 700,
                             background: scene.clipper_checked ? '#66BB6A' : 'transparent',
