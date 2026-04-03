@@ -966,7 +966,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
             <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
               Scenes ({scenes.length})
             </h3>
-            {isClippingStage && scenes.length > 0 && (() => {
+            {canClipperCheck && scenes.length > 0 && (() => {
               const done = scenes.filter(s => s.clipper_checked).length;
               const total = scenes.length;
               const pct = Math.round((done / total) * 100);
@@ -1157,7 +1157,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                           style={{ fontSize: '13px', fontWeight: 700, color: '#e05a4e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
                         >×</button>
                       )}
-                      {isClippingStage && canClipperCheck && (
+                      {canClipperCheck && (
                         <button
                           onClick={async (e) => {
                             e.stopPropagation();
@@ -1311,7 +1311,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                 {saving === scene.id && (
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Saving...</span>
                 )}
-                {isClippingStage && canClipperCheck && (
+                {canClipperCheck && (
                   <button
                     onClick={async () => {
                       const val = !scene.clipper_checked;
