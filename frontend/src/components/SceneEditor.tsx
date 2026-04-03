@@ -86,7 +86,7 @@ function InlineBoundaryHandle({
 // Interactive script view: renders scene highlights with inline delete + boundary drag handles
 function InteractiveScriptView({
   scriptContent, scenes, localScriptLines, canEditScenes,
-  showAnnotations, isClippingStage, onDeleteScene, onSelectScene, onBoundaryUpdate, onBoundaryCommit, onCreateSceneFromSelection,
+  showAnnotations, isClippingStage, activeSceneId, onDeleteScene, onSelectScene, onBoundaryUpdate, onBoundaryCommit, onCreateSceneFromSelection,
 }: {
   scriptContent: string;
   scenes: Scene[];
@@ -94,6 +94,7 @@ function InteractiveScriptView({
   canEditScenes: boolean;
   showAnnotations: boolean;
   isClippingStage: boolean;
+  activeSceneId: number | null;
   onDeleteScene: (id: number) => void;
   onSelectScene: (id: number) => void;
   onBoundaryUpdate: (aboveId: number, belowId: number, a: string, b: string) => void;
@@ -140,7 +141,7 @@ function InteractiveScriptView({
   }
   if (pos < scriptContent.length) segments.push({ text: scriptContent.slice(pos), scene: null });
 
-  const activeSceneId: number | null = null;
+  // activeSceneId is now passed as a prop
 
   return (
     <div className="relative">
@@ -340,7 +341,6 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
       }
     }
   }, [expandedScene, scenes]);
-
 
   const loadScenes = async () => {
     try {
@@ -582,6 +582,27 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
     return withPos.map(p => p.scene);
   }, [scenes, scriptContent]);
 
+  // Arrow key navigation between scenes when sidebar is open
+  useEffect(() => {
+    if (expandedScene === null) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
+
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        const idx = sortedScenes.findIndex(s => s.id === expandedScene);
+        if (idx === -1) return;
+        if (e.key === 'ArrowLeft' && idx > 0) {
+          setExpandedScene(sortedScenes[idx - 1].id);
+        } else if (e.key === 'ArrowRight' && idx < sortedScenes.length - 1) {
+          setExpandedScene(sortedScenes[idx + 1].id);
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [expandedScene, sortedScenes]);
 
   // Preset picker for expanded scene
   const renderPresetPicker = (sceneId: number) => {
@@ -937,6 +958,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
             canEditScenes={canEditScenes}
             showAnnotations={showSceneAnnotations}
             isClippingStage={isClippingStage}
+            activeSceneId={expandedScene}
             onDeleteScene={deleteScene}
             onSelectScene={id => setExpandedScene(prev => prev === id ? null : id)}
             onBoundaryUpdate={handleBoundaryUpdate}
