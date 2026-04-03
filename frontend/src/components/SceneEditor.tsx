@@ -871,7 +871,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   return (
     <React.Fragment>
     <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 0, flex: 1, height: '100%' }}>
-      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Main Script Section */}
       <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
         <div className="flex items-center justify-between mb-3">
@@ -954,7 +954,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
 
       {/* Scenes Grid Section */}
       <style>{sceneCardStyles}</style>
-      <div className="px-6 py-4">
+      <div className="px-6 py-4" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
