@@ -1140,10 +1140,31 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                 >
                   {/* Scene number + saving indicator + badges */}
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--gold)' }}>
                         Scene {index + 1}
                       </span>
+                      {canClipperCheck && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const val = !scene.clipper_checked;
+                            setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, clipper_checked: val } : s));
+                            try { await scenesApi.update(shortId, scene.id, { clipper_checked: val }); }
+                            catch { loadScenes(); }
+                          }}
+                          title={scene.clipper_checked ? 'Mark not clipped' : 'Mark clipped'}
+                          style={{
+                            fontSize: '10px', fontWeight: 700, background: scene.clipper_checked ? '#66BB6A' : 'transparent',
+                            border: `1px solid ${scene.clipper_checked ? '#66BB6A' : 'var(--border-strong)'}`,
+                            borderRadius: '3px', cursor: 'pointer', padding: '1px 4px', lineHeight: 1,
+                            color: scene.clipper_checked ? '#fff' : 'var(--text-muted)',
+                            transition: 'all 0.15s',
+                          }}
+                        >
+                          {scene.clipper_checked ? '✓' : '○'}
+                        </button>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {saving === scene.id && (
@@ -1156,27 +1177,6 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                           title="Delete scene"
                           style={{ fontSize: '13px', fontWeight: 700, color: '#e05a4e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 2px', lineHeight: 1 }}
                         >×</button>
-                      )}
-                      {canClipperCheck && (
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            const val = !scene.clipper_checked;
-                            setScenes(prev => prev.map(s => s.id === scene.id ? { ...s, clipper_checked: val } : s));
-                            try { await scenesApi.update(shortId, scene.id, { clipper_checked: val }); }
-                            catch { loadScenes(); }
-                          }}
-                          title={scene.clipper_checked ? 'Mark not clipped' : 'Mark clipped'}
-                          style={{
-                            fontSize: '13px', fontWeight: 700, background: scene.clipper_checked ? '#66BB6A' : 'transparent',
-                            border: `1px solid ${scene.clipper_checked ? '#66BB6A' : 'var(--border-strong)'}`,
-                            borderRadius: '4px', cursor: 'pointer', padding: '1px 5px', lineHeight: 1,
-                            color: scene.clipper_checked ? '#fff' : 'var(--text-muted)',
-                            transition: 'all 0.15s',
-                          }}
-                        >
-                          {scene.clipper_checked ? '✓' : '○'}
-                        </button>
                       )}
                       {canEditScenes && scene.needs_rework && (
                         <span style={{ color: '#E05A4E', fontSize: '13px', lineHeight: 1 }} title="Flagged">⚑</span>
@@ -1326,7 +1326,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                       transition: 'all 0.15s',
                     }}
                   >
-                    {scene.clipper_checked ? '✓ Clipped' : '○ Not clipped'}
+                    {scene.clipper_checked ? '✓' : '○'}
                   </button>
                 )}
                 {canEditScenes && (
