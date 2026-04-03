@@ -86,13 +86,14 @@ function InlineBoundaryHandle({
 // Interactive script view: renders scene highlights with inline delete + boundary drag handles
 function InteractiveScriptView({
   scriptContent, scenes, localScriptLines, canEditScenes,
-  showAnnotations, onDeleteScene, onSelectScene, onBoundaryUpdate, onBoundaryCommit, onCreateSceneFromSelection,
+  showAnnotations, isClippingStage, onDeleteScene, onSelectScene, onBoundaryUpdate, onBoundaryCommit, onCreateSceneFromSelection,
 }: {
   scriptContent: string;
   scenes: Scene[];
   localScriptLines: Record<number, string>;
   canEditScenes: boolean;
   showAnnotations: boolean;
+  isClippingStage: boolean;
   onDeleteScene: (id: number) => void;
   onSelectScene: (id: number) => void;
   onBoundaryUpdate: (aboveId: number, belowId: number, a: string, b: string) => void;
@@ -200,16 +201,20 @@ function InteractiveScriptView({
                 style={{
                   background: isActive
                     ? 'color-mix(in srgb, var(--gold) 40%, transparent)'
-                    : 'color-mix(in srgb, var(--gold) 14%, transparent)',
+                    : isClippingStage && seg.scene!.clipper_checked
+                      ? 'color-mix(in srgb, #66BB6A 18%, transparent)'
+                      : 'color-mix(in srgb, var(--gold) 14%, transparent)',
                   borderBottom: isActive
                     ? '2px solid var(--gold)'
-                    : '1px solid color-mix(in srgb, var(--gold) 45%, transparent)',
+                    : isClippingStage && seg.scene!.clipper_checked
+                      ? '1px solid color-mix(in srgb, #66BB6A 55%, transparent)'
+                      : '1px solid color-mix(in srgb, var(--gold) 45%, transparent)',
                   borderRadius: '2px',
                   padding: '1px 0',
                   transition: 'background 0.2s, border-color 0.2s',
                   cursor: 'pointer',
                 }}>
-                <span style={{ fontSize: '8px', fontWeight: 800, color: 'var(--gold)', verticalAlign: 'super', userSelect: 'none', marginRight: '1px', lineHeight: 1 }}>
+                <span style={{ fontSize: '8px', fontWeight: 800, color: isClippingStage && seg.scene!.clipper_checked ? '#66BB6A' : 'var(--gold)', verticalAlign: 'super', userSelect: 'none', marginRight: '1px', lineHeight: 1 }}>
                   S{sceneIdx + 1}
                 </span>
                 {seg.text}
@@ -930,6 +935,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
             localScriptLines={localScriptLines}
             canEditScenes={canEditScenes}
             showAnnotations={showSceneAnnotations}
+            isClippingStage={isClippingStage}
             onDeleteScene={deleteScene}
             onSelectScene={id => setExpandedScene(prev => prev === id ? null : id)}
             onBoundaryUpdate={handleBoundaryUpdate}
