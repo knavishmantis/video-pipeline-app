@@ -230,9 +230,9 @@ export default function SceneEditorPage() {
   }
 
   return (
-    <div className="w-full" style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="w-full flex flex-col flex-1" style={{ minHeight: 0 }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/')}
@@ -319,7 +319,7 @@ export default function SceneEditorPage() {
       )}
 
       {/* Scene Editor */}
-      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
+      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <SceneEditor
           shortId={short.id}
           shortStatus={short.status}
