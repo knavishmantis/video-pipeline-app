@@ -850,6 +850,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
     .scene-card:hover .quick-delete { opacity: 1; }
     .quick-delete:hover { color: #c0392b !important; }
     .scene-link-btn:hover { color: var(--text-primary) !important; }
+    .clip-check:hover { color: #66BB6A !important; }
 
     .sidebar-field {
       width: 100%; background: transparent; border: none;
@@ -1154,10 +1155,14 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                             catch { loadScenes(); }
                           }}
                           title={scene.clipper_checked ? 'Mark not clipped' : 'Mark clipped'}
+                          className="clip-check"
                           style={{
-                            fontSize: '10px', fontWeight: 700, background: scene.clipper_checked ? '#66BB6A' : 'transparent',
-                            border: `1px solid ${scene.clipper_checked ? '#66BB6A' : 'var(--border-strong)'}`,
-                            borderRadius: '3px', cursor: 'pointer', padding: '1px 4px', lineHeight: 1,
+                            fontSize: '10px', fontWeight: 700,
+                            background: scene.clipper_checked ? '#66BB6A' : 'transparent',
+                            border: scene.clipper_checked ? '1px solid #66BB6A' : 'none',
+                            borderRadius: '3px', cursor: 'pointer',
+                            padding: scene.clipper_checked ? '1px 4px' : '0',
+                            lineHeight: 1,
                             color: scene.clipper_checked ? '#fff' : 'var(--text-muted)',
                             transition: 'all 0.15s',
                           }}
