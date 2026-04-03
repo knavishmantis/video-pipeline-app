@@ -1317,7 +1317,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
                     }}
                   >
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '4px' }}><polyline points="20 6 9 17 4 12"/></svg>
-                    {scene.clipper_checked ? 'Uncheck' : 'Check'}
+                    {scene.clipper_checked ? 'Unmark' : 'Mark'}
                   </button>
                 )}
                 {canEditScenes && (
