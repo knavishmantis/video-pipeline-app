@@ -12,7 +12,8 @@ sampleAssignmentsRouter.use(authenticateToken);
 async function loadSampleWithScenes(sampleId: number) {
   const sampleResult = await query(
     `SELECT s.*, sh.title AS source_short_title, sh.description AS source_short_description,
-            u.name AS prospect_display_name, cu.name AS created_by_name
+            u.name AS prospect_display_name, u.discord_username AS prospect_discord,
+            cu.name AS created_by_name
      FROM sample_assignments s
      JOIN shorts sh ON sh.id = s.source_short_id
      JOIN users u ON u.id = s.user_id
@@ -63,6 +64,7 @@ async function loadSampleWithScenes(sampleId: number) {
     user_id: sample.user_id,
     prospect_email: sample.prospect_email,
     prospect_name: sample.prospect_name,
+    prospect_discord: sample.prospect_discord,
     created_by: sample.created_by,
     created_by_name: sample.created_by_name,
     created_at: sample.created_at,
@@ -147,6 +149,34 @@ sampleAssignmentsRouter.post('/me/upload-url', async (req: AuthRequest, res: Res
   } catch (error) {
     logger.error('Failed to create upload URL for sample', { userId: req.userId, error });
     res.status(500).json({ error: 'Failed to create upload URL' });
+  }
+});
+
+// POST /api/samples/me/discord  — sample clipper sets/updates their Discord username
+sampleAssignmentsRouter.post('/me/discord', async (req: AuthRequest, res: Response) => {
+  if (!req.userId) {
+    res.status(401).json({ error: 'Not authenticated' });
+    return;
+  }
+  const isSampleClipper = req.userRoles?.includes('sample_clipper') || req.userRole === 'sample_clipper';
+  if (!isSampleClipper) {
+    res.status(403).json({ error: 'Sample clipper access only' });
+    return;
+  }
+  const { discord_username } = req.body;
+  if (!discord_username || typeof discord_username !== 'string' || !discord_username.trim()) {
+    res.status(400).json({ error: 'discord_username is required' });
+    return;
+  }
+  try {
+    await query(
+      'UPDATE users SET discord_username = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [discord_username.trim(), req.userId]
+    );
+    res.json({ success: true });
+  } catch (error) {
+    logger.error('Failed to save discord username', { userId: req.userId, error });
+    res.status(500).json({ error: 'Failed to save discord username' });
   }
 });
 
@@ -292,9 +322,11 @@ sampleAssignmentsRouter.get('/', requireRole('admin'), async (_req: AuthRequest,
       `SELECT s.id, s.source_short_id, s.prospect_email, s.prospect_name,
               s.created_at, s.expires_at, s.submitted_at, s.review_status, s.promoted_at,
               sh.title AS source_short_title,
+              u.discord_username AS prospect_discord,
               (SELECT COUNT(*) FROM sample_assignment_scenes sas WHERE sas.sample_assignment_id = s.id) AS scene_count
        FROM sample_assignments s
        JOIN shorts sh ON sh.id = s.source_short_id
+       JOIN users u ON u.id = s.user_id
        ORDER BY s.created_at DESC`
     );
     res.json(result.rows);

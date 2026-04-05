@@ -60,7 +60,7 @@ export default function UserManagement() {
     try {
       const params = filterRole !== 'all' ? { role: filterRole } : undefined;
       const data = await usersApi.getAll(params);
-      setUsers(data.filter((u: User) => u.email !== 'knavishmantis@gmail.com'));
+      setUsers(data);
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {

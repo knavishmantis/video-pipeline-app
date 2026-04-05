@@ -14,6 +14,8 @@ export const teamMetricsController = {
 
       // Per-user submission stats
       // A "submission" = uploading clips_zip (clipper) or final_video (editor)
+      // Note: the channel's shared account (knavishmantis@gmail.com) is excluded
+      // so it doesn't pollute team metrics.
       const userStatsResult = await query(`
         WITH user_submissions AS (
           SELECT
@@ -31,6 +33,7 @@ export const teamMetricsController = {
             (ur.role = 'clipper' AND f.file_type = 'clips_zip') OR
             (ur.role = 'editor' AND f.file_type = 'final_video')
           )
+          WHERE u.email != 'knavishmantis@gmail.com'
         ),
         user_assignment_counts AS (
           SELECT
@@ -80,7 +83,7 @@ export const teamMetricsController = {
           '1 day'::interval
         ) d(date)
         LEFT JOIN files f ON DATE(f.uploaded_at) = d.date AND f.file_type IN ('clips_zip', 'final_video')
-        LEFT JOIN users u ON f.uploaded_by = u.id
+        LEFT JOIN users u ON f.uploaded_by = u.id AND u.email != 'knavishmantis@gmail.com'
         LEFT JOIN user_roles ur ON u.id = ur.user_id AND ur.role IN ('clipper', 'editor')
         GROUP BY d.date
         ORDER BY d.date
@@ -97,6 +100,7 @@ export const teamMetricsController = {
         JOIN users u ON f.uploaded_by = u.id
         JOIN user_roles ur ON u.id = ur.user_id AND ur.role IN ('clipper', 'editor')
         WHERE f.file_type IN ('clips_zip', 'final_video')
+          AND u.email != 'knavishmantis@gmail.com'
           AND (
             (ur.role = 'clipper' AND f.file_type = 'clips_zip') OR
             (ur.role = 'editor' AND f.file_type = 'final_video')

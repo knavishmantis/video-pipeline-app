@@ -651,6 +651,7 @@ export interface SampleListItem {
   source_short_title: string;
   prospect_email: string;
   prospect_name: string;
+  prospect_discord: string | null;
   created_at: string;
   expires_at: string;
   submitted_at: string | null;
@@ -715,6 +716,9 @@ export const samplesApi = {
       file_size: fileSize,
     });
     return response.data;
+  },
+  saveMyDiscord: async (discord_username: string): Promise<void> => {
+    await api.post('/samples/me/discord', { discord_username });
   },
 };
 

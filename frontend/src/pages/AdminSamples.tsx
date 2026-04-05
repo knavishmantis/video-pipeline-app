@@ -3,6 +3,7 @@ import { IconUserPlus, IconCircleCheck, IconClock, IconTrash, IconDownload, Icon
 import { samplesApi, scenesApi, SampleListItem, SampleDetail } from '../services/api';
 import { Scene } from '../../../shared/types';
 import { useToast } from '../hooks/useToast';
+import { useConfirm } from '../hooks/useConfirm';
 
 // Hardcoded sample configuration — every prospect sample uses the first N scenes of this short.
 // Dev uses short #5 (test data); prod uses short #77.
@@ -15,6 +16,7 @@ export default function AdminSamples() {
   const [showCreate, setShowCreate] = useState(false);
   const [viewingSample, setViewingSample] = useState<SampleDetail | null>(null);
   const { showToast, ToastComponent } = useToast();
+  const { confirm, ConfirmComponent } = useConfirm();
 
   const loadSamples = async () => {
     setLoading(true);
@@ -33,7 +35,13 @@ export default function AdminSamples() {
   }, []);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this sample? The prospect will lose access.')) return;
+    const ok = await confirm({
+      title: 'Delete Sample',
+      message: 'Delete this sample? The prospect will lose access.',
+      variant: 'danger',
+      confirmText: 'Delete',
+    });
+    if (!ok) return;
     try {
       await samplesApi.delete(id);
       showToast('Sample deleted', 'success');
@@ -53,7 +61,7 @@ export default function AdminSamples() {
   };
 
   return (
-    <div style={{ padding: '0 4px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -126,6 +134,7 @@ export default function AdminSamples() {
       {viewingSample && <SampleDetailModal sample={viewingSample} onClose={() => setViewingSample(null)} onChanged={loadSamples} />}
 
       <ToastComponent />
+      <ConfirmComponent />
     </div>
   );
 }
@@ -172,9 +181,14 @@ function SampleRow({ sample, onDelete, onView }: { sample: SampleListItem; onDel
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
           <strong style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{sample.prospect_name}</strong>
           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>· {sample.prospect_email}</span>
+          {sample.prospect_discord && (
+            <span style={{ fontSize: '11px', color: 'var(--gold)', fontWeight: 600 }}>
+              · @{sample.prospect_discord}
+            </span>
+          )}
         </div>
         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
           {sample.source_short_title} · {sample.scene_count} scenes · Created {new Date(sample.created_at).toLocaleDateString()}
@@ -367,7 +381,7 @@ function CreateSampleModal({ onClose, onCreated }: { onClose: () => void; onCrea
                   }}
                 >
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    Scene {scene.scene_order}
+                    Scene {idx + 1}
                     {scene.link_group && <> · {scene.link_group}</>}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--text-primary)', marginTop: '2px', lineHeight: '1.4' }}>
@@ -410,22 +424,17 @@ function CreateSampleModal({ onClose, onCreated }: { onClose: () => void; onCrea
 // ── Detail modal ───────────────────────────────────────────────────────────────
 function SampleDetailModal({ sample, onClose, onChanged }: { sample: SampleDetail; onClose: () => void; onChanged: () => void }) {
   const { showToast } = useToast();
+  const { confirm, ConfirmComponent } = useConfirm();
   const [promoting, setPromoting] = useState(false);
   const isPromoted = !!sample.promoted_at;
 
-  const handleSetReview = async (status: 'approved' | 'rejected') => {
-    try {
-      await samplesApi.setReview(sample.id, status);
-      showToast(`Marked as ${status}`, 'success');
-      onChanged();
-      onClose();
-    } catch (err) {
-      showToast('Failed to update', 'error');
-    }
-  };
-
   const handlePromote = async () => {
-    if (!confirm(`Promote ${sample.prospect_name} to a real clipper? They'll be able to log in to the main app and be assigned to shorts.`)) return;
+    const ok = await confirm({
+      title: 'Promote to Clipper',
+      message: `Promote ${sample.prospect_name} to a real clipper? They'll be able to log in to the main app and be assigned to shorts.`,
+      confirmText: 'Promote',
+    });
+    if (!ok) return;
     setPromoting(true);
     try {
       await samplesApi.promote(sample.id);
@@ -454,6 +463,11 @@ function SampleDetailModal({ sample, onClose, onChanged }: { sample: SampleDetai
           </div>
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{sample.prospect_name}</div>
           <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{sample.prospect_email}</div>
+          {(sample as any).prospect_discord && (
+            <div style={{ fontSize: '12px', color: 'var(--gold)', fontWeight: 600, marginTop: '4px' }}>
+              Discord: @{(sample as any).prospect_discord}
+            </div>
+          )}
         </div>
 
         {/* Source short + scenes */}
@@ -527,32 +541,6 @@ function SampleDetailModal({ sample, onClose, onChanged }: { sample: SampleDetai
                   <IconDownload size={13} /> Download submission
                 </a>
               )}
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
-                <button
-                  onClick={() => handleSetReview('approved')}
-                  style={{ ...secondaryBtnStyle, color: 'var(--col-ready)' }}
-                >
-                  Mark approved
-                </button>
-                <button
-                  onClick={() => handleSetReview('rejected')}
-                  style={{ ...secondaryBtnStyle, color: 'var(--col-changes)' }}
-                >
-                  Mark rejected
-                </button>
-                {sample.review_status && (
-                  <span style={{
-                    padding: '6px 10px',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                    alignSelf: 'center',
-                  }}>
-                    Current: {sample.review_status}
-                  </span>
-                )}
-              </div>
-
               {/* Promote to clipper */}
               <div style={{
                 marginTop: '14px',
@@ -614,6 +602,7 @@ function SampleDetailModal({ sample, onClose, onChanged }: { sample: SampleDetai
           )}
         </div>
       </div>
+      <ConfirmComponent />
     </ModalShell>
   );
 }

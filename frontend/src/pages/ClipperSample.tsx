@@ -4,7 +4,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { IconBook, IconMovie, IconUpload, IconCircleCheck, IconLogout, IconClock, IconCamera } from '@tabler/icons-react';
+import { IconBook, IconMovie, IconUpload, IconCircleCheck, IconLogout, IconClock, IconCamera, IconBrandDiscord } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { samplesApi, formulaGuidesApi, SampleDetail } from '../services/api';
 
@@ -17,19 +17,18 @@ declare global {
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function ClipperSample() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const userRoles = user?.roles || (user?.role ? [user.role] : []);
   const isSampleClipper = userRoles.includes('sample_clipper');
-  const isAdmin = userRoles.includes('admin');
 
-  // ─── Unauthed: redirect non-sample users ─────────────────────────────────────
+  // Any real (non-sample) user who lands here goes straight to the main app
   useEffect(() => {
-    if (!loading && user && !isSampleClipper && !isAdmin) {
-      navigate('/');
+    if (!loading && user && !isSampleClipper) {
+      navigate('/', { replace: true });
     }
-  }, [loading, user, isSampleClipper, isAdmin, navigate]);
+  }, [loading, user, isSampleClipper, navigate]);
 
   if (loading) {
     return (
@@ -43,8 +42,13 @@ export default function ClipperSample() {
     return <SignInGate />;
   }
 
-  if (!isSampleClipper && !isAdmin) {
-    return null;
+  if (!isSampleClipper) {
+    return null; // useEffect will redirect
+  }
+
+  // First-time flow: collect their Discord handle before showing the sample
+  if (!user.discord_username) {
+    return <DiscordGate onSaved={refreshUser} onLogout={logout} />;
   }
 
   return <SamplePanel user={user} onLogout={logout} />;
@@ -180,6 +184,165 @@ function SignInGate() {
           <p className="text-xs text-center" style={{ color: 'var(--text-muted)', letterSpacing: '0.02em' }}>
             Sign-in is restricted to invited prospects only
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────────
+// Discord gate — first-time prompt to collect Discord username
+// ────────────────────────────────────────────────────────────────────────────────
+function DiscordGate({ onSaved, onLogout }: { onSaved: () => void; onLogout: () => void }) {
+  const [discord, setDiscord] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSave = async () => {
+    const trimmed = discord.trim();
+    if (!trimmed) {
+      setError('Please enter your Discord username');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await samplesApi.saveMyDiscord(trimmed);
+      await onSaved();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to save');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center p-4"
+      style={{ background: 'var(--bg-base)' }}
+    >
+      <div
+        className="mx-auto w-full max-w-md"
+        style={{
+          background: 'var(--modal-bg)',
+          borderRadius: '14px',
+          padding: '40px',
+          position: 'relative',
+          border: '1px solid var(--modal-border)',
+          boxShadow: 'var(--modal-shadow)',
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: '10%',
+          right: '10%',
+          height: '2px',
+          background: 'linear-gradient(90deg, transparent, var(--gold) 40%, var(--gold) 60%, transparent)',
+          borderRadius: '2px',
+        }} />
+
+        <div style={{
+          width: '44px',
+          height: '44px',
+          borderRadius: '10px',
+          background: 'var(--gold-dim)',
+          border: '1px solid var(--gold-border)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px',
+        }}>
+          <IconBrandDiscord size={22} style={{ color: 'var(--gold)' }} />
+        </div>
+
+        <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+          One quick thing
+        </h1>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '18px' }}>
+          What's your Discord username? We use it to reach out if we decide to bring you on — or later, if
+          a clipping spot opens up.
+        </p>
+
+        <label style={{
+          display: 'block',
+          fontSize: '11px',
+          fontWeight: 600,
+          color: 'var(--text-muted)',
+          textTransform: 'uppercase',
+          letterSpacing: '0.05em',
+          marginBottom: '6px',
+        }}>
+          Discord username
+        </label>
+        <input
+          type="text"
+          value={discord}
+          onChange={(e) => setDiscord(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}
+          placeholder="e.g. knavish"
+          autoFocus
+          style={{
+            width: '100%',
+            padding: '11px 14px',
+            fontSize: '13px',
+            color: 'var(--text-primary)',
+            background: 'var(--bg-base)',
+            border: '1px solid var(--border-default)',
+            borderRadius: '8px',
+            outline: 'none',
+            fontFamily: 'inherit',
+            marginBottom: '8px',
+          }}
+        />
+
+        {error && (
+          <div
+            className="mb-2 rounded-lg p-3 text-xs font-medium"
+            style={{
+              background: 'rgba(180, 60, 60, 0.08)',
+              border: '1px solid rgba(180, 60, 60, 0.22)',
+              color: 'var(--text-primary)',
+              marginTop: '10px',
+            }}
+          >
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            marginTop: '18px',
+            width: '100%',
+            padding: '12px',
+            fontSize: '13px',
+            fontWeight: 700,
+            color: '#fff',
+            background: 'var(--gold)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: saving ? 'default' : 'pointer',
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? 'Saving…' : 'Continue to sample'}
+        </button>
+
+        <div style={{ borderTop: '1px solid var(--border-default)', marginTop: '24px', paddingTop: '14px', textAlign: 'center' }}>
+          <button
+            onClick={onLogout}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              fontSize: '11px',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Sign out
+          </button>
         </div>
       </div>
     </div>
@@ -392,20 +555,51 @@ function AssignmentTab({ sample, onSubmitted }: { sample: SampleDetail; onSubmit
         marginBottom: '24px',
         boxShadow: 'var(--card-shadow)',
       }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px', letterSpacing: '-0.02em' }}>
-          Welcome, {sample.prospect_name.split(' ')[0]}
+        <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '14px', letterSpacing: '-0.02em' }}>
+          Welcome, {sample.prospect_name.split(' ')[0]}!
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.7', marginBottom: '12px' }}>
-          Thanks for applying as a clipper for KnavishMantis. You've been assigned{' '}
-          <strong style={{ color: 'var(--text-primary)' }}>{scenes.length} scenes</strong>{' '}
-          from one of our shorts. Your job is to record clips that match each scene's description and clipper notes.
+          These scenes are taken directly from a past short — the real short had{' '}
+          <strong>37 scenes in total</strong>, so this is a good indication of what an average clip
+          set will be like. The short has already been uploaded and the clips you create here will{' '}
+          <strong>not be used at all</strong> — this is only a sample to confirm you're able to
+          create the clips.
         </p>
-        <ol style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.8', marginLeft: '18px', marginBottom: 0 }}>
-          <li>Read the <strong>Flashback Guide</strong> tab — it contains the mod list, setup, and filming techniques we use.</li>
-          <li>Record your clips for each scene below. Aim for quality over speed — no rush.</li>
-          <li>Zip the clips together (name files like <code style={{ padding: '1px 5px', background: 'var(--bg-base)', borderRadius: '3px', fontSize: '11px' }}>scene_1.mp4</code>, <code style={{ padding: '1px 5px', background: 'var(--bg-base)', borderRadius: '3px', fontSize: '11px' }}>scene_2.mp4</code>, etc.).</li>
-          <li>Upload the zip at the bottom and hit submit.</li>
-        </ol>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.7', marginBottom: '12px' }}>
+          The <strong>Flashback Guide</strong> tab is an extensive guide on how to set up your game,
+          mods, and shader, and covers the techniques for recording clips which you must follow
+          when creating your own.
+        </p>
+        <div style={{
+          padding: '12px 14px',
+          background: 'rgba(180, 60, 60, 0.06)',
+          border: '1px solid rgba(180, 60, 60, 0.22)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: 'var(--text-secondary)',
+          lineHeight: '1.6',
+          marginBottom: '12px',
+        }}>
+          <strong style={{ color: 'var(--text-primary)' }}>Please do not share the Flashback Guide with anyone.</strong>{' '}
+          It includes custom mods and assets created specifically for the channel.
+        </div>
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: '1.7', marginBottom: '12px' }}>
+          Going through the setup and completing the sample should only take about{' '}
+          <strong>45 minutes to an hour</strong>. Even if you're not chosen immediately after
+          completing the sample, your Discord will be saved and we may reach out in the future
+          when we're looking to add clippers again.
+        </p>
+        <p style={{
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+          marginTop: '16px',
+          marginBottom: 0,
+          fontStyle: 'italic',
+          fontWeight: 600,
+          letterSpacing: '-0.01em',
+        }}>
+          — Knavish
+        </p>
       </div>
 
       {/* Scene list */}
