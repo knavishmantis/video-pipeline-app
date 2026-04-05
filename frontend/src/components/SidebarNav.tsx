@@ -189,11 +189,11 @@ export function SidebarNav() {
       href: "/presets",
       icon: <IconMovie className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
-    {
+    ...((isEditor || isAdmin) ? [{
       label: "Assets",
       href: "/assets",
       icon: <IconPhoto className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
-    },
+    }] : []),
     ...((isClipper || isAdmin) ? [{
       label: "Flashback Reference",
       href: "/flashback-reference",
