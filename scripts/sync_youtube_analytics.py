@@ -270,8 +270,8 @@ def main():
     print(f"Saved to {output_path}")
 
     # POST to backend if BACKEND_URL and SYNC_API_KEY are set
-    backend_url = os.environ.get("BACKEND_URL")
-    sync_api_key = os.environ.get("SYNC_API_KEY")
+    backend_url = (os.environ.get("BACKEND_URL") or "").strip()
+    sync_api_key = (os.environ.get("SYNC_API_KEY") or "").strip()
 
     if backend_url and sync_api_key:
         import urllib.request
