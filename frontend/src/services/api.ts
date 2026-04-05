@@ -406,6 +406,10 @@ export const scenesApi = {
     const response = await api.post(`/shorts/${shortId}/scenes/auto-link-groups`);
     return response.data;
   },
+  generateSegments: async (shortId: number): Promise<string[]> => {
+    const response = await api.post(`/shorts/${shortId}/scenes/generate-segments`);
+    return response.data.segments;
+  },
 };
 
 export const presetClipsApi = {
@@ -614,6 +618,13 @@ export const scriptEngineApi = {
   },
   markCritique: async (id: number, human_status: 'used' | 'not_used' | null): Promise<any> => {
     const response = await api.patch(`/script-engine/critiques/${id}/mark`, { human_status });
+    return response.data;
+  },
+  getCritiqueCounts: async (): Promise<{
+    unmarked: number; used: number; not_used: number; total: number;
+    avg_score_unmarked: number; high_unmarked: number; mid_unmarked: number; low_unmarked: number;
+  }> => {
+    const response = await api.get('/script-engine/critiques/counts');
     return response.data;
   },
 };

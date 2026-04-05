@@ -258,6 +258,31 @@ scriptEngineRouter.get('/critiques', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/script-engine/critiques/counts — tab counts + score distribution for the review page header
+scriptEngineRouter.get('/critiques/counts', async (_req: Request, res: Response) => {
+  try {
+    const rows = await seQuery(`
+      WITH latest AS (
+        SELECT sc.* FROM script_critiques sc
+        WHERE sc.id = (SELECT MAX(sc2.id) FROM script_critiques sc2 WHERE sc2.idea_id = sc.idea_id)
+      )
+      SELECT
+        COUNT(*) FILTER (WHERE human_status IS NULL)::INTEGER AS unmarked,
+        COUNT(*) FILTER (WHERE human_status = 'used')::INTEGER AS used,
+        COUNT(*) FILTER (WHERE human_status = 'not_used')::INTEGER AS not_used,
+        COUNT(*)::INTEGER AS total,
+        ROUND(AVG(score_overall) FILTER (WHERE human_status IS NULL), 1)::FLOAT AS avg_score_unmarked,
+        COUNT(*) FILTER (WHERE human_status IS NULL AND score_overall >= 8)::INTEGER AS high_unmarked,
+        COUNT(*) FILTER (WHERE human_status IS NULL AND score_overall BETWEEN 6 AND 7)::INTEGER AS mid_unmarked,
+        COUNT(*) FILTER (WHERE human_status IS NULL AND score_overall < 6)::INTEGER AS low_unmarked
+      FROM latest
+    `);
+    res.json(rows[0] || { unmarked: 0, used: 0, not_used: 0, total: 0, avg_score_unmarked: 0, high_unmarked: 0, mid_unmarked: 0, low_unmarked: 0 });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch critique counts' });
+  }
+});
+
 // GET /api/script-engine/critiques/:id — single critique with full detail + draft history
 scriptEngineRouter.get('/critiques/:id', async (req: Request, res: Response) => {
   try {
