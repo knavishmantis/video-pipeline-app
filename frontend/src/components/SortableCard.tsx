@@ -218,7 +218,7 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: '86px',
+            right: '60px',
             width: '22px',
             height: '22px',
             cursor: 'pointer',
@@ -258,7 +258,7 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: !isDragging ? '60px' : '8px',
+            right: !isDragging ? '34px' : '8px',
             width: '22px',
             height: '22px',
             cursor: isDragging ? 'grabbing' : 'grab',
@@ -305,7 +305,7 @@ export function SortableCard({
             style={{
               position: 'absolute',
               top: '8px',
-              right: !isDragging ? (column.id === 'script' ? '112px' : '86px') : '36px',
+              right: !isDragging ? (column.id === 'script' ? '86px' : '60px') : '36px',
               width: '22px',
               height: '22px',
               cursor: 'pointer',
