@@ -23,12 +23,12 @@ function authenticateSync(req: Request, res: Response, next: NextFunction): void
   });
 }
 
+// Sync endpoint: accepts static SYNC_API_KEY (GH Action) or admin JWT — must be before authenticateToken middleware
+youtubeAnalyticsRouter.post('/sync', authenticateSync, youtubeAnalyticsController.sync);
+
 youtubeAnalyticsRouter.use(authenticateToken);
 youtubeAnalyticsRouter.use(requireProfileComplete);
 
 // All authenticated users can view analytics
 youtubeAnalyticsRouter.get('/', youtubeAnalyticsController.getAll);
 youtubeAnalyticsRouter.get('/pipeline', youtubeAnalyticsController.getPipeline);
-
-// Sync endpoint: accepts static SYNC_API_KEY (GH Action) or admin JWT
-youtubeAnalyticsRouter.post('/sync', authenticateSync, youtubeAnalyticsController.sync);
