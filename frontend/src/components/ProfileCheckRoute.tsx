@@ -14,13 +14,21 @@ export default function ProfileCheckRoute({ children, requiredRole }: ProfileChe
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
 
+  const userRoles = user?.roles || (user?.role ? [user.role] : []);
+  const isSampleClipper = userRoles.includes('sample_clipper');
+
   useEffect(() => {
     if (user && !loading) {
+      if (isSampleClipper) {
+        // Sample clippers don't have a "complete profile" — they're confined to /clipper-sample
+        setChecking(false);
+        return;
+      }
       checkProfile();
     } else if (!user && !loading) {
       setChecking(false);
     }
-  }, [user, loading]);
+  }, [user, loading, isSampleClipper]);
 
   const checkProfile = async () => {
     try {
@@ -46,8 +54,12 @@ export default function ProfileCheckRoute({ children, requiredRole }: ProfileChe
     return <Navigate to="/login" replace />;
   }
 
+  // Sample clippers are locked to the /clipper-sample route
+  if (isSampleClipper) {
+    return <Navigate to="/clipper-sample" replace />;
+  }
+
   if (requiredRole) {
-    const userRoles = user.roles || (user.role ? [user.role] : []);
     if (!userRoles.includes(requiredRole)) {
       return <Navigate to="/" replace />;
     }

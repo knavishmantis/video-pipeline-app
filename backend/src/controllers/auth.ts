@@ -95,14 +95,15 @@ export const authController = {
 
           if (result.rows.length === 0) {
             // User doesn't exist - only allow if email matches admin
+            // (sample_clipper users are pre-created when admin creates a sample assignment)
             if (payload.email !== 'quinncaverly@gmail.com') {
               res.status(403).json({ error: 'User not found. Only admin can sign in with Google OAuth initially.' });
               return;
             }
             // Create admin user
             result = await query(
-              `INSERT INTO users (email, name) 
-               VALUES ($1, $2) 
+              `INSERT INTO users (email, name)
+               VALUES ($1, $2)
                RETURNING id, email, name, discord_username, paypal_email, profile_picture, timezone, created_at, updated_at`,
               [payload.email, payload.name || 'Admin']
             );

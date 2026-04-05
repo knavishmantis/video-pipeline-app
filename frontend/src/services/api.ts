@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, IncentiveRule, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, IncentiveRule, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput, SampleAssignment, CreateSampleInput } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -644,6 +644,86 @@ export interface CompetitorReviewData {
   payoff_notes?: string;
   emotion?: string;
 }
+
+export interface SampleListItem {
+  id: number;
+  source_short_id: number;
+  source_short_title: string;
+  prospect_email: string;
+  prospect_name: string;
+  created_at: string;
+  expires_at: string;
+  submitted_at: string | null;
+  review_status: 'pending' | 'approved' | 'rejected' | null;
+  promoted_at: string | null;
+  scene_count: number;
+}
+
+export interface SampleDetail extends SampleAssignment {
+  source_short_title?: string;
+  submission_download_url?: string | null;
+}
+
+export const samplesApi = {
+  // Admin
+  list: async (): Promise<SampleListItem[]> => {
+    const response = await api.get('/samples');
+    return response.data;
+  },
+  create: async (input: CreateSampleInput): Promise<SampleDetail> => {
+    const response = await api.post('/samples', input);
+    return response.data;
+  },
+  get: async (id: number): Promise<SampleDetail> => {
+    const response = await api.get(`/samples/${id}`);
+    return response.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/samples/${id}`);
+  },
+  setReview: async (id: number, review_status: 'pending' | 'approved' | 'rejected'): Promise<void> => {
+    await api.post(`/samples/${id}/review`, { review_status });
+  },
+  promote: async (id: number): Promise<void> => {
+    await api.post(`/samples/${id}/promote`);
+  },
+  // Sample clipper (prospect)
+  getMine: async (): Promise<SampleDetail> => {
+    const response = await api.get('/samples/me');
+    return response.data;
+  },
+  getMyUploadUrl: async (
+    fileName: string,
+    fileSize: number,
+    contentType: string
+  ): Promise<{ upload_url: string; bucket_path: string; expires_in: number }> => {
+    const response = await api.post('/samples/me/upload-url', {
+      file_name: fileName,
+      file_size: fileSize,
+      content_type: contentType,
+    });
+    return response.data;
+  },
+  confirmMySubmission: async (
+    bucketPath: string,
+    fileName: string,
+    fileSize: number
+  ): Promise<{ success: boolean }> => {
+    const response = await api.post('/samples/me/submit', {
+      bucket_path: bucketPath,
+      file_name: fileName,
+      file_size: fileSize,
+    });
+    return response.data;
+  },
+};
+
+export const formulaGuidesApi = {
+  getFlashback: async (): Promise<{ markdown: string; lastUpdated: string | null }> => {
+    const response = await api.get('/formula-guides/flashback');
+    return response.data;
+  },
+};
 
 export const competitorAnalysisApi = {
   getChannels: async (): Promise<any[]> => {

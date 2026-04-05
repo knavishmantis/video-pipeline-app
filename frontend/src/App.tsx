@@ -21,6 +21,8 @@ import CompetitorAnalysis from './pages/CompetitorAnalysis';
 import SceneEditorPage from './pages/SceneEditorPage';
 import Presets from './pages/Presets';
 import Assets from './pages/Assets';
+import ClipperSample from './pages/ClipperSample';
+import AdminSamples from './pages/AdminSamples';
 import PrivateRoute from './components/PrivateRoute';
 import ProfileCheckRoute from './components/ProfileCheckRoute';
 import { SidebarNav } from './components/SidebarNav';
@@ -48,6 +50,17 @@ function AppContent() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/clipper-sample" element={<ClipperSample />} />
+          <Route
+            path="/samples"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <AdminSamples />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
           <Route
             path="/complete-profile"
             element={

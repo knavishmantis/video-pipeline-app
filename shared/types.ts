@@ -1,6 +1,6 @@
 // Shared types between frontend and backend
 
-export type UserRole = 'admin' | 'script_writer' | 'clipper' | 'editor';
+export type UserRole = 'admin' | 'script_writer' | 'clipper' | 'editor' | 'sample_clipper';
 export type ShortStatus = 'idea' | 'script' | 'clipping' | 'clips' | 'clip_changes' | 'editing' | 'editing_changes' | 'completed' | 'uploaded';
 export type FileType = 'script' | 'clip' | 'audio' | 'final_video' | 'clips_zip' | 'scene_image';
 export type PaymentStatus = 'pending' | 'paid';
@@ -239,4 +239,37 @@ export interface BulkCreateScenesInput {
 export interface AuthResponse {
   user: User;
   token: string;
+}
+
+export type SampleReviewStatus = 'pending' | 'approved' | 'rejected';
+
+export interface SampleAssignment {
+  id: number;
+  source_short_id: number;
+  user_id: number;
+  prospect_email: string;
+  prospect_name: string;
+  scene_ids: number[];
+  created_by: number;
+  created_at: string;
+  expires_at: string;
+  submitted_at?: string | null;
+  submission_bucket_path?: string | null;
+  submission_file_name?: string | null;
+  submission_file_size?: number | null;
+  review_status?: SampleReviewStatus | null;
+  reviewed_at?: string | null;
+  promoted_at?: string | null;
+  // Populated fields (admin views)
+  source_short?: Short;
+  scenes?: Scene[];
+  created_by_user?: User;
+}
+
+export interface CreateSampleInput {
+  source_short_id: number;
+  prospect_email: string;
+  prospect_name: string;
+  scene_ids: number[];
+  expires_in_days?: number; // default 14
 }

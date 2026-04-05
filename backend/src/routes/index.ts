@@ -15,6 +15,7 @@ import { presetClipsRouter } from './presetClips';
 import { scriptEngineRouter } from './scriptEngine';
 import { pipelineAnalyticsRouter } from './pipelineAnalytics';
 import { competitorAnalysisRouter } from './competitorAnalysis';
+import { sampleAssignmentsRouter } from './sampleAssignments';
 import { getCacheStats, clearCache } from '../db';
 
 export function setupRoutes(app: Express): void {
@@ -34,6 +35,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/script-engine', scriptEngineRouter);
   app.use('/api/analytics/pipeline', pipelineAnalyticsRouter);
   app.use('/api/competitor-analysis', competitorAnalysisRouter);
+  app.use('/api/samples', sampleAssignmentsRouter);
 
   // Debug endpoint for cache stats (only in non-production or with debug flag)
   if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_DEBUG_ENDPOINTS === 'true') {

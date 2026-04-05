@@ -13,6 +13,14 @@ export async function requireProfileComplete(
     return;
   }
 
+  // Sample clippers cannot access routes that require a complete profile.
+  // They are confined to the sample routes + formula guide. Return a distinct
+  // error so the frontend can redirect them to /clipper-sample.
+  if (req.userRoles?.includes('sample_clipper') || req.userRole === 'sample_clipper') {
+    res.status(403).json({ error: 'Sample access only', sample_clipper: true });
+    return;
+  }
+
   try {
     const result = await query(
       'SELECT discord_username, paypal_email FROM users WHERE id = $1',
@@ -29,7 +37,7 @@ export async function requireProfileComplete(
     const isComplete = !!(user.discord_username && user.paypal_email);
 
     if (!isComplete) {
-      res.status(403).json({ 
+      res.status(403).json({
         error: 'Profile incomplete',
         missing: {
           discord_username: !user.discord_username,

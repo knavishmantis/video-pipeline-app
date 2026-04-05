@@ -253,10 +253,11 @@ export default function UserManagement() {
   };
 
   const roleColors: Record<UserRole, { bg: string; color: string; border: string }> = {
-    admin:         { bg: 'var(--gold-dim)',              color: 'var(--gold)',           border: 'var(--gold-border)' },
-    script_writer: { bg: 'var(--col-script-dim)',        color: 'var(--col-script)',     border: 'var(--col-script-border)' },
-    clipper:       { bg: 'var(--col-clips-dim)',         color: 'var(--col-clips)',      border: 'var(--col-clips-border)' },
-    editor:        { bg: 'var(--col-editing-dim)',       color: 'var(--col-editing)',    border: 'var(--col-editing-border)' },
+    admin:          { bg: 'var(--gold-dim)',              color: 'var(--gold)',           border: 'var(--gold-border)' },
+    script_writer:  { bg: 'var(--col-script-dim)',        color: 'var(--col-script)',     border: 'var(--col-script-border)' },
+    clipper:        { bg: 'var(--col-clips-dim)',         color: 'var(--col-clips)',      border: 'var(--col-clips-border)' },
+    editor:         { bg: 'var(--col-editing-dim)',       color: 'var(--col-editing)',    border: 'var(--col-editing-border)' },
+    sample_clipper: { bg: 'var(--bg-surface)',            color: 'var(--text-muted)',     border: 'var(--border-default)' },
   };
 
   return (

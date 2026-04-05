@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   name VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255),
-  role VARCHAR(50) CHECK (role IN ('admin', 'script_writer', 'clipper', 'editor')),
+  role VARCHAR(50) CHECK (role IN ('admin', 'script_writer', 'clipper', 'editor', 'sample_clipper')),
   discord_username VARCHAR(255),
   paypal_email VARCHAR(255),
   google_account VARCHAR(255),
@@ -26,9 +26,36 @@ CREATE TABLE IF NOT EXISTS users (
 -- User roles junction table (many-to-many for multiple roles)
 CREATE TABLE IF NOT EXISTS user_roles (
   user_id INTEGER NOT NULL,
-  role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'script_writer', 'clipper', 'editor')),
+  role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'script_writer', 'clipper', 'editor', 'sample_clipper')),
   PRIMARY KEY (user_id, role),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Sample assignments (prospect clippers doing a trial sample)
+CREATE TABLE IF NOT EXISTS sample_assignments (
+  id SERIAL PRIMARY KEY,
+  source_short_id INTEGER NOT NULL REFERENCES shorts(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  prospect_email VARCHAR(255) NOT NULL,
+  prospect_name VARCHAR(255) NOT NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  submitted_at TIMESTAMP,
+  submission_bucket_path TEXT,
+  submission_file_name VARCHAR(255),
+  submission_file_size BIGINT,
+  review_status VARCHAR(20) CHECK (review_status IN ('pending', 'approved', 'rejected')),
+  reviewed_at TIMESTAMP,
+  promoted_at TIMESTAMP
+);
+
+-- Junction table linking sample assignments to specific scenes of the source short
+CREATE TABLE IF NOT EXISTS sample_assignment_scenes (
+  sample_assignment_id INTEGER NOT NULL REFERENCES sample_assignments(id) ON DELETE CASCADE,
+  scene_id INTEGER NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
+  display_order INTEGER NOT NULL,
+  PRIMARY KEY (sample_assignment_id, scene_id)
 );
 
 -- Shorts table
@@ -170,6 +197,10 @@ CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
 CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
 CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role);
+CREATE INDEX IF NOT EXISTS idx_sample_assignments_email ON sample_assignments(prospect_email);
+CREATE INDEX IF NOT EXISTS idx_sample_assignments_user_id ON sample_assignments(user_id);
+CREATE INDEX IF NOT EXISTS idx_sample_assignments_source_short ON sample_assignments(source_short_id);
+CREATE INDEX IF NOT EXISTS idx_sample_assignment_scenes_assignment ON sample_assignment_scenes(sample_assignment_id);
 `;
 
 // SQLite version (SERIAL -> INTEGER PRIMARY KEY AUTOINCREMENT, other SERIAL -> INTEGER)
@@ -357,6 +388,86 @@ export async function migrate(): Promise<void> {
       } catch (error: any) {
         if (!error.message.includes('already exists')) {
           console.warn('Could not add clipper_checked/link_group columns:', error.message);
+        }
+      }
+
+      // Expand role CHECK constraints to include 'sample_clipper'
+      try {
+        await query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
+        await query(`
+          ALTER TABLE users
+          ADD CONSTRAINT users_role_check
+          CHECK (role IN ('admin', 'script_writer', 'clipper', 'editor', 'sample_clipper'))
+        `);
+        await query('ALTER TABLE user_roles DROP CONSTRAINT IF EXISTS user_roles_role_check');
+        await query(`
+          ALTER TABLE user_roles
+          ADD CONSTRAINT user_roles_role_check
+          CHECK (role IN ('admin', 'script_writer', 'clipper', 'editor', 'sample_clipper'))
+        `);
+        console.log('Updated role CHECK constraints to include sample_clipper');
+      } catch (error: any) {
+        if (!error.message.includes('does not exist') && !error.message.includes('already exists')) {
+          console.warn('Could not update role CHECK constraints:', error.message);
+        }
+      }
+
+      // Drop legacy scene_ids column from sample_assignments (earlier iteration had it NOT NULL)
+      try {
+        await query('ALTER TABLE sample_assignments DROP COLUMN IF EXISTS scene_ids');
+      } catch (error: any) {
+        // Table might not exist yet
+        if (!error.message.includes('does not exist')) {
+          console.warn('Could not drop legacy sample_assignments.scene_ids column:', error.message);
+        }
+      }
+
+      // Add promoted_at column for tracking prospects promoted to real clippers
+      try {
+        await query('ALTER TABLE sample_assignments ADD COLUMN IF NOT EXISTS promoted_at TIMESTAMP');
+      } catch (error: any) {
+        if (!error.message.includes('already exists') && !error.message.includes('does not exist')) {
+          console.warn('Could not add promoted_at column:', error.message);
+        }
+      }
+
+      // Create sample_assignments + sample_assignment_scenes (may not exist on older DBs)
+      try {
+        await query(`
+          CREATE TABLE IF NOT EXISTS sample_assignments (
+            id SERIAL PRIMARY KEY,
+            source_short_id INTEGER NOT NULL REFERENCES shorts(id) ON DELETE CASCADE,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            prospect_email VARCHAR(255) NOT NULL,
+            prospect_name VARCHAR(255) NOT NULL,
+            created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP NOT NULL,
+            submitted_at TIMESTAMP,
+            submission_bucket_path TEXT,
+            submission_file_name VARCHAR(255),
+            submission_file_size BIGINT,
+            review_status VARCHAR(20) CHECK (review_status IN ('pending', 'approved', 'rejected')),
+            reviewed_at TIMESTAMP,
+            promoted_at TIMESTAMP
+          )
+        `);
+        await query(`
+          CREATE TABLE IF NOT EXISTS sample_assignment_scenes (
+            sample_assignment_id INTEGER NOT NULL REFERENCES sample_assignments(id) ON DELETE CASCADE,
+            scene_id INTEGER NOT NULL REFERENCES scenes(id) ON DELETE CASCADE,
+            display_order INTEGER NOT NULL,
+            PRIMARY KEY (sample_assignment_id, scene_id)
+          )
+        `);
+        await query('CREATE INDEX IF NOT EXISTS idx_sample_assignments_email ON sample_assignments(prospect_email)');
+        await query('CREATE INDEX IF NOT EXISTS idx_sample_assignments_user_id ON sample_assignments(user_id)');
+        await query('CREATE INDEX IF NOT EXISTS idx_sample_assignments_source_short ON sample_assignments(source_short_id)');
+        await query('CREATE INDEX IF NOT EXISTS idx_sample_assignment_scenes_assignment ON sample_assignment_scenes(sample_assignment_id)');
+        console.log('Ensured sample_assignments + sample_assignment_scenes tables exist');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not create sample_assignments tables:', error.message);
         }
       }
     }

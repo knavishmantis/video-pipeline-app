@@ -11,6 +11,7 @@ export default function FlashbackReference() {
   const { user } = useAuth();
   const isClipper = user?.roles?.includes('clipper') || user?.role === 'clipper';
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
+  const isSampleClipper = user?.roles?.includes('sample_clipper') || user?.role === 'sample_clipper';
   const [content, setContent] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +41,7 @@ export default function FlashbackReference() {
     loadGuide();
   }, []);
 
-  if (!isClipper && !isAdmin) {
+  if (!isClipper && !isAdmin && !isSampleClipper) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
         <div style={{ textAlign: 'center' }}>
