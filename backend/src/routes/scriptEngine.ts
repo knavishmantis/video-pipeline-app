@@ -105,6 +105,34 @@ scriptEngineRouter.get('/ideas', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/script-engine/ideas/search — search ideas for linking briefs to existing shorts
+// Must be before /ideas/:id to avoid Express matching "search" as an id
+scriptEngineRouter.get('/ideas/search', async (req: Request, res: Response) => {
+  try {
+    const q = (req.query.q as string || '').trim();
+    let sql = `
+      SELECT i.id, i.title, i.source, i.status,
+        rb.full_brief, rb.summary as brief_summary
+      FROM ideas i
+      LEFT JOIN research_briefs rb ON rb.id = (
+        SELECT MAX(rb2.id) FROM research_briefs rb2
+        WHERE rb2.idea_id = i.id AND rb2.verdict != 'rejected'
+      )
+      WHERE rb.full_brief IS NOT NULL
+    `;
+    const params: any[] = [];
+    if (q) {
+      sql += ` AND i.title ILIKE $1`;
+      params.push(`%${q}%`);
+    }
+    sql += ' ORDER BY i.id DESC LIMIT 50';
+    const rows = await seQuery(sql, params);
+    res.json(rows);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to search ideas' });
+  }
+});
+
 // GET /api/script-engine/ideas/:id — single idea with research brief
 scriptEngineRouter.get('/ideas/:id', async (req: Request, res: Response) => {
   try {
@@ -384,32 +412,6 @@ scriptEngineRouter.post('/critiques/:id/create-short', async (req: Request, res:
   }
 });
 
-// POST /api/script-engine/ideas/search — search ideas for linking briefs to existing shorts
-scriptEngineRouter.get('/ideas/search', async (req: Request, res: Response) => {
-  try {
-    const q = (req.query.q as string || '').trim();
-    let sql = `
-      SELECT i.id, i.title, i.source, i.status,
-        rb.full_brief, rb.summary as brief_summary
-      FROM ideas i
-      LEFT JOIN research_briefs rb ON rb.id = (
-        SELECT MAX(rb2.id) FROM research_briefs rb2
-        WHERE rb2.idea_id = i.id AND rb2.verdict != 'rejected'
-      )
-      WHERE rb.full_brief IS NOT NULL
-    `;
-    const params: any[] = [];
-    if (q) {
-      sql += ` AND i.title ILIKE $1`;
-      params.push(`%${q}%`);
-    }
-    sql += ' ORDER BY i.id DESC LIMIT 50';
-    const rows = await seQuery(sql, params);
-    res.json(rows);
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to search ideas' });
-  }
-});
 
 // PATCH /api/script-engine/critiques/:id/mark — mark human_status (used/not_used/null)
 scriptEngineRouter.patch('/critiques/:id/mark', async (req: Request, res: Response) => {
