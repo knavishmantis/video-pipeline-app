@@ -17,6 +17,7 @@ export const updateShortSchema = z.object({
   reflection_what_didnt: z.string().nullable().optional(),
   reflection_would_do_differently: z.string().nullable().optional(),
   reflection_rating: z.number().int().min(1).max(10).nullable().optional(),
+  research_brief: z.string().nullable().optional(),
 });
 
 export type CreateShortInput = z.infer<typeof createShortSchema>;

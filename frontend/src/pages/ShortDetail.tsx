@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../contexts/AuthContext';
 import { useAlert } from '../hooks/useAlert';
 import { useConfirm } from '../hooks/useConfirm';
 import { useToast } from '../hooks/useToast';
-import { shortsApi, assignmentsApi, filesApi, usersApi } from '../services/api';
+import { shortsApi, assignmentsApi, filesApi, usersApi, scriptEngineApi } from '../services/api';
 import { Short, File as FileInterface, FileType, User, ShortStatus, AssignmentRole } from '../../../shared/types';
 import { triggerConfetti } from '../utils/confetti';
 import { getErrorMessage } from '../utils/errorHandler';
@@ -43,6 +44,7 @@ export default function ShortDetail() {
   const [assignRate, setAssignRate] = useState('');
   const [assignRateDescription, setAssignRateDescription] = useState('');
   const [accessDenied, setAccessDenied] = useState(false);
+  const [showLinkBriefModal, setShowLinkBriefModal] = useState(false);
 
   const isAdmin = user?.roles?.includes('admin') || user?.role === 'admin';
 
@@ -573,7 +575,28 @@ export default function ShortDetail() {
         {/* Script Section */}
         <section className="mb-8" style={{ background: 'var(--bg-surface)', borderRadius: '10px', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
           <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-default)' }}>
-            <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Script</h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Script</h2>
+              {isAdmin && (
+                <button
+                  onClick={() => setShowLinkBriefModal(true)}
+                  style={{
+                    padding: '3px 10px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    background: short.research_brief ? 'var(--gold-dim)' : 'transparent',
+                    color: short.research_brief ? 'var(--gold)' : 'var(--text-muted)',
+                    border: `1px ${short.research_brief ? 'solid var(--gold-border)' : 'dashed var(--border-default)'}`,
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  {short.research_brief ? 'Brief Linked' : '+ Link Brief'}
+                </button>
+              )}
+            </div>
             <div className="flex gap-2 items-center">
               {(scriptWriterUser?.id === user?.id || isAdmin || (user?.roles?.includes('script_writer') && !scriptWriterUser) || (short.script_content && (isAdmin || user?.roles?.includes('script_writer')))) && (
                 <>
@@ -992,6 +1015,119 @@ export default function ShortDetail() {
       <AlertComponent />
       <ConfirmComponent />
       <ToastComponent />
+      {showLinkBriefModal && (
+        <LinkBriefModal
+          onClose={() => setShowLinkBriefModal(false)}
+          onLinked={async (brief: string) => {
+            try {
+              await shortsApi.update(short.id, { research_brief: brief });
+              await loadShort();
+              showToast('Research brief linked', 'success');
+            } catch (err: unknown) {
+              showAlert(getErrorMessage(err, 'Failed to link brief'), { type: 'error' });
+            }
+            setShowLinkBriefModal(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Link Brief Modal ─────────────────────────────────────────────────────────
+function LinkBriefModal({ onClose, onLinked }: { onClose: () => void; onLinked: (brief: string) => void }) {
+  const [search, setSearch] = useState('');
+  const [ideas, setIdeas] = useState<Array<{ id: number; title: string; source: string; full_brief: string | null; brief_summary: string | null }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedBrief, setSelectedBrief] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    scriptEngineApi.searchIdeasWithBriefs(search || undefined)
+      .then(setIdeas)
+      .catch(() => setIdeas([]))
+      .finally(() => setLoading(false));
+  }, [search]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: '24px',
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--modal-bg)', border: '1px solid var(--modal-border)',
+          borderRadius: '14px', boxShadow: 'var(--modal-shadow)',
+          width: '100%', maxWidth: '600px', maxHeight: '80vh',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}
+      >
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>Link Research Brief</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '18px', cursor: 'pointer' }}>×</button>
+        </div>
+        <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border-default)' }}>
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search ideas by title…"
+            autoFocus
+            style={{
+              width: '100%', padding: '9px 12px', fontSize: '13px',
+              background: 'var(--bg-base)', color: 'var(--text-primary)',
+              border: '1px solid var(--border-default)', borderRadius: '6px',
+              outline: 'none', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: '8px 0' }}>
+          {loading ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>Loading…</div>
+          ) : ideas.length === 0 ? (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>No ideas with research briefs found</div>
+          ) : (
+            ideas.map(idea => (
+              <div
+                key={idea.id}
+                onClick={() => {
+                  if (idea.full_brief) {
+                    setSelectedBrief(idea.full_brief);
+                  }
+                }}
+                style={{
+                  padding: '10px 24px', cursor: idea.full_brief ? 'pointer' : 'default',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  background: selectedBrief === idea.full_brief ? 'var(--gold-dim)' : 'transparent',
+                  transition: 'background 0.1s',
+                }}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{idea.title}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {idea.source} · {idea.brief_summary ? idea.brief_summary.slice(0, 120) + '…' : 'No summary'}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border-default)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+          <button onClick={onClose} style={{ padding: '8px 14px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '6px', cursor: 'pointer' }}>
+            Cancel
+          </button>
+          <button
+            onClick={() => selectedBrief && onLinked(selectedBrief)}
+            disabled={!selectedBrief}
+            style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 700, color: '#fff', background: selectedBrief ? 'var(--gold)' : 'var(--border-default)', border: 'none', borderRadius: '6px', cursor: selectedBrief ? 'pointer' : 'default' }}
+          >
+            Link Brief
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

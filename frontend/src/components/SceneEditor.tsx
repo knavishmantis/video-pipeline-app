@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput, PresetClip, ShortStatus } from '../../../shared/types';
 import { scenesApi, filesApi, presetClipsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,6 +9,7 @@ interface SceneEditorProps {
   shortId: number;
   shortStatus?: ShortStatus;
   scriptContent: string;
+  researchBrief?: string;
   onScriptContentChange: (content: string) => void;
   isAdmin: boolean;
 }
@@ -283,7 +285,7 @@ function InteractiveScriptView({
   );
 }
 
-export default function SceneEditor({ shortId, shortStatus, scriptContent, onScriptContentChange, isAdmin }: SceneEditorProps) {
+export default function SceneEditor({ shortId, shortStatus, scriptContent, researchBrief, onScriptContentChange, isAdmin }: SceneEditorProps) {
   const { user } = useAuth();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [loading, setLoading] = useState(true);
@@ -292,6 +294,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
   const [scriptDraft, setScriptDraft] = useState(scriptContent);
   const [expandedScene, setExpandedScene] = useState<number | null>(null);
   const [imageSignedUrls, setImageSignedUrls] = useState<Record<number, string>>({});
+  const [showBriefView, setShowBriefView] = useState(false);
   const saveTimeouts = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
 
   // Preset clips state
@@ -981,14 +984,40 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
         )}
       </div>
 
-      {/* Scenes Grid Section */}
+      {/* Scenes Grid Section (or Research Brief) */}
       <style>{sceneCardStyles}</style>
       <div className="px-6 py-4" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-              Scenes ({scenes.length})
-            </h3>
+            {researchBrief ? (
+              <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border-default)' }}>
+                <button
+                  onClick={() => setShowBriefView(false)}
+                  style={{
+                    padding: '4px 12px', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer',
+                    borderRight: '1px solid var(--border-default)',
+                    background: !showBriefView ? 'var(--gold-dim)' : 'var(--bg-elevated)',
+                    color: !showBriefView ? 'var(--gold)' : 'var(--text-muted)',
+                  }}
+                >
+                  Scenes ({scenes.length})
+                </button>
+                <button
+                  onClick={() => setShowBriefView(true)}
+                  style={{
+                    padding: '4px 12px', fontSize: '10px', fontWeight: 700, border: 'none', cursor: 'pointer',
+                    background: showBriefView ? 'var(--gold-dim)' : 'var(--bg-elevated)',
+                    color: showBriefView ? 'var(--gold)' : 'var(--text-muted)',
+                  }}
+                >
+                  Research Brief
+                </button>
+              </div>
+            ) : (
+              <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+                Scenes ({scenes.length})
+              </h3>
+            )}
           </div>
           <div className="flex items-center gap-2">
             {/* Generate Scenes button — disabled pending prompt review
@@ -1058,7 +1087,23 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, onScr
           </div>
         </div>
 
-        {scenes.length === 0 ? (
+        {showBriefView && researchBrief ? (
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.75, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '10px', padding: '20px 24px' }}>
+            <ReactMarkdown components={{
+              h1: ({children}) => <h1 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '14px 0 6px' }}>{children}</h1>,
+              h2: ({children}) => <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: '12px 0 5px' }}>{children}</h2>,
+              h3: ({children}) => <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '10px 0 4px' }}>{children}</h3>,
+              p: ({children}) => <p style={{ margin: '4px 0', lineHeight: 1.75 }}>{children}</p>,
+              li: ({children}) => <li style={{ margin: '2px 0', lineHeight: 1.65 }}>{children}</li>,
+              strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
+              a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
+              blockquote: ({children}) => <blockquote style={{ borderLeft: '3px solid var(--gold)', paddingLeft: '14px', margin: '8px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
+              code: ({children, className}) => className
+                ? <pre style={{ background: 'var(--bg-base)', padding: '12px 14px', borderRadius: '6px', overflow: 'auto', fontSize: '11px', fontFamily: 'ui-monospace, monospace', lineHeight: 1.55, border: '1px solid var(--border-default)', margin: '8px 0' }}><code>{children}</code></pre>
+                : <code style={{ background: 'var(--bg-base)', padding: '2px 5px', borderRadius: '4px', fontSize: '11px', color: 'var(--gold)', fontFamily: 'ui-monospace, monospace', border: '1px solid var(--border-subtle)' }}>{children}</code>,
+            }}>{researchBrief}</ReactMarkdown>
+          </div>
+        ) : scenes.length === 0 ? (
           <div className="p-6 rounded-lg text-center" style={{ background: 'var(--bg-elevated)', border: '1px dashed var(--border-default)' }}>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
               No scenes yet. {canEditScenes ? 'Highlight text in the script above and click "Create Scene from Selection" to get started.' : ''}

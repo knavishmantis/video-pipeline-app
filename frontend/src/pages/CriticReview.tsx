@@ -1,6 +1,66 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { scriptEngineApi } from '../services/api';
+
+// Shared code block renderer for ReactMarkdown
+function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
+  const match = /language-(\w+)/.exec(className || '');
+  const codeStr = String(children).replace(/\n$/, '');
+  if (match) {
+    return (
+      <SyntaxHighlighter
+        style={oneDark}
+        language={match[1]}
+        PreTag="div"
+        customStyle={{
+          margin: '10px 0',
+          borderRadius: '8px',
+          fontSize: '11px',
+          lineHeight: 1.55,
+          border: '1px solid var(--border-default)',
+        }}
+      >
+        {codeStr}
+      </SyntaxHighlighter>
+    );
+  }
+  // Fenced block without a language tag
+  return (
+    <pre style={{
+      background: '#282c34',
+      padding: '14px 16px',
+      borderRadius: '8px',
+      overflow: 'auto',
+      fontSize: '11px',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      lineHeight: 1.55,
+      border: '1px solid var(--border-default)',
+      margin: '10px 0',
+      color: '#abb2bf',
+    }}>
+      <code style={{ fontFamily: 'inherit' }}>{children}</code>
+    </pre>
+  );
+}
+
+function InlineCode({ children }: { children: React.ReactNode }) {
+  return (
+    <code style={{
+      background: 'var(--bg-base)',
+      padding: '2px 6px',
+      borderRadius: '4px',
+      fontSize: '11px',
+      color: 'var(--gold)',
+      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+      border: '1px solid var(--border-subtle)',
+    }}>
+      {children}
+    </code>
+  );
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SRC: Record<string, { short: string; full: string }> = {
@@ -145,12 +205,14 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function CriticReview() {
+  const navigate = useNavigate();
   // state
   const [critiques, setCritiques] = useState<any[]>([]);
   const [counts, setCounts] = useState(DEFAULT_COUNTS);
   const [selected, setSelected] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [creatingShort, setCreatingShort] = useState(false);
   const [humanTab, setHumanTab] = useState<'unmarked' | 'used' | 'not_used'>('unmarked');
   const [decision, setDecision] = useState<'' | 'needs_review' | 'approved' | 'rewrite'>('');
   const [source, setSource] = useState<string>('');
@@ -206,6 +268,10 @@ export default function CriticReview() {
   // ── derived: filter + sort ──
   const filtered = useMemo(() => {
     let r = critiques;
+    // Belt-and-suspenders: ensure tab filtering even if local state lags behind
+    if (humanTab === 'unmarked') r = r.filter(c => !c.human_status);
+    else if (humanTab === 'used') r = r.filter(c => c.human_status === 'used');
+    else if (humanTab === 'not_used') r = r.filter(c => c.human_status === 'not_used');
     if (decision) {
       if (decision === 'approved') r = r.filter(c => c.script_status === 'approved');
       else if (decision === 'needs_review') r = r.filter(c => c.decision === 'needs_review' && c.script_status !== 'approved' && c.script_status !== 'rejected');
@@ -321,6 +387,23 @@ export default function CriticReview() {
     }
   }, [critiques, selected, filtered, humanTab, push, loadCounts, loadCritiques, loadDetail]);
 
+  const handleCreateShort = useCallback(async (critiqueId: number) => {
+    setCreatingShort(true);
+    try {
+      const newShort = await scriptEngineApi.createShortFromCritique(critiqueId);
+      push({
+        kind: 'info',
+        message: `Short "${newShort.title}" created`,
+        actionLabel: 'Open',
+        onAction: () => navigate(`/shorts/${newShort.id}`),
+      });
+    } catch (err: any) {
+      push({ kind: 'error', message: err.response?.data?.error || 'Failed to create short' });
+    } finally {
+      setCreatingShort(false);
+    }
+  }, [push, navigate]);
+
   // ── keyboard ──
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -409,7 +492,7 @@ export default function CriticReview() {
     const hasNext = idx >= 0 && idx < filtered.length - 1;
 
     return (
-      <div style={{ fontVariantNumeric: 'tabular-nums', maxWidth: '1280px', margin: '0 auto' }}>
+      <div style={{ fontVariantNumeric: 'tabular-nums', width: '100%' }}>
         {/* Top action bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
           <button onClick={() => setSelected(null)} style={{ fontSize: '11px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>← Back</button>
@@ -429,6 +512,7 @@ export default function CriticReview() {
           {s.script_status !== 'rejected' && <button onClick={() => handleReject(s.id)} title="Reject (r)" style={{ padding: '6px 16px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Reject</button>}
           {s.script_status === 'approved' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--green)', padding: '5px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', borderRadius: '4px' }}>APPROVED</span>}
           {s.script_status === 'rejected' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--red)', padding: '5px 14px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', borderRadius: '4px' }}>REJECTED</span>}
+          <button onClick={() => handleCreateShort(s.id)} disabled={creatingShort} title="Create a short in the pipeline from this critique" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--gold) 12%, transparent)', color: 'var(--gold)', border: '1px solid color-mix(in srgb, var(--gold) 30%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: creatingShort ? 'default' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em', opacity: creatingShort ? 0.5 : 1 }}>{creatingShort ? 'Creating…' : '+ Short'}</button>
           <div style={{ width: '1px', height: '20px', background: 'var(--border-default)', margin: '0 4px' }} />
           {s.human_status !== 'used' && <button onClick={() => handleMark(s.id, 'used')} title="Mark used (u)" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mark Used</button>}
           {s.human_status !== 'not_used' && <button onClick={() => handleMark(s.id, 'not_used')} title="Mark not used (n)" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Not Used</button>}
@@ -477,6 +561,25 @@ export default function CriticReview() {
                 <div style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{s.critic_script}</div>
               </PNL>
             )}
+
+            {/* Research Brief — embedded in main column for readability */}
+            {s.full_brief && (
+              <PNL label="Research Brief" style={{ padding: '18px 24px 22px' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.8 }}>
+                  <ReactMarkdown components={{
+                    h1: ({children}) => <h1 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', margin: '16px 0 6px' }}>{children}</h1>,
+                    h2: ({children}) => <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: '14px 0 5px' }}>{children}</h2>,
+                    h3: ({children}) => <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '10px 0 4px' }}>{children}</h3>,
+                    p: ({children}) => <p style={{ margin: '5px 0', lineHeight: 1.8 }}>{children}</p>,
+                    li: ({children}) => <li style={{ margin: '3px 0', lineHeight: 1.7 }}>{children}</li>,
+                    strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
+                    a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
+                    blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--gold)', paddingLeft: '14px', margin: '8px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
+                    code: ({children, className}) => className || (typeof children === 'string' && children.includes('\n')) ? <CodeBlock className={className}>{children}</CodeBlock> : <InlineCode>{children}</InlineCode>,
+                  }}>{s.full_brief}</ReactMarkdown>
+                </div>
+              </PNL>
+            )}
           </div>
 
           {/* Right rail */}
@@ -511,23 +614,6 @@ export default function CriticReview() {
               </PNL>
             )}
 
-            {s.full_brief && (
-              <PNL label="Research Brief">
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.7, maxHeight: '420px', overflow: 'auto' }}>
-                  <ReactMarkdown components={{
-                    h1: ({children}) => <h1 style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', margin: '12px 0 4px' }}>{children}</h1>,
-                    h2: ({children}) => <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: '10px 0 4px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{children}</h2>,
-                    h3: ({children}) => <h3 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', margin: '8px 0 3px' }}>{children}</h3>,
-                    p: ({children}) => <p style={{ margin: '3px 0', lineHeight: 1.7 }}>{children}</p>,
-                    li: ({children}) => <li style={{ margin: '2px 0', lineHeight: 1.6 }}>{children}</li>,
-                    strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
-                    a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
-                    blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--gold)', paddingLeft: '10px', margin: '6px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
-                    code: ({children, className}) => className ? <pre style={{ background: 'var(--bg-elevated)', padding: '6px 8px', borderRadius: '4px', overflow: 'auto', fontSize: '10px' }}><code>{children}</code></pre> : <code style={{ background: 'var(--bg-elevated)', padding: '1px 4px', borderRadius: '3px', fontSize: '10px', color: 'var(--gold)' }}>{children}</code>,
-                  }}>{s.full_brief}</ReactMarkdown>
-                </div>
-              </PNL>
-            )}
           </div>
         </div>
 
@@ -545,8 +631,10 @@ export default function CriticReview() {
   ];
   const distTotal = counts.low_unmarked + counts.mid_unmarked + counts.high_unmarked;
 
+  const focusedCritique = filtered[focusIdx] || null;
+
   return (
-    <div style={{ fontVariantNumeric: 'tabular-nums', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ fontVariantNumeric: 'tabular-nums', width: '100%' }}>
       {/* Header: title + tabs + help */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0, marginRight: '4px' }}>Critic Review</h1>
@@ -722,7 +810,8 @@ export default function CriticReview() {
         {refreshing && <span style={{ fontSize: '9px', color: 'var(--text-muted)', marginLeft: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>refreshing…</span>}
       </div>
 
-      {/* Table */}
+      {/* Table + Brief preview */}
+      <div style={{ display: 'grid', gridTemplateColumns: focusedCritique?.full_brief ? '1fr 700px' : '1fr', gap: '12px', alignItems: 'start' }}>
       <PNL style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-base)' }}>
           <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '36px', textAlign: 'center', letterSpacing: '0.06em' }}>Score</span>
@@ -791,6 +880,26 @@ export default function CriticReview() {
           );
         })}
       </PNL>
+
+      {/* Research brief preview panel */}
+      {focusedCritique?.full_brief && (
+        <PNL label="Research Brief" style={{ position: 'sticky', top: '12px', maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
+          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+            <ReactMarkdown components={{
+              h1: ({children}) => <h1 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', margin: '14px 0 5px' }}>{children}</h1>,
+              h2: ({children}) => <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '12px 0 4px' }}>{children}</h2>,
+              h3: ({children}) => <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: '8px 0 3px' }}>{children}</h3>,
+              p: ({children}) => <p style={{ margin: '4px 0', lineHeight: 1.75 }}>{children}</p>,
+              li: ({children}) => <li style={{ margin: '2px 0', lineHeight: 1.65 }}>{children}</li>,
+              strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
+              a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
+              blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--gold)', paddingLeft: '12px', margin: '6px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
+              code: ({children, className}) => className || (typeof children === 'string' && children.includes('\n')) ? <CodeBlock className={className}>{children}</CodeBlock> : <InlineCode>{children}</InlineCode>,
+            }}>{focusedCritique.full_brief}</ReactMarkdown>
+          </div>
+        </PNL>
+      )}
+      </div>
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
       <ToastStack toasts={toasts} onDismiss={dismiss} />

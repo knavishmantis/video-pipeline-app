@@ -620,6 +620,14 @@ export const scriptEngineApi = {
     const response = await api.patch(`/script-engine/critiques/${id}/mark`, { human_status });
     return response.data;
   },
+  createShortFromCritique: async (critiqueId: number): Promise<Short> => {
+    const response = await api.post(`/script-engine/critiques/${critiqueId}/create-short`);
+    return response.data;
+  },
+  searchIdeasWithBriefs: async (q?: string): Promise<Array<{ id: number; title: string; source: string; status: string; full_brief: string | null; brief_summary: string | null }>> => {
+    const response = await api.get('/script-engine/ideas/search', { params: q ? { q } : {} });
+    return response.data;
+  },
   getCritiqueCounts: async (): Promise<{
     unmarked: number; used: number; not_used: number; total: number;
     avg_score_unmarked: number; high_unmarked: number; mid_unmarked: number; low_unmarked: number;

@@ -449,6 +449,10 @@ export const shortsController = {
         updates.push(`reflection_rating = $${paramCount++}`);
         params.push(input.reflection_rating);
       }
+      if (input.research_brief !== undefined) {
+        updates.push(`research_brief = $${paramCount++}`);
+        params.push(input.research_brief);
+      }
       const isReflectionUpdate =
         input.reflection_what_worked !== undefined ||
         input.reflection_what_didnt !== undefined ||

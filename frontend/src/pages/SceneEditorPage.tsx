@@ -324,6 +324,7 @@ export default function SceneEditorPage() {
           shortId={short.id}
           shortStatus={short.status}
           scriptContent={short.script_content || ''}
+          researchBrief={short.research_brief || undefined}
           onScriptContentChange={async (content) => {
             try {
               await shortsApi.update(short.id, { script_content: content });

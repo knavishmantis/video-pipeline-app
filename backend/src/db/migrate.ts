@@ -422,6 +422,16 @@ export async function migrate(): Promise<void> {
         }
       }
 
+      // Add research_brief column to shorts
+      try {
+        await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS research_brief TEXT');
+        console.log('Added research_brief column to shorts');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add research_brief column:', error.message);
+        }
+      }
+
       // Add promoted_at column for tracking prospects promoted to real clippers
       try {
         await query('ALTER TABLE sample_assignments ADD COLUMN IF NOT EXISTS promoted_at TIMESTAMP');

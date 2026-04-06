@@ -227,7 +227,7 @@ scriptEngineRouter.get('/critiques', async (req: Request, res: Response) => {
         sc.decision, sc.critique, sc.rewrite_guidance, sc.created_at, sc.human_status,
         s.script_text, s.word_count, s.model_used, s.status as script_status,
         i.title, i.source, i.hook, i.angle, i.status as idea_status,
-        rb.summary as brief_summary
+        rb.full_brief, rb.summary as brief_summary
       FROM script_critiques sc
       JOIN scripts s ON sc.script_id = s.id
       JOIN ideas i ON sc.idea_id = i.id
@@ -334,6 +334,80 @@ scriptEngineRouter.patch('/critiques/:id/reject', async (req: Request, res: Resp
     res.json({ ok: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to reject' });
+  }
+});
+
+// POST /api/script-engine/critiques/:id/create-short — create a short in the main pipeline from a critique
+scriptEngineRouter.post('/critiques/:id/create-short', async (req: Request, res: Response) => {
+  try {
+    // Fetch full critique data from script_engine DB
+    const rows = await seQuery(`
+      SELECT sc.id, sc.script_id, sc.idea_id,
+        s.script_text,
+        i.title, i.hook, i.angle, i.content_points,
+        rb.full_brief
+      FROM script_critiques sc
+      JOIN scripts s ON sc.script_id = s.id
+      JOIN ideas i ON sc.idea_id = i.id
+      LEFT JOIN research_briefs rb ON rb.id = (
+        SELECT MAX(rb2.id) FROM research_briefs rb2
+        WHERE rb2.idea_id = i.id AND rb2.verdict != 'rejected'
+      )
+      WHERE sc.id = $1
+    `, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Critique not found' });
+
+    const c = rows[0];
+
+    // Build the idea text from hook + angle + content_points
+    const ideaParts: string[] = [];
+    if (c.hook) ideaParts.push(`Hook: ${c.hook}`);
+    if (c.angle) ideaParts.push(`Angle: ${c.angle}`);
+    if (c.content_points) {
+      const pts = typeof c.content_points === 'string' ? c.content_points : JSON.stringify(c.content_points);
+      ideaParts.push(`Content points: ${pts}`);
+    }
+
+    // Create short in the main app DB
+    const { query: mainQuery } = await import('../db');
+    const result = await mainQuery(
+      `INSERT INTO shorts (title, idea, script_content, research_brief, status)
+       VALUES ($1, $2, $3, $4, 'script')
+       RETURNING *`,
+      [c.title, ideaParts.join('\n') || null, c.script_text, c.full_brief || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Failed to create short from critique:', error.message);
+    res.status(500).json({ error: 'Failed to create short from critique' });
+  }
+});
+
+// POST /api/script-engine/ideas/search — search ideas for linking briefs to existing shorts
+scriptEngineRouter.get('/ideas/search', async (req: Request, res: Response) => {
+  try {
+    const q = (req.query.q as string || '').trim();
+    let sql = `
+      SELECT i.id, i.title, i.source, i.status,
+        rb.full_brief, rb.summary as brief_summary
+      FROM ideas i
+      LEFT JOIN research_briefs rb ON rb.id = (
+        SELECT MAX(rb2.id) FROM research_briefs rb2
+        WHERE rb2.idea_id = i.id AND rb2.verdict != 'rejected'
+      )
+      WHERE rb.full_brief IS NOT NULL
+    `;
+    const params: any[] = [];
+    if (q) {
+      sql += ` AND i.title ILIKE $1`;
+      params.push(`%${q}%`);
+    }
+    sql += ' ORDER BY i.id DESC LIMIT 50';
+    const rows = await seQuery(sql, params);
+    res.json(rows);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to search ideas' });
   }
 });
 

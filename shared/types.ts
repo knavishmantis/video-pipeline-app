@@ -41,6 +41,7 @@ export interface Short {
   reflection_rating?: number | null;
   reflection_at?: string | null;
   is_active?: boolean;
+  research_brief?: string | null;
   created_at: string;
   updated_at: string;
   // Populated fields
@@ -116,6 +117,7 @@ export interface UpdateShortInput {
   script_content?: string;
   status?: ShortStatus;
   script_writer_id?: number | null;
+  research_brief?: string | null;
   reflection_what_worked?: string | null;
   reflection_what_didnt?: string | null;
   reflection_would_do_differently?: string | null;
