@@ -62,6 +62,18 @@ function InlineCode({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Hooks ────────────────────────────────────────────────────────────────────
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 const SRC: Record<string, { short: string; full: string }> = {
   code:      { short: 'CODE', full: 'Code' },
@@ -223,6 +235,7 @@ export default function CriticReview() {
   const [briefOpen, setBriefOpen] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [showAxesHelp, setShowAxesHelp] = useState(false);
+  const isMobile = useIsMobile();
   const { toasts, push, dismiss } = useToasts();
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -495,30 +508,54 @@ export default function CriticReview() {
     return (
       <div style={{ fontVariantNumeric: 'tabular-nums', width: '100%' }}>
         {/* Top action bar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-          <button onClick={() => setSelected(null)} style={{ fontSize: '11px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>← Back</button>
-          <div style={{ display: 'flex', gap: '3px' }}>
-            <button disabled={!hasPrev} onClick={() => hasPrev && loadDetail(filtered[idx - 1].id)} title="Previous (k)" style={{ padding: '5px 11px', fontSize: '11px', fontWeight: 700, background: 'var(--bg-elevated)', color: hasPrev ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-default)', borderRadius: '4px', cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.4 }}>↑</button>
-            <button disabled={!hasNext} onClick={() => hasNext && loadDetail(filtered[idx + 1].id)} title="Next (j)" style={{ padding: '5px 11px', fontSize: '11px', fontWeight: 700, background: 'var(--bg-elevated)', color: hasNext ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-default)', borderRadius: '4px', cursor: hasNext ? 'pointer' : 'not-allowed', opacity: hasNext ? 1 : 0.4 }}>↓</button>
+        {isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+            {/* Row 1: nav */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button onClick={() => setSelected(null)} style={{ fontSize: '11px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>← Back</button>
+              <button disabled={!hasPrev} onClick={() => hasPrev && loadDetail(filtered[idx - 1].id)} style={{ padding: '5px 11px', fontSize: '11px', fontWeight: 700, background: 'var(--bg-elevated)', color: hasPrev ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-default)', borderRadius: '4px', cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.4 }}>↑</button>
+              <button disabled={!hasNext} onClick={() => hasNext && loadDetail(filtered[idx + 1].id)} style={{ padding: '5px 11px', fontSize: '11px', fontWeight: 700, background: 'var(--bg-elevated)', color: hasNext ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-default)', borderRadius: '4px', cursor: hasNext ? 'pointer' : 'not-allowed', opacity: hasNext ? 1 : 0.4 }}>↓</button>
+              {idx >= 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1}/{filtered.length}</span>}
+              <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase' }}>{SRC[s.source]?.short || s.source}</span>
+              <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '3px', textTransform: 'uppercase', background: `color-mix(in srgb, ${decisionColor(s.decision)} 15%, transparent)`, color: decisionColor(s.decision) }}>{s.decision?.replace('_', ' ')}</span>
+            </div>
+            {/* Row 2: actions */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {s.script_status !== 'approved' && <button onClick={() => handleApprove(s.id)} style={{ flex: 1, padding: '8px', background: 'color-mix(in srgb, var(--green) 15%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 30%, transparent)', borderRadius: '4px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Approve</button>}
+              {s.script_status !== 'rejected' && <button onClick={() => handleReject(s.id)} style={{ flex: 1, padding: '8px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)', borderRadius: '4px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Reject</button>}
+              {s.script_status === 'approved' && <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--green)', padding: '8px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', borderRadius: '4px', textAlign: 'center' }}>APPROVED</span>}
+              {s.script_status === 'rejected' && <span style={{ flex: 1, fontSize: '11px', fontWeight: 700, color: 'var(--red)', padding: '8px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', borderRadius: '4px', textAlign: 'center' }}>REJECTED</span>}
+              {s.human_status !== 'used' && <button onClick={() => handleMark(s.id, 'used')} style={{ flex: 1, padding: '8px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)', borderRadius: '4px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Used</button>}
+              {s.human_status !== 'not_used' && <button onClick={() => handleMark(s.id, 'not_used')} style={{ flex: 1, padding: '8px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: '4px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Skip</button>}
+              {s.human_status && <button onClick={() => handleMark(s.id, null)} style={{ padding: '8px 10px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', borderRadius: '4px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>✕</button>}
+            </div>
           </div>
-          {idx >= 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1} of {filtered.length}</span>}
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase' }}>{SRC[s.source]?.short || s.source}</span>
-          <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 8px', borderRadius: '3px', textTransform: 'uppercase',
-            background: `color-mix(in srgb, ${decisionColor(s.decision)} 15%, transparent)`,
-            color: decisionColor(s.decision),
-          }}>{s.decision}</span>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>draft #{s.draft_number} · {s.word_count}w · {s.model_used}</span>
-          <div style={{ flex: 1 }} />
-          {s.script_status !== 'approved' && <button onClick={() => handleApprove(s.id)} title="Approve (a)" style={{ padding: '6px 16px', background: 'color-mix(in srgb, var(--green) 15%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 30%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Approve</button>}
-          {s.script_status !== 'rejected' && <button onClick={() => handleReject(s.id)} title="Reject (r)" style={{ padding: '6px 16px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Reject</button>}
-          {s.script_status === 'approved' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--green)', padding: '5px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', borderRadius: '4px' }}>APPROVED</span>}
-          {s.script_status === 'rejected' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--red)', padding: '5px 14px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', borderRadius: '4px' }}>REJECTED</span>}
-          <button onClick={() => handleCreateShort(s.id)} disabled={creatingShort} title="Create a short in the pipeline from this critique" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--gold) 12%, transparent)', color: 'var(--gold)', border: '1px solid color-mix(in srgb, var(--gold) 30%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: creatingShort ? 'default' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em', opacity: creatingShort ? 0.5 : 1 }}>{creatingShort ? 'Creating…' : '+ Short'}</button>
-          <div style={{ width: '1px', height: '20px', background: 'var(--border-default)', margin: '0 4px' }} />
-          {s.human_status !== 'used' && <button onClick={() => handleMark(s.id, 'used')} title="Mark used (u)" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mark Used</button>}
-          {s.human_status !== 'not_used' && <button onClick={() => handleMark(s.id, 'not_used')} title="Mark not used (n)" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Not Used</button>}
-          {s.human_status && <button onClick={() => handleMark(s.id, null)} style={{ padding: '6px 10px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', borderRadius: '4px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>Unmark</button>}
-        </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <button onClick={() => setSelected(null)} style={{ fontSize: '11px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>← Back</button>
+            <div style={{ display: 'flex', gap: '3px' }}>
+              <button disabled={!hasPrev} onClick={() => hasPrev && loadDetail(filtered[idx - 1].id)} title="Previous (k)" style={{ padding: '5px 11px', fontSize: '11px', fontWeight: 700, background: 'var(--bg-elevated)', color: hasPrev ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-default)', borderRadius: '4px', cursor: hasPrev ? 'pointer' : 'not-allowed', opacity: hasPrev ? 1 : 0.4 }}>↑</button>
+              <button disabled={!hasNext} onClick={() => hasNext && loadDetail(filtered[idx + 1].id)} title="Next (j)" style={{ padding: '5px 11px', fontSize: '11px', fontWeight: 700, background: 'var(--bg-elevated)', color: hasNext ? 'var(--text-primary)' : 'var(--text-muted)', border: '1px solid var(--border-default)', borderRadius: '4px', cursor: hasNext ? 'pointer' : 'not-allowed', opacity: hasNext ? 1 : 0.4 }}>↓</button>
+            </div>
+            {idx >= 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{idx + 1} of {filtered.length}</span>}
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase' }}>{SRC[s.source]?.short || s.source}</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 8px', borderRadius: '3px', textTransform: 'uppercase',
+              background: `color-mix(in srgb, ${decisionColor(s.decision)} 15%, transparent)`,
+              color: decisionColor(s.decision),
+            }}>{s.decision}</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>draft #{s.draft_number} · {s.word_count}w · {s.model_used}</span>
+            <div style={{ flex: 1 }} />
+            {s.script_status !== 'approved' && <button onClick={() => handleApprove(s.id)} title="Approve (a)" style={{ padding: '6px 16px', background: 'color-mix(in srgb, var(--green) 15%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 30%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Approve</button>}
+            {s.script_status !== 'rejected' && <button onClick={() => handleReject(s.id)} title="Reject (r)" style={{ padding: '6px 16px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>Reject</button>}
+            {s.script_status === 'approved' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--green)', padding: '5px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', borderRadius: '4px' }}>APPROVED</span>}
+            {s.script_status === 'rejected' && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--red)', padding: '5px 14px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', borderRadius: '4px' }}>REJECTED</span>}
+            <button onClick={() => handleCreateShort(s.id)} disabled={creatingShort} title="Create a short in the pipeline from this critique" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--gold) 12%, transparent)', color: 'var(--gold)', border: '1px solid color-mix(in srgb, var(--gold) 30%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: creatingShort ? 'default' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em', opacity: creatingShort ? 0.5 : 1 }}>{creatingShort ? 'Creating…' : '+ Short'}</button>
+            <div style={{ width: '1px', height: '20px', background: 'var(--border-default)', margin: '0 4px' }} />
+            {s.human_status !== 'used' && <button onClick={() => handleMark(s.id, 'used')} title="Mark used (u)" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mark Used</button>}
+            {s.human_status !== 'not_used' && <button onClick={() => handleMark(s.id, 'not_used')} title="Mark not used (n)" style={{ padding: '6px 14px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: '4px', fontSize: '10px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Not Used</button>}
+            {s.human_status && <button onClick={() => handleMark(s.id, null)} style={{ padding: '6px 10px', background: 'none', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)', borderRadius: '4px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}>Unmark</button>}
+          </div>
+        )}
 
         {/* Score strip */}
         <PNL style={{ padding: '14px 18px', marginBottom: '12px' }}>
@@ -534,7 +571,7 @@ export default function CriticReview() {
         </PNL>
 
         {/* Main grid: script (left) + rail (right) */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'minmax(0, 1fr) 320px', gap: '12px' }}>
           {/* Script column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', minWidth: 0 }}>
             {/* Title + hook */}
@@ -712,7 +749,7 @@ export default function CriticReview() {
       )}
 
       {/* Controls row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', paddingBottom: isMobile ? '4px' : 0 }}>
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <input
@@ -722,7 +759,7 @@ export default function CriticReview() {
             onChange={e => setSearch(e.target.value)}
             placeholder="Search title, hook, script…"
             style={{
-              padding: '6px 26px 6px 28px', fontSize: '11px', width: '260px',
+              padding: '6px 26px 6px 28px', fontSize: '11px', width: isMobile ? '180px' : '260px',
               background: 'var(--bg-elevated)', color: 'var(--text-primary)',
               border: '1px solid var(--border-default)', borderRadius: '4px', outline: 'none',
               fontFamily: 'inherit',
@@ -812,17 +849,19 @@ export default function CriticReview() {
       </div>
 
       {/* Table + Brief preview */}
-      <div style={{ display: 'grid', gridTemplateColumns: focusedCritique?.full_brief && briefOpen ? '1fr 700px' : '1fr', gap: '12px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: !isMobile && focusedCritique?.full_brief && briefOpen ? '1fr 700px' : '1fr', gap: '12px', alignItems: 'start' }}>
       <PNL style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-base)' }}>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '36px', textAlign: 'center', letterSpacing: '0.06em' }}>Score</span>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '38px', letterSpacing: '0.06em' }}>Src</span>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', flex: 1, letterSpacing: '0.06em' }}>Title · Hook</span>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '96px', textAlign: 'center', letterSpacing: '0.06em' }}>Decision</span>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '40px', textAlign: 'center', letterSpacing: '0.06em' }}>Draft</span>
-          <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '46px', letterSpacing: '0.06em' }}>Age</span>
-          <span style={{ width: '144px' }} />
-        </div>
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-base)' }}>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '36px', textAlign: 'center', letterSpacing: '0.06em' }}>Score</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '38px', letterSpacing: '0.06em' }}>Src</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', flex: 1, letterSpacing: '0.06em' }}>Title · Hook</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '96px', textAlign: 'center', letterSpacing: '0.06em' }}>Decision</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '40px', textAlign: 'center', letterSpacing: '0.06em' }}>Draft</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '46px', letterSpacing: '0.06em' }}>Age</span>
+            <span style={{ width: '144px' }} />
+          </div>
+        )}
 
         {filtered.length === 0 && (
           <div style={{ padding: '48px 20px', textAlign: 'center' }}>
@@ -840,6 +879,43 @@ export default function CriticReview() {
           const isActionable = c.decision === 'needs_review' && c.script_status !== 'approved' && c.script_status !== 'rejected';
           const displayDecision = c.script_status === 'approved' ? 'approved' : c.script_status === 'rejected' ? 'rejected' : c.decision?.replace('_', ' ');
           const decisionCol = c.script_status === 'approved' ? 'var(--green)' : c.script_status === 'rejected' ? 'var(--red)' : decisionColor(c.decision);
+
+          if (isMobile) {
+            return (
+              <div
+                key={c.id}
+                ref={el => { rowRefs.current[c.id] = el; }}
+                onClick={() => { setFocusIdx(idx); loadDetail(c.id); }}
+                style={{
+                  padding: '12px 14px',
+                  borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer',
+                  background: focused ? 'color-mix(in srgb, var(--gold) 8%, transparent)' : isActionable ? 'color-mix(in srgb, var(--gold) 3%, transparent)' : 'transparent',
+                  borderLeft: focused ? '3px solid var(--gold)' : '3px solid transparent',
+                  paddingLeft: focused ? '11px' : '14px',
+                  transition: 'background 0.08s, border-left-color 0.08s',
+                }}
+              >
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '26px', fontWeight: 900, color: scoreColor(c.score_overall), letterSpacing: '-0.04em', lineHeight: 1, minWidth: '30px', paddingTop: '2px' }}>{c.score_overall}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '5px', lineHeight: 1.3, letterSpacing: '-0.01em' }}>{c.title}</div>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '9px', fontWeight: 700, padding: '2px 7px', borderRadius: '3px', textTransform: 'uppercase', background: `color-mix(in srgb, ${decisionCol} 15%, transparent)`, color: decisionCol }}>{displayDecision}</span>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)' }}>{SRC[c.source]?.short || c.source}</span>
+                      {c.draft_number > 1 && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gold)' }}>#{c.draft_number}</span>}
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{ago(c.created_at)}</span>
+                    </div>
+                    {c.hook && <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.hook}</div>}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', marginTop: '10px', paddingLeft: '42px' }} onClick={e => e.stopPropagation()}>
+                  <button onClick={() => handleMark(c.id, 'used')} style={{ flex: 1, padding: '7px', background: 'color-mix(in srgb, var(--green) 10%, transparent)', color: 'var(--green)', border: '1px solid color-mix(in srgb, var(--green) 25%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Used</button>
+                  <button onClick={() => handleMark(c.id, 'not_used')} style={{ flex: 1, padding: '7px', background: 'color-mix(in srgb, var(--red) 8%, transparent)', color: 'var(--red)', border: '1px solid color-mix(in srgb, var(--red) 20%, transparent)', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Skip</button>
+                </div>
+              </div>
+            );
+          }
+
           return (
             <div
               key={c.id}
@@ -882,8 +958,8 @@ export default function CriticReview() {
         })}
       </PNL>
 
-      {/* Research brief preview panel — toggle button or collapsed pill */}
-      {focusedCritique?.full_brief && (
+      {/* Research brief preview panel — toggle button or collapsed pill (desktop only) */}
+      {!isMobile && focusedCritique?.full_brief && (
         briefOpen ? (
           <PNL
             label={
