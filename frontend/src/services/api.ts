@@ -1,4 +1,11 @@
 import axios from 'axios';
+
+export interface LintIssue {
+  type: 'error' | 'warning' | 'info';
+  check: string;
+  message: string;
+  matches?: string[];
+}
 import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, IncentiveRule, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput, SampleAssignment, CreateSampleInput } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -86,6 +93,9 @@ export const shortsApi = {
     const response = await api.patch(`/shorts/${id}/toggle-active`);
     return response.data;
   },
+  setScriptSubStage: async (id: number, stage: 'idea' | 'written' | 'scenes' | null): Promise<void> => {
+    await api.patch(`/shorts/${id}/script-sub-stage`, { script_sub_stage: stage });
+  },
   markClipsComplete: async (id: number): Promise<Short> => {
     const response = await api.post(`/shorts/${id}/mark-clips-complete`);
     return response.data;
@@ -96,6 +106,10 @@ export const shortsApi = {
   },
   getReflectionStats: async (): Promise<{ overdue_count: number }> => {
     const response = await api.get('/shorts/reflection-stats');
+    return response.data;
+  },
+  analyzeScript: async (id: number): Promise<{ issues: LintIssue[] }> => {
+    const response = await api.post(`/shorts/${id}/analyze-script`);
     return response.data;
   },
 };

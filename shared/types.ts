@@ -42,6 +42,7 @@ export interface Short {
   reflection_at?: string | null;
   is_active?: boolean;
   scene_count?: number;
+  script_sub_stage?: 'idea' | 'written' | 'scenes' | null;
   research_brief?: string | null;
   created_at: string;
   updated_at: string;

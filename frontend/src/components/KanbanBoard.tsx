@@ -7,6 +7,10 @@ import {
   DragStartEvent,
   DragEndEvent,
   useSensors,
+  useDraggable,
+  useDroppable,
+  PointerSensor,
+  useSensor,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -71,44 +75,36 @@ function AnimatedCount({ target }: { target: number }) {
   return <>{count}</>;
 }
 
-// ─── Script sub-column static card ───────────────────────────────────────────
-function StaticScriptCard({ short, onClick, isAdmin, currentUserId }: {
+// ─── Script sub-column draggable card ────────────────────────────────────────
+function DraggableScriptCard({ short, onClick, currentUserId, isDragging }: {
   short: Short;
   onClick: () => void;
-  isAdmin: boolean;
   currentUserId?: number;
+  isDragging?: boolean;
 }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: `sub-${short.id}`, data: { shortId: short.id } });
   const isActive = !!short.is_active;
   const writer = short.script_writer;
   const isYou = writer && currentUserId && writer.id === currentUserId;
 
   return (
     <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
       onClick={onClick}
       style={{
-        background: isActive
-          ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))'
-          : 'var(--card-bg)',
+        background: isActive ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))' : 'var(--card-bg)',
         border: '1px solid var(--border-default)',
         borderLeft: isActive ? '4px solid var(--gold)' : '4px solid transparent',
         borderRadius: '10px',
         padding: '11px 13px',
-        cursor: 'pointer',
-        transition: 'background 0.12s, border-color 0.12s, box-shadow 0.12s',
+        cursor: isDragging ? 'grabbing' : 'grab',
+        transition: isDragging ? 'none' : 'background 0.12s, box-shadow 0.12s',
         boxShadow: isActive ? '0 0 0 1px var(--gold-border)' : undefined,
+        opacity: isDragging ? 0.4 : 1,
         userSelect: 'none',
-      }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.background = isActive
-          ? 'color-mix(in srgb, var(--gold) 10%, var(--card-hover-bg))'
-          : 'var(--card-hover-bg)';
-        (e.currentTarget as HTMLElement).style.boxShadow = 'var(--card-hover-shadow)';
-      }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.background = isActive
-          ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))'
-          : 'var(--card-bg)';
-        (e.currentTarget as HTMLElement).style.boxShadow = isActive ? '0 0 0 1px var(--gold-border)' : '';
+        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
       }}
     >
       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: short.description || short.idea ? '5px' : '8px', letterSpacing: '-0.01em' }}>
@@ -138,8 +134,9 @@ function StaticScriptCard({ short, onClick, isAdmin, currentUserId }: {
   );
 }
 
-// ─── Script expanded sub-column ────────────────────────────────────────────────
-function ScriptSubColumn({ title, color, cards, onCardClick, isAdmin, currentUserId, onCreateClick, showAdd }: {
+// ─── Script expanded sub-column (droppable) ───────────────────────────────────
+function ScriptSubColumn({ id, title, color, cards, onCardClick, isAdmin, currentUserId, onCreateClick, showAdd, activeDragId }: {
+  id: string;
   title: string;
   color: string;
   cards: Short[];
@@ -148,41 +145,50 @@ function ScriptSubColumn({ title, color, cards, onCardClick, isAdmin, currentUse
   currentUserId?: number;
   onCreateClick?: () => void;
   showAdd?: boolean;
+  activeDragId?: string | null;
 }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
   return (
     <div style={{
-      background: 'var(--column-bg)',
-      border: '1px solid var(--border-default)',
+      background: isOver ? `color-mix(in srgb, ${color} 5%, var(--column-bg))` : 'var(--column-bg)',
+      border: isOver ? `1px solid color-mix(in srgb, ${color} 50%, var(--border-default))` : '1px solid var(--border-default)',
       borderRadius: '12px',
       display: 'flex',
       flexDirection: 'column',
       minWidth: '270px',
       height: 'calc(100vh - 220px)',
       overflow: 'hidden',
+      transition: 'background 0.12s, border-color 0.12s',
     }}>
       {/* Header */}
       <div style={{ padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `color-mix(in srgb, ${color} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
           <IconFileText size={15} stroke={2} />
         </div>
-        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {title}
-        </h3>
+        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
         <div style={{ fontSize: '12px', fontWeight: 700, color, background: `color-mix(in srgb, ${color} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`, borderRadius: '6px', padding: '2px 8px', minWidth: '28px', textAlign: 'center', flexShrink: 0 }}>
           <AnimatedCount target={cards.length} />
         </div>
       </div>
 
       {/* Cards */}
-      <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div ref={setNodeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '12px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '40px' }}>
           {cards.map((short, index) => (
             <motion.div key={short.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04, duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
-              <StaticScriptCard short={short} onClick={() => onCardClick(short)} isAdmin={isAdmin} currentUserId={currentUserId} />
+              <DraggableScriptCard
+                short={short}
+                onClick={() => onCardClick(short)}
+                currentUserId={currentUserId}
+                isDragging={activeDragId === `sub-${short.id}`}
+              />
             </motion.div>
           ))}
           {cards.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '28px 12px', color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>Empty</div>
+            <div style={{ textAlign: 'center', padding: '28px 12px', color: isOver ? color : 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', transition: 'color 0.12s' }}>
+              {isOver ? 'Drop here' : 'Empty'}
+            </div>
           )}
         </div>
       </div>
@@ -224,6 +230,7 @@ interface KanbanBoardProps {
   onCreateClick: (columnId: ColumnType) => void;
   navigate: (path: string) => void;
   getShortsForColumn: (columnId: ColumnType) => Short[];
+  onSubStageChange: (shortId: number, stage: 'idea' | 'written' | 'scenes') => Promise<void>;
 }
 
 // ─── Board ────────────────────────────────────────────────────────────────────
@@ -246,8 +253,11 @@ export function KanbanBoard({
   onCreateClick,
   navigate,
   getShortsForColumn,
+  onSubStageChange,
 }: KanbanBoardProps) {
   const [scriptExpanded, setScriptExpanded] = useState(false);
+  const [subActiveDragId, setSubActiveDragId] = useState<string | null>(null);
+  const subSensors = [useSensor(PointerSensor, { activationConstraint: { distance: 6 } })];
 
   // Sub-column data (computed when script column is expanded)
   const scriptColumn = filteredColumns.find(c => c.id === 'script');
@@ -255,9 +265,17 @@ export function KanbanBoard({
   const hasScriptContent = useCallback((s: Short) =>
     !!s.script_content || !!s.files?.some(f => f.file_type === 'script'), []);
 
-  const ideaCards    = scriptCards.filter(s => !hasScriptContent(s));
-  const writtenCards = scriptCards.filter(s => hasScriptContent(s) && !(s.scene_count));
-  const scenesCards  = scriptCards.filter(s => !!(s.scene_count));
+  // Determine sub-stage: explicit override takes priority, else auto-detect
+  const getSubStage = useCallback((s: Short): 'idea' | 'written' | 'scenes' => {
+    if (s.script_sub_stage) return s.script_sub_stage;
+    if (s.scene_count) return 'scenes';
+    if (hasScriptContent(s)) return 'written';
+    return 'idea';
+  }, [hasScriptContent]);
+
+  const ideaCards    = scriptCards.filter(s => getSubStage(s) === 'idea');
+  const writtenCards = scriptCards.filter(s => getSubStage(s) === 'written');
+  const scenesCards  = scriptCards.filter(s => getSubStage(s) === 'scenes');
 
   const scriptColor  = scriptColumn?.color ?? 'var(--col-script)';
 
@@ -291,35 +309,55 @@ export function KanbanBoard({
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Script</span>
             <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{scriptCards.length} total</span>
           </div>
-          {/* 3 sub-columns */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
-            <ScriptSubColumn
-              title="Idea"
-              color={scriptColor}
-              cards={ideaCards}
-              onCardClick={s => navigate(`/shorts/${s.id}/scenes`)}
-              isAdmin={isAdmin}
-              currentUserId={currentUserId}
-              showAdd
-              onCreateClick={() => onCreateClick('script')}
-            />
-            <ScriptSubColumn
-              title="Script Written"
-              color={scriptColor}
-              cards={writtenCards}
-              onCardClick={s => navigate(`/shorts/${s.id}/scenes`)}
-              isAdmin={isAdmin}
-              currentUserId={currentUserId}
-            />
-            <ScriptSubColumn
-              title="Scenes Ready"
-              color="var(--green)"
-              cards={scenesCards}
-              onCardClick={s => onCardClick(s, scriptColumn)}
-              isAdmin={isAdmin}
-              currentUserId={currentUserId}
-            />
-          </div>
+          {/* 3 sub-columns with their own DnD context */}
+          <DndContext
+            sensors={subSensors}
+            onDragStart={e => setSubActiveDragId(String(e.active.id))}
+            onDragEnd={e => {
+              setSubActiveDragId(null);
+              const shortId = e.active.data.current?.shortId as number | undefined;
+              const toStage = e.over?.id as 'idea' | 'written' | 'scenes' | undefined;
+              if (shortId && toStage && ['idea', 'written', 'scenes'].includes(toStage)) {
+                onSubStageChange(shortId, toStage);
+              }
+            }}
+            onDragCancel={() => setSubActiveDragId(null)}
+          >
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+              <ScriptSubColumn
+                id="idea"
+                title="Idea"
+                color={scriptColor}
+                cards={ideaCards}
+                onCardClick={s => navigate(`/shorts/${s.id}/scenes`)}
+                isAdmin={isAdmin}
+                currentUserId={currentUserId}
+                showAdd
+                onCreateClick={() => onCreateClick('script')}
+                activeDragId={subActiveDragId}
+              />
+              <ScriptSubColumn
+                id="written"
+                title="Script Written"
+                color={scriptColor}
+                cards={writtenCards}
+                onCardClick={s => navigate(`/shorts/${s.id}/scenes`)}
+                isAdmin={isAdmin}
+                currentUserId={currentUserId}
+                activeDragId={subActiveDragId}
+              />
+              <ScriptSubColumn
+                id="scenes"
+                title="Scenes Ready"
+                color="var(--green)"
+                cards={scenesCards}
+                onCardClick={s => onCardClick(s, scriptColumn)}
+                isAdmin={isAdmin}
+                currentUserId={currentUserId}
+                activeDragId={subActiveDragId}
+              />
+            </div>
+          </DndContext>
         </div>
       )}
 

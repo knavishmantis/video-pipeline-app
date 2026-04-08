@@ -233,6 +233,13 @@ export default function Dashboard() {
     } catch (e) { console.error(e); }
   };
 
+  const handleSubStageChange = async (shortId: number, stage: 'idea' | 'written' | 'scenes') => {
+    try {
+      await shortsApi.setScriptSubStage(shortId, stage);
+      setShorts(prev => prev.map(s => s.id === shortId ? { ...s, script_sub_stage: stage } : s));
+    } catch (e) { console.error(e); }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -828,6 +835,7 @@ export default function Dashboard() {
         onCreateClick={handleCreateClick}
         navigate={navigate}
         getShortsForColumn={getShortsForColumn}
+        onSubStageChange={handleSubStageChange}
       />
 
       <CreateShortModal
