@@ -195,9 +195,7 @@ Return ONLY a JSON array of {scene_id, link_group} objects.
 - Only include scenes that belong to a group — skip ungrouped scenes
 - Return [] if no scenes should be grouped`;
 
-  // Use Flash for link groups — faster and cheaper than Pro, sufficient for this task
-  const flashEndpoint = getApiEndpoint('gemini-2.5-flash');
-  const response = await fetch(flashEndpoint, {
+  const response = await fetch(getApiEndpoint(), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken.token}`,
@@ -209,7 +207,6 @@ Return ONLY a JSON array of {scene_id, link_group} objects.
         temperature: 0.2,
         maxOutputTokens: 8192,
         responseMimeType: 'application/json',
-        thinkingConfig: { thinkingBudget: 2048 },
       },
     }),
   });
@@ -220,9 +217,24 @@ Return ONLY a JSON array of {scene_id, link_group} objects.
   }
 
   const data = await response.json() as any;
-  const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const candidate = data?.candidates?.[0];
+  if (!candidate?.content?.parts?.length) {
+    const finishReason = candidate?.finishReason || 'unknown';
+    throw new Error(`Vertex AI returned no content (finishReason: ${finishReason})`);
+  }
+  // With thinking models, the JSON output may be in a later part (thinking content comes first)
+  const parts = candidate.content.parts;
+  const textPart = parts.find((p: any) => p.text && !p.thought) || parts[parts.length - 1];
+  const text: string = textPart?.text ?? '';
+  if (!text.trim()) {
+    throw new Error(`Vertex AI returned empty text. Parts: ${JSON.stringify(parts.map((p: any) => ({ hasText: !!p.text, thought: !!p.thought, len: p.text?.length })))}`);
+  }
   const jsonText = text.trim().replace(/^```json\n?/s, '').replace(/\n?```\s*$/s, '').trim();
-  return JSON.parse(jsonText) as LinkGroupSuggestion[];
+  try {
+    return JSON.parse(jsonText) as LinkGroupSuggestion[];
+  } catch (parseErr) {
+    throw new Error(`Failed to parse Vertex AI JSON response: ${(parseErr as Error).message}. Raw text (first 500 chars): ${text.substring(0, 500)}`);
+  }
 }
 
 /**
