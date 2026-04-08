@@ -4,6 +4,8 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  pointerWithin,
+  rectIntersection,
   DragStartEvent,
   DragEndEvent,
   useSensors,
@@ -208,6 +210,15 @@ function ScriptSubColumn({ id, title, color, cards, onCardClick, isAdmin, curren
   );
 }
 
+// ─── Collision detection: prefer column droppables, pointer-based ─────────────
+function columnFirstCollision(args: Parameters<typeof pointerWithin>[0]) {
+  const pointer = pointerWithin(args).filter(c => String(c.id).startsWith('column-'));
+  if (pointer.length > 0) return pointer;
+  const rect = rectIntersection(args).filter(c => String(c.id).startsWith('column-'));
+  if (rect.length > 0) return rect;
+  return closestCenter(args);
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface KanbanBoardProps {
   filteredColumns: Column[];
@@ -291,7 +302,7 @@ export function KanbanBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={closestCenter}
+      collisionDetection={columnFirstCollision}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
     >
