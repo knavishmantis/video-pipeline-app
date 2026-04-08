@@ -5,9 +5,9 @@ import { logger } from '../utils/logger';
 
 const LOCATION = 'us-central1';
 
-function getApiEndpoint(): string {
+function getApiEndpoint(modelOverride?: string): string {
   const projectId = process.env.GCP_PROJECT_ID;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
+  const model = modelOverride || process.env.GEMINI_MODEL || 'gemini-2.5-pro';
   return `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${projectId}/locations/${LOCATION}/publishers/google/models/${model}:generateContent`;
 }
 
@@ -195,7 +195,9 @@ Return ONLY a JSON array of {scene_id, link_group} objects.
 - Only include scenes that belong to a group — skip ungrouped scenes
 - Return [] if no scenes should be grouped`;
 
-  const response = await fetch(getApiEndpoint(), {
+  // Use Flash for link groups — faster and cheaper than Pro, sufficient for this task
+  const flashEndpoint = getApiEndpoint('gemini-2.5-flash');
+  const response = await fetch(flashEndpoint, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken.token}`,
@@ -207,6 +209,7 @@ Return ONLY a JSON array of {scene_id, link_group} objects.
         temperature: 0.2,
         maxOutputTokens: 8192,
         responseMimeType: 'application/json',
+        thinkingConfig: { thinkingBudget: 2048 },
       },
     }),
   });

@@ -6,6 +6,7 @@ import { validate } from '../middleware/validate';
 import { createSceneSchema, updateSceneSchema, bulkCreateScenesSchema, reorderScenesSchema } from '../validators/scenes';
 import { suggestLinkGroups } from '../services/vertexAI';
 import { query } from '../db';
+import { logger } from '../utils/logger';
 
 export const scenesRouter = Router({ mergeParams: true });
 
@@ -108,6 +109,7 @@ scenesRouter.post('/auto-link-groups', async (req: Request, res: Response) => {
 
     res.json({ applied: suggestions });
   } catch (e: any) {
+    logger.error('Auto link group generation failed', { shortId, error: e.message, stack: e.stack?.substring(0, 500) });
     res.status(500).json({ error: e.message });
   }
 });
