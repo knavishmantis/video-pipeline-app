@@ -11,7 +11,8 @@ export const shortsController = {
       const { status, assigned } = req.query;
       
       let sqlQuery = `
-        SELECT s.*
+        SELECT s.*,
+          (SELECT COUNT(*) FROM scenes sc WHERE sc.short_id = s.id)::int AS scene_count
         FROM shorts s
       `;
       const params: any[] = [];

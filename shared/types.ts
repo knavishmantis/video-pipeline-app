@@ -41,6 +41,7 @@ export interface Short {
   reflection_rating?: number | null;
   reflection_at?: string | null;
   is_active?: boolean;
+  scene_count?: number;
   research_brief?: string | null;
   created_at: string;
   updated_at: string;
