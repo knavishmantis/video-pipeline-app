@@ -12,7 +12,7 @@ Each scene = **one visual clip** the clipper records in Flashback (Minecraft rep
 
 | Field | Purpose | Notes |
 |-------|---------|-------|
-| `script_line` | Exact narration words spoken during this clip | 3–10 words. Split at breath/phrase boundaries. |
+| `script_line` | Exact narration words spoken during this clip | 3–6 words. Split at breath/phrase boundaries. One short phrase, not a full sentence. |
 | `direction` | One-line visual summary for the editor | e.g. "wide village establishing shot", "KM close up nodding" |
 | `clipper_notes` | Full instructions for the clipper — what to build, where, which skin, which angle, what action | Most important field. Be specific. |
 | `editor_notes` | Post-production notes — SFX, transitions, overlays, timing, external media | Only include when there's something specific. |
@@ -50,6 +50,8 @@ Use `preset_clip_id` and keep `clipper_notes` minimal ("use preset"). These are 
 | 35 | 16 — Magenta Shaking Head No Nametag | KM shaking head, magenta, no nametag | |
 | 36 | 17 — Magenta Shifting Nametag | KM shifting, magenta, nametag | |
 | 37 | 18 — Magenta Shifting No Nametag | KM shifting, magenta, no nametag | |
+| 38 | 19 — Magenta Talking Nametag | KM talking directly to camera, magenta bg, nametag | Direct address, narrating a point, "let me explain" moments |
+| 39 | 20 — Magenta Talking No Nametag | KM talking directly to camera, magenta bg, no nametag | Same without nametag |
 
 **Nametag rule**: Use "Nametag" when KnavishMantis is the direct speaker/narrator. Use "No Nametag" when acting as a character or when the nametag would be distracting.
 
@@ -126,7 +128,7 @@ Use for: Sora AI clips, YouTube clips, memes, real-world footage references, tex
 ## Splitting Rules
 
 1. **Split at breath/phrase boundaries** — not sentence boundaries. One scene = one thought unit the viewer sees as a single clip.
-2. **Target 3–8 words per `script_line`**. A 15-word sentence = 2–3 scenes.
+2. **Target 3–6 words per `script_line`**. A 15-word sentence = 3–4 scenes. When in doubt, split shorter.
 3. **A 200-word script → ~20–35 scenes.**
 4. **Parentheticals** like `(pause)`, `(Vsauce music)`, `<show Bart>` = their own scenes with `script_line` matching the cue.
 5. **Sub-clips** — if a scene needs multiple quick cuts, use sub-clips noted in `clipper_notes`: "Sub-clip A: ..., Sub-clip B: ..."
@@ -173,4 +175,4 @@ Final scene:    PRESET (punching or shaking head — land the punchline)
 - [ ] Sub-clips noted inline in `clipper_notes` where multiple angles needed
 - [ ] Bart Simpson scenes always say "NO nametag"
 - [ ] Final scene has a preset (punching or shaking head) to land the punchline
-- [ ] Total scene count is proportional: ~1 scene per 6–8 words of script
+- [ ] Total scene count is proportional: ~1 scene per 4–6 words of script

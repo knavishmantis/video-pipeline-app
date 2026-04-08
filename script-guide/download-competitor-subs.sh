@@ -17,6 +17,7 @@ CHANNELS=(
   ["camman18"]="@camman18"
   ["mogswamp"]="@MogSwamp"
   ["dashpum4"]="@DashPum4"
+  ["kallaway"]="@kallawaymarketing"
 )
 
 echo "=== Downloading subtitles from ${#CHANNELS[@]} channels (max $MAX_VIDEOS per channel) ==="

@@ -5,6 +5,7 @@ import { shortsApi, scenesApi } from '../services/api';
 import { Short, Scene } from '../../../shared/types';
 import SceneEditor from '../components/SceneEditor';
 import jsPDF from 'jspdf';
+import { LintIssue } from '../services/api';
 
 async function fetchImageAsDataUrl(url: string): Promise<string | null> {
   try {
@@ -150,6 +151,9 @@ export default function SceneEditorPage() {
   const [loading, setLoading] = useState(true);
   const [marking, setMarking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lintResults, setLintResults] = useState<LintIssue[] | null>(null);
+  const [lintLoading, setLintLoading] = useState(false);
+  const [isEditingScript, setIsEditingScript] = useState(false);
 
   const isAdmin = user?.roles?.includes('admin') || false;
 
@@ -188,6 +192,21 @@ export default function SceneEditorPage() {
       console.error('Failed to toggle script complete:', err);
     } finally {
       setMarking(false);
+    }
+  };
+
+  const handleAnalyzeScript = async () => {
+    if (!short) return;
+    setLintLoading(true);
+    setLintResults(null);
+    try {
+      const { issues } = await shortsApi.analyzeScript(short.id);
+      setLintResults(issues);
+    } catch (e: any) {
+      const msg = e?.response?.data?.error || e?.message || 'Script analysis failed';
+      console.error('Script analysis failed:', msg, e?.response?.data);
+    } finally {
+      setLintLoading(false);
     }
   };
 
@@ -251,6 +270,32 @@ export default function SceneEditorPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          {short.script_content && (
+            <button
+              onClick={handleAnalyzeScript}
+              disabled={lintLoading || isEditingScript}
+              className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-opacity hover:opacity-80"
+              style={{
+                background: lintResults !== null ? 'color-mix(in srgb, var(--gold) 15%, var(--bg-elevated))' : 'var(--bg-elevated)',
+                color: lintResults !== null ? 'var(--gold)' : 'var(--text-primary)',
+                border: `1px solid ${lintResults !== null ? 'var(--gold)' : 'var(--border-default)'}`,
+                cursor: (lintLoading || isEditingScript) ? 'not-allowed' : 'pointer',
+                opacity: (lintLoading || isEditingScript) ? 0.4 : 1,
+              }}
+            >
+              {lintLoading ? (
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              )}
+              {lintLoading ? 'Analyzing...' : 'Analyze Script'}
+            </button>
+          )}
           <button
             onClick={handleExportPdf}
             className="px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-opacity hover:opacity-80"
@@ -318,6 +363,59 @@ export default function SceneEditorPage() {
         </div>
       )}
 
+      {/* Script Lint Results */}
+      {lintResults !== null && (
+        <div className="mb-4 rounded-xl" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
+          <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: lintResults.length > 0 ? '1px solid var(--border-default)' : undefined }}>
+            <div className="flex items-center gap-2">
+              {lintResults.length === 0 ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--green)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--gold)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+              )}
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {lintResults.length === 0 ? 'Script looks clean' : `${lintResults.length} issue${lintResults.length > 1 ? 's' : ''} found`}
+              </span>
+            </div>
+            <button
+              onClick={() => setLintResults(null)}
+              className="text-xs transition-opacity hover:opacity-80"
+              style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              dismiss
+            </button>
+          </div>
+          {lintResults.length > 0 && (
+            <div className="p-3 flex flex-col gap-2">
+              {lintResults.map((issue, i) => {
+                const color = issue.type === 'error' ? 'var(--red)' : issue.type === 'warning' ? 'var(--gold)' : 'var(--text-muted)';
+                return (
+                  <div key={i} className="rounded-lg p-3" style={{ background: `color-mix(in srgb, ${color} 8%, var(--bg-elevated))`, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)` }}>
+                    <div className="flex items-start gap-2">
+                      <span className="text-xs font-bold mt-0.5 shrink-0" style={{ color }}>{issue.check}</span>
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{issue.message}</span>
+                    </div>
+                    {issue.matches && issue.matches.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-1">
+                        {issue.matches.map((m, j) => (
+                          <span key={j} className="text-xs font-mono px-2 py-1 rounded" style={{ background: `color-mix(in srgb, ${color} 12%, var(--bg-base))`, color: 'var(--text-primary)' }}>
+                            {m}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Scene Editor */}
       <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <SceneEditor
@@ -334,6 +432,7 @@ export default function SceneEditorPage() {
             }
           }}
           isAdmin={isAdmin}
+          onEditingScriptChange={setIsEditingScript}
         />
       </div>
     </div>

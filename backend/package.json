@@ -22,7 +22,9 @@
     "fetch-camman18": "tsx src/scripts/fetchCamman18Shorts.ts",
     "migrate-reflection": "tsx src/db/migrateReflection.ts",
     "migrate-scenes": "tsx src/db/migrateScenes.ts",
-    "research": "tsx src/research/index.ts"
+    "research": "tsx src/research/index.ts",
+    "link-group-tests": "tsx src/link-group-tests/run-tests.ts",
+    "seed-link-groups": "tsx src/link-group-tests/seed-local-db.ts"
   },
   "keywords": [],
   "author": "",

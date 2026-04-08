@@ -33,6 +33,58 @@ scenesRouter.get('/:id', scenesController.getById);
 // POST /api/shorts/:shortId/scenes/bulk - Replace all scenes at once (must be before /:id)
 scenesRouter.post('/bulk', validate(bulkCreateScenesSchema), scenesController.bulkCreate);
 
+// POST /api/shorts/:shortId/scenes/generate-segments
+// Uses Gemini to split the short's script_content into scene segments (does NOT write to DB)
+scenesRouter.post('/generate-segments', async (req: Request, res: Response) => {
+  const { shortId } = req.params;
+  try {
+    const shortResult = await query('SELECT script_content FROM shorts WHERE id = $1', [shortId]);
+    if (shortResult.rows.length === 0) { res.status(404).json({ error: 'Short not found' }); return; }
+    const script: string = shortResult.rows[0].script_content ?? '';
+    if (!script.trim()) { res.status(400).json({ error: 'Short has no script content' }); return; }
+
+    const { GoogleAuth } = await import('google-auth-library');
+    const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+    const client = await auth.getClient();
+    const accessToken = await client.getAccessToken();
+    if (!accessToken.token) throw new Error('Failed to get access token');
+
+    const PROJECT_ID = process.env.GCP_PROJECT_ID;
+    const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const endpoint = `https://us-central1-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/us-central1/publishers/google/models/${MODEL}:generateContent`;
+
+    const prompt = `Split this Minecraft YouTube Short script into scenes for video production. Each scene = one continuous shot or setup.
+
+Rules:
+- Split only at sentence boundaries — never mid-sentence
+- Each scene: 1-3 sentences, short enough to film in one take
+- Aim for 6-14 scenes total
+- Include ALL words from the script — do not add, omit, or rephrase anything
+- Return ONLY a JSON array of strings
+
+Script:
+${script}
+
+Return ONLY valid JSON like: ["Scene 1 text.", "Scene 2 text."]`;
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2048, responseMimeType: 'application/json' },
+      }),
+    });
+    if (!response.ok) { const e = await response.text(); res.status(500).json({ error: `Gemini error: ${e.substring(0, 200)}` }); return; }
+    const data = await response.json() as any;
+    const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const segments: string[] = JSON.parse(text.trim());
+    res.json({ segments });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/shorts/:shortId/scenes/auto-link-groups
 // Uses Gemini to suggest link groups and applies them
 scenesRouter.post('/auto-link-groups', async (req: Request, res: Response) => {
