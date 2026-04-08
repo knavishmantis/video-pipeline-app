@@ -356,8 +356,8 @@ Now grade ONLY the "Main Script" portion according to the criteria above. Ignore
       errorName,
       errorStack: errorStack.substring(0, 1000), // Limit stack trace size
       code: error?.code,
-      projectId: PROJECT_ID,
-      model: MODEL,
+      projectId: process.env.GCP_PROJECT_ID,
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-pro',
     });
     throw error;
   }
