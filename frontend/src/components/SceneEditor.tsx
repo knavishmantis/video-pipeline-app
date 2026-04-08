@@ -11,6 +11,7 @@ interface SceneEditorProps {
   scriptContent: string;
   researchBrief?: string;
   onScriptContentChange: (content: string) => void;
+  onEditingScriptChange?: (editing: boolean) => void;
   isAdmin: boolean;
 }
 
@@ -285,7 +286,7 @@ function InteractiveScriptView({
   );
 }
 
-export default function SceneEditor({ shortId, shortStatus, scriptContent, researchBrief, onScriptContentChange, isAdmin }: SceneEditorProps) {
+export default function SceneEditor({ shortId, shortStatus, scriptContent, researchBrief, onScriptContentChange, onEditingScriptChange, isAdmin }: SceneEditorProps) {
   const { user } = useAuth();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [loading, setLoading] = useState(true);
@@ -318,6 +319,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
   const [showSceneAnnotations, setShowSceneAnnotations] = useState(true);
   const [generatingSegments, setGeneratingSegments] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [groupByLabel, setGroupByLabel] = useState(false);
 
   const canEditScenes = isAdmin || user?.roles?.includes('script_writer') || false;
   const canClipperCheck = isAdmin || user?.roles?.includes('clipper') || user?.roles?.includes('script_writer') || false;
@@ -509,6 +511,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
   const handleSaveScript = async () => {
     onScriptContentChange(scriptDraft);
     setEditingScript(false);
+    onEditingScriptChange?.(false);
   };
 
   const handleImageUpload = async (sceneId: number, file: File) => {
@@ -569,21 +572,40 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
     }
   };
 
-  // Scenes ordered by their position in the script text
+  // Scenes ordered by their position in the script text (or grouped by link_group)
   const sortedScenes = React.useMemo(() => {
-    if (!scriptContent) return scenes;
-    const withPos = scenes.map(s => ({
-      scene: s,
-      pos: s.script_line ? scriptContent.indexOf(s.script_line) : -1,
-    }));
-    withPos.sort((a, b) => {
-      if (a.pos === -1 && b.pos === -1) return 0;
-      if (a.pos === -1) return 1;
-      if (b.pos === -1) return -1;
-      return a.pos - b.pos;
-    });
-    return withPos.map(p => p.scene);
-  }, [scenes, scriptContent]);
+    // First, get script-order sorted scenes
+    let ordered = [...scenes];
+    if (scriptContent) {
+      const withPos = ordered.map(s => ({
+        scene: s,
+        pos: s.script_line ? scriptContent.indexOf(s.script_line) : -1,
+      }));
+      withPos.sort((a, b) => {
+        if (a.pos === -1 && b.pos === -1) return 0;
+        if (a.pos === -1) return 1;
+        if (b.pos === -1) return -1;
+        return a.pos - b.pos;
+      });
+      ordered = withPos.map(p => p.scene);
+    }
+
+    if (!groupByLabel) return ordered;
+
+    // Group by link_group: grouped scenes first (sorted by group name), ungrouped last
+    const groups = new Map<string, typeof ordered>();
+    const ungrouped: typeof ordered = [];
+    for (const s of ordered) {
+      if (s.link_group) {
+        if (!groups.has(s.link_group)) groups.set(s.link_group, []);
+        groups.get(s.link_group)!.push(s);
+      } else {
+        ungrouped.push(s);
+      }
+    }
+    const sortedGroups = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    return [...sortedGroups.flatMap(([, scenes]) => scenes), ...ungrouped];
+  }, [scenes, scriptContent, groupByLabel]);
 
   // Arrow key navigation between scenes when sidebar is open
   useEffect(() => {
@@ -924,6 +946,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                     handleSaveScript();
                   } else {
                     setEditingScript(true);
+                    onEditingScriptChange?.(true);
                   }
                 }}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
@@ -973,7 +996,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
             <p className="text-sm mb-2" style={{ color: 'var(--text-muted)' }}>No script written yet</p>
             {canEditScenes && (
               <button
-                onClick={() => setEditingScript(true)}
+                onClick={() => { setEditingScript(true); onEditingScriptChange?.(true); }}
                 className="px-4 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
                 style={{ background: 'var(--gold)', color: 'var(--bg-base)', border: 'none', cursor: 'pointer' }}
               >
@@ -1014,9 +1037,16 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                 </button>
               </div>
             ) : (
-              <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
-                Scenes ({scenes.length})
-              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)', margin: 0 }}>
+                  Scenes ({scenes.length})
+                </h3>
+                {groupByLabel && (
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', opacity: 0.7, fontStyle: 'italic' }}>
+                    Labels are generated by AI and may be wrong
+                  </span>
+                )}
+              </div>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -1031,8 +1061,21 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
               </button>
             )}
             */}
-            {/* Auto-label button — disabled for now
-            {canEditScenes && scenes.length > 1 && (
+            {scenes.some(s => s.link_group) && (
+              <button
+                onClick={() => setGroupByLabel(v => !v)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{
+                  background: groupByLabel ? 'var(--gold-dim)' : 'var(--bg-elevated)',
+                  color: groupByLabel ? 'var(--gold)' : 'var(--text-muted)',
+                  border: `1px solid ${groupByLabel ? 'var(--gold-border, var(--border-default))' : 'var(--border-default)'}`,
+                  cursor: 'pointer',
+                }}
+              >
+                {groupByLabel ? 'Grouped' : 'Group by Label'}
+              </button>
+            )}
+            {isAdmin && scenes.length > 1 && (
               <button
                 onClick={async () => {
                   setAutoLinking(true);
@@ -1062,7 +1105,6 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                 {autoLinking ? '✦ Labeling…' : '✦ Auto-label'}
               </button>
             )}
-            */}
             {canEditScenes && (
               <button
                 onClick={() => createScene({ script_line: '', direction: '' })}
@@ -1164,9 +1206,46 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
               gridTemplateColumns: expandedScene !== null ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
               gap: '8px',
             }}>
-              {sortedScenes.map((scene, index) => (
+              {sortedScenes.map((scene, index) => {
+                // Show group header when entering a new link_group in grouped mode
+                const prevGroup = index > 0 ? sortedScenes[index - 1].link_group : null;
+                const showGroupHeader = groupByLabel && scene.link_group && scene.link_group !== prevGroup;
+                const showUngroupedHeader = groupByLabel && !scene.link_group && prevGroup;
+                return (<React.Fragment key={scene.id}>
+                {showGroupHeader && (
+                  <div style={{
+                    gridColumn: `1 / -1`,
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '8px 0 4px',
+                    marginTop: index > 0 ? '8px' : 0,
+                  }}>
+                    <span style={{
+                      display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%',
+                      background: getLinkGroupColor(scene.link_group!),
+                    }} />
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: getLinkGroupColor(scene.link_group!), textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      {scene.link_group}
+                    </span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                      ({sortedScenes.filter(s => s.link_group === scene.link_group).length} scenes)
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: `color-mix(in srgb, ${getLinkGroupColor(scene.link_group!)} 30%, transparent)` }} />
+                  </div>
+                )}
+                {showUngroupedHeader && (
+                  <div style={{
+                    gridColumn: `1 / -1`,
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '8px 0 4px',
+                    marginTop: '8px',
+                  }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      Ungrouped
+                    </span>
+                    <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
+                  </div>
+                )}
                 <div
-                  key={scene.id}
                   onClick={() => setExpandedScene(expandedScene === scene.id ? null : scene.id)}
                   className="rounded-lg transition-all scene-card"
                   style={{
@@ -1331,7 +1410,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                     </div>
                   )}
                 </div>
-              ))}
+              </React.Fragment>);
+              })}
             </div>
           </>
         )}

@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { Short, CreateShortInput, UpdateShortInput } from '../../../shared/types';
 import { processProfilePicture } from '../utils/profilePicture';
 import { logger } from '../utils/logger';
+import { suggestLinkGroups } from '../services/vertexAI';
 
 export const shortsController = {
   async getAll(req: AuthRequest, res: Response): Promise<void> {
@@ -479,7 +480,27 @@ export const shortsController = {
         res.status(404).json({ error: 'Short not found' });
         return;
       }
-      
+
+      // Auto-generate link groups when moving to clipping stage
+      if (input.status === 'clipping') {
+        const scenesResult = await query(
+          'SELECT id, scene_order, script_line, direction, clipper_notes FROM scenes WHERE short_id = $1 ORDER BY scene_order ASC',
+          [id]
+        );
+        if (scenesResult.rows.length > 1) {
+          suggestLinkGroups(scenesResult.rows).then(async (suggestions) => {
+            if (suggestions.length > 0) {
+              await Promise.all(suggestions.map(s =>
+                query('UPDATE scenes SET link_group = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND short_id = $3', [s.link_group, s.scene_id, id])
+              ));
+              logger.info('Auto-generated link groups', { shortId: id, groupCount: new Set(suggestions.map(s => s.link_group)).size, sceneCount: suggestions.length });
+            }
+          }).catch(err => {
+            logger.error('Auto link group generation failed', { shortId: id, error: err.message });
+          });
+        }
+      }
+
       res.json(result.rows[0]);
     } catch (error) {
       logger.error('Update short error', { shortId: id, error });

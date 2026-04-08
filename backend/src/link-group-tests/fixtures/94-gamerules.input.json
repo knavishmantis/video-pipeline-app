@@ -1,0 +1,31 @@
+{
+  "short_id": 94,
+  "title": "The Best Gamerules You Might Actually Want to Use",
+  "scenes": [
+    { "id": 577, "scene_order": 0, "script_line": "There's some", "direction": "", "clipper_notes": "No clip" },
+    { "id": 578, "scene_order": 1, "script_line": "gamerules that you might actually want to use.", "direction": "", "clipper_notes": "Show in the gamerules menu that you can see when creating a world in the options, scrolling through the menu and like toggling them on and off" },
+    { "id": 579, "scene_order": 2, "script_line": "When creating a world you can now directly change them.", "direction": "", "clipper_notes": "Show navigating from the singleplayer menu to creating a world to the gamerules and like starting to change them, try to do it somewhat quickly" },
+    { "id": 580, "scene_order": 3, "script_line": "And it has things", "direction": "", "clipper_notes": "Show my character walking towards the camera (Can be first person but if its first person dont have the mouse move to keep it smooth)" },
+    { "id": 581, "scene_order": 4, "script_line": "like 'Spawn Phantoms'", "direction": "", "clipper_notes": "Show spawn phantoms toggle in gamerules, toggling it off" },
+    { "id": 582, "scene_order": 5, "script_line": "which I think everyone should turn off.", "direction": "", "clipper_notes": "6a and 6b. 6a will be a bunch of phantoms flying around in a studio world, then 6b will be all the phantoms are gone. Have the camera still so its good for transition" },
+    { "id": 583, "scene_order": 6, "script_line": "Instant respawn is", "direction": "", "clipper_notes": "Show first person with instant respawn on dying and then instantly respawning" },
+    { "id": 584, "scene_order": 7, "script_line": "kind of cool", "direction": "", "clipper_notes": "Show toggling instant respawn on in the gamerules" },
+    { "id": 585, "scene_order": 8, "script_line": "(if you are bad at the game,", "direction": "", "clipper_notes": "Show the Bart Simpson character (no nametag) in a plains village with like starter armor leather / iron getting killed by some mobs at night time" },
+    { "id": 586, "scene_order": 9, "script_line": "unlike me).", "direction": "", "clipper_notes": null },
+    { "id": 587, "scene_order": 10, "script_line": "Infinite lava sources", "direction": "", "clipper_notes": "Show infinite lava sources gamerule turned on with a 2by2 lava pool and grabbing a lava bucket out and it works like an infinite water source." },
+    { "id": 588, "scene_order": 11, "script_line": "kind of just makes sense.", "direction": "", "clipper_notes": "Show a 2by2 infinite lava source next to a 2by2 water source" },
+    { "id": 589, "scene_order": 12, "script_line": "Ender pearls vanish on death", "direction": "", "clipper_notes": "Show this stasis chamber: https://www.youtube.com/shorts/wHwV19pSwxk (the one with the daylight sensor at the end). And this clip is just the ender pearl in the stasis chamber just vanishing, you can prob do this with commands." },
+    { "id": 590, "scene_order": 13, "script_line": "if you use stasis chambers a lot", "direction": "", "clipper_notes": "Show first person walking around and then stasis chamber teleporting back to the stasis chamber" },
+    { "id": 591, "scene_order": 14, "script_line": "and don't want to reset it.", "direction": "", "clipper_notes": "Show timelapse of resetting the stasis chamber, so walking up to it, opening the trapdoor and putting the ender pearl in" },
+    { "id": 592, "scene_order": 15, "script_line": "Snow Accumulation Height", "direction": "", "clipper_notes": "Show in a snowy biome, short timelapse 1-2 seconds of snow piling up after turning snow accumulation height on to like 8-10, so it should fill up to the entire block basically instead of how it normally just adds the thin layer" },
+    { "id": 593, "scene_order": 16, "script_line": "if you're doing a cozy winter village playthrough.", "direction": "", "clipper_notes": "Show a winter biome village, initially it has the normal amount of snow but timelapse of it snowing and the snow building up around the entire village" },
+    { "id": 594, "scene_order": 17, "script_line": "Many people", "direction": "", "clipper_notes": "Show about 20-30 villagers standing in a grid" },
+    { "id": 595, "scene_order": 18, "script_line": "turn off", "direction": "", "clipper_notes": "Show turning off the wandering traders thing" },
+    { "id": 596, "scene_order": 19, "script_line": "Wandering Traders apparently", "direction": "", "clipper_notes": "20a and 20b. Show a wandering trader standing / walking around with their llamas and then 20b is they are gone, have the camera stable between the two so its easy for transition" },
+    { "id": 597, "scene_order": 20, "script_line": "(this mod that does the same thing", "direction": "", "clipper_notes": "Show scrolling on this mod page https://www.curseforge.com/minecraft/mc-mods/nomowanderer" },
+    { "id": 598, "scene_order": 21, "script_line": "has 15 million downloads).", "direction": "", "clipper_notes": "Show highlighting the 15 million downloads portion with your mouse: https://www.curseforge.com/minecraft/mc-mods/nomowanderer" },
+    { "id": 599, "scene_order": 22, "script_line": "And Disabling Vines Spread", "direction": "", "clipper_notes": "Show a cobblestone wall with a single vine and then" },
+    { "id": 600, "scene_order": 23, "script_line": "is useful", "direction": "", "clipper_notes": "Show the vines spread thing being toggled off in the gamerule menu" },
+    { "id": 601, "scene_order": 24, "script_line": "if you use vines in your builds.", "direction": "", "clipper_notes": "Show this build: https://www.planetminecraft.com/project/english-country-house/, and show a timelapse of my character flying around and placing vines on the building as if I'm completing the build by adding the vines" }
+  ]
+}

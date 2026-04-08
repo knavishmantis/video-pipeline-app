@@ -1,0 +1,18 @@
+[
+  { "scene_id": 478, "link_group": "desert_no_structures" },
+  { "scene_id": 479, "link_group": "desert_no_structures" },
+  { "scene_id": 482, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 483, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 484, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 485, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 486, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 487, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 488, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 489, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 490, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 496, "link_group": "studio_illusioner_fight" },
+  { "scene_id": 497, "link_group": "illusioner_vs_creaking" },
+  { "scene_id": 498, "link_group": "illusioner_vs_creaking" },
+  { "scene_id": 499, "link_group": "illusioner_pen" },
+  { "scene_id": 500, "link_group": "illusioner_pen" }
+]

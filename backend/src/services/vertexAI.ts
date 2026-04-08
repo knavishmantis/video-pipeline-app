@@ -3,12 +3,13 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { logger } from '../utils/logger';
 
-const PROJECT_ID = process.env.GCP_PROJECT_ID;
 const LOCATION = 'us-central1';
-// Using gemini-2.5-pro for high quality grading
-// Set GEMINI_MODEL env var to override (e.g., gemini-2.5-flash for cheaper option)
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
-const API_ENDPOINT = `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${PROJECT_ID}/locations/${LOCATION}/publishers/google/models/${MODEL}:generateContent`;
+
+function getApiEndpoint(): string {
+  const projectId = process.env.GCP_PROJECT_ID;
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-pro';
+  return `https://${LOCATION}-aiplatform.googleapis.com/v1beta1/projects/${projectId}/locations/${LOCATION}/publishers/google/models/${model}:generateContent`;
+}
 
 // Cache for grading criteria (read once, reuse)
 let cachedCriteria: string | null = null;
@@ -83,34 +84,118 @@ export async function suggestLinkGroups(scenes: SceneForGrouping[]): Promise<Lin
     `Scene ${s.scene_order} (id=${s.id}):\n  Script: ${s.script_line || '—'}\n  Direction: ${s.direction || '—'}${s.clipper_notes ? `\n  Clipper notes: ${s.clipper_notes}` : ''}`
   ).join('\n\n');
 
-  const prompt = `You are analyzing the scenes of a Minecraft YouTube Short to identify which scenes a clipper should film together — because they require the same physical setup, world state, or dimension that takes effort to get into.
+  const prompt = `You are analyzing scenes of a Minecraft YouTube Short to identify which scenes a clipper should film together because they share the same physical filming location and setup.
+
+BACKGROUND — HOW A CLIPPER WORKS:
+A Minecraft clipper records footage for each scene. Their workflow:
+1. Enter/create a Minecraft world
+2. Travel to the right location or build the required setup
+3. Record ALL scenes that use that location/setup
+4. Move to the next location or switch worlds
+
+EXPENSIVE operations: creating a world, traveling to a distant location, building structures, installing mods, configuring world settings.
+CHEAP operations (once at a location): repositioning the camera, changing time of day, spawning/swapping mobs, doing different activities in the same area.
+
+Your job: group scenes that share the same filming location so the clipper can record them all in one session.
 
 Here are all the scenes:
 
 ${sceneList}
 
-GROUPING RULES:
-A group is ONLY useful if recording the scenes together saves real work. Ask: "Would the clipper need to travel somewhere, build something, or set up a specific world state to record this?"
+═══════════════════════════════════════
+GROUPING RULES
+═══════════════════════════════════════
 
-GOOD groups (same physical setup required):
-- Same dimension (nether, end) — clipper must travel there
-- Same specific biome or structure (jungle temple, ocean monument)
-- Same menu that requires world configuration (gamerule menu, world settings)
-- Same constructed build or specific location in the world
-- Same mob/boss encounter that requires setup
+RULE 1 — CROSS-REFERENCES MEAN SAME LOCATION
+When clipper notes reference another scene ("infront of scene #X", "same area as #X", "the [thing] from #X", "from the previous scene"), those scenes are at the SAME physical spot.
 
-BAD groups (do NOT create these — accessible from anywhere, no setup needed):
-- Inventory screen — can open inventory anywhere
-- Crafting table UI — can place a crafting table anywhere
-- Generic overworld — too broad, not a specific location
-- Any UI/menu the player can access from their current position without travelling
+Follow reference chains: if scene C says "infront of scene B" and scene B says "same area as scene A", then A, B, and C are all one group.
 
-Only create a group if 2+ scenes share a context that requires real clipper effort to set up. Give each group a short lowercase label (2-4 words max, use underscores). Skip scenes that don't belong to any useful group.
+"Different angle of [thing from #X]" and "further away shot of [thing from #X]" also mean same location as X.
 
-Return ONLY a JSON array. Each element: scene_id (number) and link_group (string). Example:
-[{"scene_id":3,"link_group":"gamerule_menu"},{"scene_id":7,"link_group":"gamerule_menu"},{"scene_id":5,"link_group":"nether"}]`;
+RULE 2 — SAME SPOT = ONE GROUP (NEVER SPLIT BY ACTIVITY)
+Multiple scenes at the same physical spot are ONE group regardless of what happens in them. This is the most important rule.
 
-  const response = await fetch(API_ENDPOINT, {
+Example: Scene A shows a mob standing → Scene B shows that mob being killed → Scene C shows the drops on the ground → Scene D shows the player talking to camera at that spot. These are ALL one group. The clipper films them in sequence without moving.
+
+Common mistake to avoid: splitting a location into "setup/standing scenes" and "action/fighting scenes." A mob standing still and that same mob being fought are at the same location. ONE group.
+
+RULE 3 — WHAT COUNTS AS A SHARED LOCATION
+- Same built structure or area (fortress, boat fleet, enchanting room, row of doghouses)
+- Same area in a custom/studio world where scenes cross-reference each other or share the same props
+- Same game menu or config screen (gamerule settings, world creation options)
+- Same mod requirement (scenes needing a specific mod installed to record)
+- Same hard-to-reach place (nether, end, specific biome, specific structure like woodland mansion)
+
+RULE 4 — DIFFERENT BUILD STATES = DIFFERENT GROUPS
+If a location physically changes during the video (e.g., a village shown first without any modifications, then later shown with major construction like a fortress around it), scenes at the ORIGINAL location are a different group from scenes at the FULLY BUILT location. The construction is a setup step that separates the groups.
+
+However, do NOT split an ongoing construction into multiple sub-groups. If scenes show digging a moat, then building a wall on it, then adding bridges, then fighting from the wall — those are all ONE group representing "the built fortress." The clipper builds the whole thing, then films all those scenes. Only split between the pre-construction state and the post-construction state.
+
+RULE 5 — "STUDIO WORLD" NUANCE
+Many scenes mention "studio world" or "chess studio world" — custom flat worlds used as backdrops.
+
+- "Studio world" alone does NOT make scenes the same group. A video may have distinct areas within studio worlds.
+- How to tell if studio scenes belong together:
+  • They cross-reference each other → same group
+  • They share a specific named world like "chess studio world" or "chess world" → same group
+  • They share the same props or setup area → same group
+  • They're doing unrelated things with no cross-references (e.g., an enchanting table vs. a block-building area) → may be separate groups
+
+When a script has a DOMINANT NAMED studio world — multiple scenes explicitly saying a specific name like "chess studio world" or "chess world" — that establishes ONE studio world for the video. ALL scenes in that script that say "studio world" (even without the specific name) should be included in that named world's group. The clipper creates one studio world and films everything there.
+
+When there is NO dominant named world — just various scenes saying "studio world" generically — group only by cross-references and shared setups. Scenes at different setups with no cross-references between them (e.g., a character with a special skin at one spot vs. endermen at another) are separate groups.
+
+═══════════════════════════════════════
+ANTI-PATTERNS — DO NOT CREATE THESE GROUPS
+═══════════════════════════════════════
+
+Group by WHERE scenes are filmed, not WHAT they show. Do NOT group scenes that only share a subject:
+
+- "Both show bunnies" → NOT a group. Bunnies can spawn anywhere.
+- "Both show villagers doing things" → NOT a group unless at the same specific village.
+- "Both use the Bart Simpson character skin" → NOT a group. Skins work anywhere.
+- "Both use the Nerd character skin" → NOT a group. Same reason.
+- "Both show the player's inventory" → NOT a group. Inventory opens anywhere.
+- "Both use a crafting table" → NOT a group. Can place one anywhere.
+- "Both are screen recordings of a website" → NOT a group. No in-game setup.
+- "Both are in the overworld" → NOT a group. Too broad, no specific location.
+- "Both show the same mob type" → NOT a group if they're in different places.
+
+═══════════════════════════════════════
+WORKED EXAMPLE
+═══════════════════════════════════════
+
+Scenes:
+  Scene 0: "Show an enderman standing in a studio world"
+  Scene 1: "Show the enderman from #0 but at nighttime with a spotlight"
+  Scene 2: "Show an enchanted axe in first-person inventory"
+  Scene 3: "Flashback of the enderman from #0 focused on their hand"
+  Scene 4: "Show Bart Simpson character standing in overworld"
+  Scene 5: "Show enderman from #0 holding a grass block"
+  Scene 6: "Kill the enderman from #5"
+  Scene 7: "Show the drops on the ground from #6"
+  Scene 8: "Player talks to camera infront of scene #7"
+  Scene 9: "Show a bunny hopping in plains"
+  Scene 10: "Show a bunny running from a wolf"
+
+Correct output:
+[{"scene_id":0,"link_group":"enderman_studio"},{"scene_id":1,"link_group":"enderman_studio"},{"scene_id":3,"link_group":"enderman_studio"},{"scene_id":5,"link_group":"enderman_studio"},{"scene_id":6,"link_group":"enderman_studio"},{"scene_id":7,"link_group":"enderman_studio"},{"scene_id":8,"link_group":"enderman_studio"}]
+
+Why: Scenes 0,1,3 are connected (same enderman, cross-referenced). Scenes 5,6,7,8 are connected (enderman killed, drops, camera at that spot). Scene 5 references the same studio enderman as scene 0. So ALL form one group — same location, different activities.
+
+Why NOT grouped: Scene 2 is inventory (anywhere). Scene 4 is a character skin in overworld (anywhere). Scenes 9-10 share a subject (bunnies) but not a location.
+
+═══════════════════════════════════════
+OUTPUT FORMAT
+═══════════════════════════════════════
+
+Return ONLY a JSON array of {scene_id, link_group} objects.
+- Label each group with a short lowercase name (2-4 words, underscores) describing the LOCATION
+- Only include scenes that belong to a group — skip ungrouped scenes
+- Return [] if no scenes should be grouped`;
+
+  const response = await fetch(getApiEndpoint(), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${accessToken.token}`,
@@ -120,7 +205,7 @@ Return ONLY a JSON array. Each element: scene_id (number) and link_group (string
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: 2048,
+        maxOutputTokens: 8192,
         responseMimeType: 'application/json',
       },
     }),
@@ -178,7 +263,7 @@ ${scriptText}
 Now grade ONLY the "Main Script" portion according to the criteria above. Ignore any non-script content (headers, metadata, instructions, etc.). Return ONLY valid JSON matching the required format specified in the criteria document. Do not include any markdown formatting, explanations, or text outside the JSON.`;
 
     // Call Vertex AI REST API
-    const response = await fetch(API_ENDPOINT, {
+    const response = await fetch(getApiEndpoint(), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken.token}`,

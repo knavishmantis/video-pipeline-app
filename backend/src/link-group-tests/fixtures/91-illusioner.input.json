@@ -1,0 +1,29 @@
+{
+  "short_id": 91,
+  "title": "Illusioner Might Finally Be Added",
+  "scenes": [
+    { "id": 478, "scene_order": 0, "script_line": "Minecraft's", "direction": "", "clipper_notes": "First show an illusioner in a desert with no structures around it (could generate no structures world)" },
+    { "id": 479, "scene_order": 1, "script_line": "long lost mob", "direction": "", "clipper_notes": "Show aerial view of the illusioner standing in the desert showing they're in the middle of nowhere like they're 'long lost'" },
+    { "id": 480, "scene_order": 2, "script_line": "might finally be added to the game", "direction": "", "clipper_notes": "Show in a woodland mansion, first there's no evoker then one spawns in from a couple blocks up in the air" },
+    { "id": 481, "scene_order": 3, "script_line": "You might know about", "direction": "", "clipper_notes": "No clip for this one" },
+    { "id": 482, "scene_order": 4, "script_line": "the illusioner", "direction": "", "clipper_notes": "Show in a studio world two shots 5a and 5b, first no illusioner then there is a NoAI illusioner standing there. (Use slightly off centered camera so not directly infront of them)" },
+    { "id": 483, "scene_order": 5, "script_line": "which is a cool, completely finished mob", "direction": "", "clipper_notes": "Show the illusioner from #5 still standing in the studio world but this time with a slightly moving camera" },
+    { "id": 484, "scene_order": 6, "script_line": "that can only be spawned", "direction": "", "clipper_notes": "Show my player in creative mode in a studio world and spawning an illusioner with the /summon command" },
+    { "id": 485, "scene_order": 7, "script_line": "with commands.", "direction": "", "clipper_notes": "Show first person of putting in the command and summoning the illusioner from #7" },
+    { "id": 486, "scene_order": 8, "script_line": "It creates 4 phantom clones while fighting", "direction": "", "clipper_notes": "Show my player fighting the illusioner and the 4 clones spawning." },
+    { "id": 487, "scene_order": 9, "script_line": "to confuse you", "direction": "", "clipper_notes": "Show player confused by the illusioner clones" },
+    { "id": 488, "scene_order": 10, "script_line": "goes invisible,", "direction": "", "clipper_notes": "Show illusioner going invisible" },
+    { "id": 489, "scene_order": 11, "script_line": "and can give you blindness.", "direction": "", "clipper_notes": "Show first person of fighting the illusioner and getting the blindness effect (it only gives blindness on hard mode)" },
+    { "id": 490, "scene_order": 12, "script_line": "But what you don't know is that", "direction": "", "clipper_notes": "Show further away angle of one of my player fighting the illusioner clips from the previous scenes" },
+    { "id": 491, "scene_order": 13, "script_line": "there's new evidence", "direction": "", "clipper_notes": "Show flashback angle of my character walking up to a chest and opening it" },
+    { "id": 492, "scene_order": 14, "script_line": "that it might officially be added.", "direction": "", "clipper_notes": "Show an illusioner in a prison cell behind iron bars, timelapse of them being let out by my character" },
+    { "id": 493, "scene_order": 15, "script_line": "Because in 1.21.11", "direction": "", "clipper_notes": "Show timelapse of building 1.21.11 in blocks in studio world" },
+    { "id": 496, "scene_order": 18, "script_line": "the Illusioner was updated", "direction": "", "clipper_notes": "Show an illusioner standing in a studio world and then they grow to 3-4x the size, like they're being updated" },
+    { "id": 497, "scene_order": 19, "script_line": "to be afraid of and", "direction": "", "clipper_notes": "Show an illusioner near a creaking and running away from it, normal flashback shot" },
+    { "id": 498, "scene_order": 20, "script_line": "run away from the creaking.", "direction": "", "clipper_notes": "This time TrackEntity focused on the illusioner as it tries to run away" },
+    { "id": 499, "scene_order": 21, "script_line": "So maybe they're keeping the illusioner up to date", "direction": "", "clipper_notes": "Show a bunch of illusioners in a fence gates pen like they're animals" },
+    { "id": 500, "scene_order": 22, "script_line": "to prepare for an upcoming release,", "direction": "", "clipper_notes": "Show the illusioners from #22 but using world edit turn all the fence gates into air like they're being released" },
+    { "id": 501, "scene_order": 23, "script_line": "maybe it even has something to do with the Ancient City Portal.", "direction": "", "clipper_notes": "Will have 24a, 24b, and 24c. My character acting like a reporter on scene talking to the camera block infront of the portal in the ancient city ruins." },
+    { "id": 502, "scene_order": 24, "script_line": "It does use magic after all...", "direction": "", "clipper_notes": "Show the illusioner using magic, there should be some animation it does when it uses magic, could show a clip focused on that." }
+  ]
+}

@@ -1,0 +1,13 @@
+[
+  { "scene_id": 578, "link_group": "gamerule_menu" },
+  { "scene_id": 579, "link_group": "gamerule_menu" },
+  { "scene_id": 581, "link_group": "gamerule_menu" },
+  { "scene_id": 584, "link_group": "gamerule_menu" },
+  { "scene_id": 595, "link_group": "gamerule_menu" },
+  { "scene_id": 600, "link_group": "gamerule_menu" },
+  { "scene_id": 589, "link_group": "stasis_chamber" },
+  { "scene_id": 590, "link_group": "stasis_chamber" },
+  { "scene_id": 591, "link_group": "stasis_chamber" },
+  { "scene_id": 592, "link_group": "snowy_biome" },
+  { "scene_id": 593, "link_group": "snowy_biome" }
+]

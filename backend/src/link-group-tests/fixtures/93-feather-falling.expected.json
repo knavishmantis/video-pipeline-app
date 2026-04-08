@@ -1,0 +1,20 @@
+[
+  { "scene_id": 503, "link_group": "enchanting_setup" },
+  { "scene_id": 507, "link_group": "enchanting_setup" },
+  { "scene_id": 509, "link_group": "enchanting_setup" },
+  { "scene_id": 510, "link_group": "enchanting_setup" },
+  { "scene_id": 512, "link_group": "enchanting_setup" },
+  { "scene_id": 514, "link_group": "enchanting_setup" },
+  { "scene_id": 515, "link_group": "enchanting_setup" },
+  { "scene_id": 536, "link_group": "enchanting_setup" },
+  { "scene_id": 537, "link_group": "enchanting_setup" },
+  { "scene_id": 540, "link_group": "enchanting_setup" },
+  { "scene_id": 511, "link_group": "studio_world_builds" },
+  { "scene_id": 513, "link_group": "studio_world_builds" },
+  { "scene_id": 517, "link_group": "studio_world_builds" },
+  { "scene_id": 518, "link_group": "studio_world_builds" },
+  { "scene_id": 519, "link_group": "studio_world_builds" },
+  { "scene_id": 520, "link_group": "studio_world_builds" },
+  { "scene_id": 525, "link_group": "studio_world_builds" },
+  { "scene_id": 526, "link_group": "studio_world_builds" }
+]
