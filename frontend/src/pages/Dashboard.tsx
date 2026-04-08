@@ -67,7 +67,7 @@ export default function Dashboard() {
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })

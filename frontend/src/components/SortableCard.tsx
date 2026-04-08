@@ -141,6 +141,8 @@ export function SortableCard({
   return (
     <div
       ref={setNodeRef}
+      {...(isAdmin ? attributes : {})}
+      {...(isAdmin ? listeners : {})}
       style={{
         ...style,
         background: isActive ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))' : isMyCard ? 'var(--bg-elevated)' : 'var(--card-bg)',
@@ -148,10 +150,11 @@ export function SortableCard({
         borderLeft: isActive ? '4px solid var(--gold)' : `4px solid ${cfg.color}`,
         borderRadius: '8px',
         padding: '11px 12px 34px',
-        cursor: onClick ? 'pointer' : 'default',
+        cursor: isAdmin ? (isDragging ? 'grabbing' : 'grab') : (onClick ? 'pointer' : 'default'),
         transition: isDragging ? 'none' : 'background 0.15s ease-out, box-shadow 0.15s ease-out, transform 0.15s ease-out',
         position: 'relative',
         boxShadow: isActive ? '0 0 0 1px var(--gold-border), var(--card-shadow)' : 'var(--card-shadow)',
+        userSelect: 'none',
       }}
       onMouseEnter={(e) => {
         if (!isDragging) {
@@ -172,8 +175,7 @@ export function SortableCard({
         }
       }}
       onClick={(e) => {
-        if (!(e.target as HTMLElement).closest('.drag-handle') &&
-            !(e.target as HTMLElement).closest('.assign-menu') &&
+        if (!(e.target as HTMLElement).closest('.assign-menu') &&
             !(e.target as HTMLElement).closest('.assign-button')) {
           onClick?.();
         }
@@ -218,7 +220,7 @@ export function SortableCard({
           style={{
             position: 'absolute',
             top: '8px',
-            right: '60px',
+            right: '34px',
             width: '22px',
             height: '22px',
             cursor: 'pointer',
@@ -249,41 +251,6 @@ export function SortableCard({
         </button>
       )}
 
-      {/* Drag handle */}
-      {isAdmin && (
-        <div
-          {...attributes}
-          {...listeners}
-          className="drag-handle"
-          style={{
-            position: 'absolute',
-            top: '8px',
-            right: !isDragging ? '34px' : '8px',
-            width: '22px',
-            height: '22px',
-            cursor: isDragging ? 'grabbing' : 'grab',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: isDragging ? 1 : 0.25,
-            borderRadius: '6px',
-            transition: isDragging ? 'none' : 'all 0.15s ease',
-            color: isDragging ? 'var(--gold)' : 'var(--text-secondary)',
-          }}
-          onMouseEnter={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--border-subtle)'; } }}
-          onMouseLeave={(e) => { if (!isDragging) { e.currentTarget.style.opacity = '0.25'; e.currentTarget.style.background = 'transparent'; } }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-            <circle cx="4"  cy="3"  r="1.3" fill="currentColor"/>
-            <circle cx="12" cy="3"  r="1.3" fill="currentColor"/>
-            <circle cx="4"  cy="8"  r="1.3" fill="currentColor"/>
-            <circle cx="12" cy="8"  r="1.3" fill="currentColor"/>
-            <circle cx="4"  cy="13" r="1.3" fill="currentColor"/>
-            <circle cx="12" cy="13" r="1.3" fill="currentColor"/>
-          </svg>
-        </div>
-      )}
 
       {/* Assign button */}
       {isAdmin && (column.id === 'script' || column.id === 'clips' || column.id === 'editing') && !isDragging && (
