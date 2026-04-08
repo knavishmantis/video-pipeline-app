@@ -674,41 +674,70 @@ export default function CriticReview() {
   return (
     <div style={{ fontVariantNumeric: 'tabular-nums', width: '100%' }}>
       {/* Header: title + tabs + help */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0, marginRight: '4px' }}>Critic Review</h1>
-        <button onClick={() => setShowAxesHelp(s => !s)} title="What do Approve and Mark Used mean?" style={{
-          width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-elevated)',
-          fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1,
-        }}>?</button>
-        {tabDefs.map(tab => {
-          const active = humanTab === tab.key;
-          return (
-            <button key={tab.key} onClick={() => setHumanTab(tab.key)} style={{
-              padding: '5px 13px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
-              border: active ? `1px solid ${tab.color}` : '1px solid var(--border-default)',
-              background: active ? `color-mix(in srgb, ${tab.color} 12%, var(--bg-elevated))` : 'var(--bg-elevated)',
-              color: active ? tab.color : 'var(--text-muted)',
-              display: 'flex', alignItems: 'center', gap: '7px',
-            }}>
-              {tab.label}
-              <span style={{
-                fontSize: '10px', fontWeight: 700,
-                padding: '1px 6px', borderRadius: '8px',
-                background: active ? 'color-mix(in srgb, var(--bg-base) 60%, transparent)' : 'var(--bg-base)',
+      {isMobile ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>Critic Review</h1>
+            <button onClick={() => setShowAxesHelp(s => !s)} title="What do Approve and Mark Used mean?" style={{
+              width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-elevated)',
+              fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1,
+            }}>?</button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {tabDefs.map(tab => {
+              const active = humanTab === tab.key;
+              return (
+                <button key={tab.key} onClick={() => setHumanTab(tab.key)} style={{
+                  padding: '5px 13px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                  border: active ? `1px solid ${tab.color}` : '1px solid var(--border-default)',
+                  background: active ? `color-mix(in srgb, ${tab.color} 12%, var(--bg-elevated))` : 'var(--bg-elevated)',
+                  color: active ? tab.color : 'var(--text-muted)',
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                }}>
+                  {tab.label}
+                  <span style={{
+                    fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '8px',
+                    background: active ? 'color-mix(in srgb, var(--bg-base) 60%, transparent)' : 'var(--bg-base)',
+                    color: active ? tab.color : 'var(--text-muted)', minWidth: '18px', textAlign: 'center',
+                  }}>{tab.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+          <h1 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0, marginRight: '4px' }}>Critic Review</h1>
+          <button onClick={() => setShowAxesHelp(s => !s)} title="What do Approve and Mark Used mean?" style={{
+            width: '18px', height: '18px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-elevated)',
+            fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1,
+          }}>?</button>
+          {tabDefs.map(tab => {
+            const active = humanTab === tab.key;
+            return (
+              <button key={tab.key} onClick={() => setHumanTab(tab.key)} style={{
+                padding: '5px 13px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+                border: active ? `1px solid ${tab.color}` : '1px solid var(--border-default)',
+                background: active ? `color-mix(in srgb, ${tab.color} 12%, var(--bg-elevated))` : 'var(--bg-elevated)',
                 color: active ? tab.color : 'var(--text-muted)',
-                minWidth: '18px', textAlign: 'center',
-              }}>{tab.count}</span>
-            </button>
-          );
-        })}
-        {!isMobile && <div style={{ flex: 1 }} />}
-        {!isMobile && (
+                display: 'flex', alignItems: 'center', gap: '7px',
+              }}>
+                {tab.label}
+                <span style={{
+                  fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '8px',
+                  background: active ? 'color-mix(in srgb, var(--bg-base) 60%, transparent)' : 'var(--bg-base)',
+                  color: active ? tab.color : 'var(--text-muted)', minWidth: '18px', textAlign: 'center',
+                }}>{tab.count}</span>
+              </button>
+            );
+          })}
+          <div style={{ flex: 1 }} />
           <button onClick={() => setShowHelp(true)} title="Keyboard shortcuts (?)" style={{
             padding: '5px 11px', fontSize: '10px', fontWeight: 700, background: 'var(--bg-elevated)', color: 'var(--text-muted)',
             border: '1px solid var(--border-default)', borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
           }}>? Shortcuts</button>
-        )}
-      </div>
+        </div>
+      )}
 
       {showAxesHelp && (
         <PNL style={{ marginBottom: '12px', borderColor: 'var(--gold-border)' }}>
