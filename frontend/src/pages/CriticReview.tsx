@@ -96,7 +96,7 @@ const scoreColor = (s: number) => s >= 8 ? 'var(--green)' : s >= 6 ? 'var(--gold
 const decisionColor = (d: string) => d === 'approved' ? 'var(--green)' : d === 'needs_review' ? 'var(--gold)' : 'var(--red)';
 
 // ─── UI atoms ─────────────────────────────────────────────────────────────────
-const PNL = ({ children, label, style }: { children: React.ReactNode; label?: string; style?: React.CSSProperties }) => (
+const PNL = ({ children, label, style }: { children: React.ReactNode; label?: React.ReactNode; style?: React.CSSProperties }) => (
   <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', padding: '14px 16px', ...style }}>
     {label && <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px', lineHeight: 1 }}>{label}</div>}
     {children}
@@ -220,6 +220,7 @@ export default function CriticReview() {
   const [sort, setSort] = useState<SortKey>('score_desc');
   const [search, setSearch] = useState('');
   const [focusIdx, setFocusIdx] = useState(0);
+  const [briefOpen, setBriefOpen] = useState(true);
   const [showHelp, setShowHelp] = useState(false);
   const [showAxesHelp, setShowAxesHelp] = useState(false);
   const { toasts, push, dismiss } = useToasts();
@@ -811,7 +812,7 @@ export default function CriticReview() {
       </div>
 
       {/* Table + Brief preview */}
-      <div style={{ display: 'grid', gridTemplateColumns: focusedCritique?.full_brief ? '1fr 700px' : '1fr', gap: '12px', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: focusedCritique?.full_brief && briefOpen ? '1fr 700px' : '1fr', gap: '12px', alignItems: 'start' }}>
       <PNL style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-base)' }}>
           <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', width: '36px', textAlign: 'center', letterSpacing: '0.06em' }}>Score</span>
@@ -881,23 +882,50 @@ export default function CriticReview() {
         })}
       </PNL>
 
-      {/* Research brief preview panel */}
+      {/* Research brief preview panel — toggle button or collapsed pill */}
       {focusedCritique?.full_brief && (
-        <PNL label="Research Brief" style={{ position: 'sticky', top: '12px', maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}>
-          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
-            <ReactMarkdown components={{
-              h1: ({children}) => <h1 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', margin: '14px 0 5px' }}>{children}</h1>,
-              h2: ({children}) => <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '12px 0 4px' }}>{children}</h2>,
-              h3: ({children}) => <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: '8px 0 3px' }}>{children}</h3>,
-              p: ({children}) => <p style={{ margin: '4px 0', lineHeight: 1.75 }}>{children}</p>,
-              li: ({children}) => <li style={{ margin: '2px 0', lineHeight: 1.65 }}>{children}</li>,
-              strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
-              a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
-              blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--gold)', paddingLeft: '12px', margin: '6px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
-              code: ({children, className}) => className || (typeof children === 'string' && children.includes('\n')) ? <CodeBlock className={className}>{children}</CodeBlock> : <InlineCode>{children}</InlineCode>,
-            }}>{focusedCritique.full_brief}</ReactMarkdown>
-          </div>
-        </PNL>
+        briefOpen ? (
+          <PNL
+            label={
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <span>Research Brief</span>
+                <button
+                  onClick={() => setBriefOpen(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '16px', lineHeight: 1, padding: '0 0 0 8px', display: 'flex', alignItems: 'center' }}
+                  title="Collapse research brief"
+                >✕</button>
+              </div>
+            }
+            style={{ position: 'sticky', top: '12px', maxHeight: 'calc(100vh - 200px)', overflow: 'auto' }}
+          >
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.75 }}>
+              <ReactMarkdown components={{
+                h1: ({children}) => <h1 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', margin: '14px 0 5px' }}>{children}</h1>,
+                h2: ({children}) => <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: '12px 0 4px' }}>{children}</h2>,
+                h3: ({children}) => <h3 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', margin: '8px 0 3px' }}>{children}</h3>,
+                p: ({children}) => <p style={{ margin: '4px 0', lineHeight: 1.75 }}>{children}</p>,
+                li: ({children}) => <li style={{ margin: '2px 0', lineHeight: 1.65 }}>{children}</li>,
+                strong: ({children}) => <strong style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{children}</strong>,
+                a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--gold)', textDecoration: 'none' }}>{children}</a>,
+                blockquote: ({children}) => <blockquote style={{ borderLeft: '2px solid var(--gold)', paddingLeft: '12px', margin: '6px 0', color: 'var(--text-muted)' }}>{children}</blockquote>,
+                code: ({children, className}) => className || (typeof children === 'string' && children.includes('\n')) ? <CodeBlock className={className}>{children}</CodeBlock> : <InlineCode>{children}</InlineCode>,
+              }}>{focusedCritique.full_brief}</ReactMarkdown>
+            </div>
+          </PNL>
+        ) : (
+          <button
+            onClick={() => setBriefOpen(true)}
+            style={{
+              position: 'sticky', top: '12px', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+              borderRadius: '8px', padding: '10px 14px', cursor: 'pointer', color: 'var(--text-muted)',
+              fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+              textAlign: 'left', width: '100%',
+            }}
+            title="Expand research brief"
+          >
+            Research Brief ›
+          </button>
+        )
       )}
       </div>
 
