@@ -272,7 +272,7 @@ export function SortableCard({
             style={{
               position: 'absolute',
               top: '8px',
-              right: !isDragging ? (column.id === 'script' ? '86px' : '60px') : '36px',
+              right: column.id === 'script' ? '60px' : '34px',
               width: '22px',
               height: '22px',
               cursor: 'pointer',
@@ -483,12 +483,12 @@ export function SortableCard({
             overflow: 'hidden',
           }}>
             {defaultRole.user.profile_picture && !defaultRole.user.profile_picture.startsWith('http') ? (
-              <span style={{ fontSize: '12px', flexShrink: 0 }}>{defaultRole.user.profile_picture}</span>
+              <span style={{ fontSize: '15px', flexShrink: 0 }}>{defaultRole.user.profile_picture}</span>
             ) : (
               <img
                 src={getProfilePicture(defaultRole.user)}
                 alt={defaultRole.user.name}
-                style={{ width: '14px', height: '14px', borderRadius: '50%', objectFit: 'cover', border: `1px solid ${isMyCard ? column.color : 'var(--border-default)'}`, flexShrink: 0 }}
+                style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover', border: `1px solid ${isMyCard ? column.color : 'var(--border-default)'}`, flexShrink: 0 }}
               />
             )}
             <span style={{ fontSize: '9px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0 }}>

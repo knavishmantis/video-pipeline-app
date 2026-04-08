@@ -253,13 +253,24 @@ export function KanbanBoard({
   getShortsForColumn,
   onSubStageChange,
 }: KanbanBoardProps) {
-  const [scriptExpanded, setScriptExpanded] = useState(false);
+  const [scriptExpanded, setScriptExpandedState] = useState(() => {
+    try { return sessionStorage.getItem('kanban_script_expanded') === '1'; } catch { return false; }
+  });
+  const setScriptExpanded = (val: boolean) => {
+    try { sessionStorage.setItem('kanban_script_expanded', val ? '1' : '0'); } catch {}
+    setScriptExpandedState(val);
+  };
+
   const [subActiveDragId, setSubActiveDragId] = useState<string | null>(null);
   const subSensors = [useSensor(PointerSensor, { activationConstraint: { distance: 6 } })];
 
   // Sub-column data (computed when script column is expanded)
   const scriptColumn = filteredColumns.find(c => c.id === 'script');
   const scriptCards = getShortsForColumn('script');
+
+  const subActiveShort = subActiveDragId
+    ? scriptCards.find(s => `sub-${s.id}` === subActiveDragId) ?? null
+    : null;
   const hasScriptContent = useCallback((s: Short) =>
     !!s.script_content || !!s.files?.some(f => f.file_type === 'script'), []);
 
@@ -376,6 +387,37 @@ export function KanbanBoard({
                 activeDragId={subActiveDragId}
               />
             </div>
+            <DragOverlay dropAnimation={null}>
+              {subActiveShort ? (
+                <div style={{
+                  width: '220px',
+                  background: !!subActiveShort.is_active ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))' : 'var(--card-bg)',
+                  border: '1px solid var(--border-default)',
+                  borderLeft: !!subActiveShort.is_active ? '4px solid var(--gold)' : '4px solid transparent',
+                  borderRadius: '10px',
+                  padding: '11px 13px',
+                  boxShadow: '0 6px 24px rgba(0,0,0,0.3)',
+                  cursor: 'grabbing',
+                }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: (subActiveShort.description || subActiveShort.idea) ? '5px' : '8px', letterSpacing: '-0.01em' }}>
+                    {subActiveShort.title}
+                  </div>
+                  {(subActiveShort.description || subActiveShort.idea) && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '8px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {subActiveShort.description || subActiveShort.idea}
+                    </div>
+                  )}
+                  {subActiveShort.script_writer && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '15px', lineHeight: 1 }}>{subActiveShort.script_writer.profile_picture || '👤'}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {subActiveShort.script_writer.name || subActiveShort.script_writer.discord_username}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         </div>
       )}
@@ -571,21 +613,43 @@ export function KanbanBoard({
         })}
       </div>
 
-      <DragOverlay>
-        {activeShort ? (
-          <div style={{
-            background: 'var(--card-hover-bg)',
-            border: '1.5px solid var(--gold-border)',
-            borderRadius: '8px',
-            padding: '12px 14px',
-            boxShadow: 'var(--card-hover-shadow)',
-            opacity: 0.96,
-          }}>
-            <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
-              {activeShort.title}
-            </h4>
-          </div>
-        ) : null}
+      <DragOverlay dropAnimation={null}>
+        {activeShort ? (() => {
+          const col = filteredColumns.find(c => c.id === activeShort.status);
+          const isActive = !!activeShort.is_active && col?.id === 'script';
+          const leftColor = isActive ? 'var(--gold)' : (col?.color ?? 'var(--text-muted)');
+          return (
+            <div style={{
+              width: '270px',
+              background: isActive ? 'color-mix(in srgb, var(--gold) 6%, var(--card-bg))' : 'var(--card-bg)',
+              border: isActive ? '1px solid var(--gold-border)' : '1px solid var(--border-default)',
+              borderLeft: isActive ? '4px solid var(--gold)' : `4px solid ${leftColor}`,
+              borderRadius: '8px',
+              padding: '11px 12px 34px',
+              boxShadow: '0 8px 28px rgba(0,0,0,0.32)',
+              position: 'relative',
+              cursor: 'grabbing',
+            }}>
+              {/* Status dot */}
+              <div style={{ position: 'absolute', top: '13px', left: '12px', width: '10px', height: '10px', borderRadius: '50%', background: leftColor }} />
+              {/* Title */}
+              <h4 style={{ margin: 0, marginBottom: '5px', fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', lineHeight: '1.45', letterSpacing: '-0.01em', paddingLeft: '18px', paddingRight: '20px' }}>
+                {activeShort.title}
+              </h4>
+              {(activeShort.description || activeShort.idea) && (
+                <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.55', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                  {activeShort.description || (activeShort.idea ? `💡 ${activeShort.idea}` : '')}
+                </p>
+              )}
+              {/* Bottom right: column label */}
+              <div style={{ position: 'absolute', bottom: '8px', right: '10px' }}>
+                <span style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.06em', textTransform: 'uppercase', color: leftColor }}>
+                  {col?.title ?? ''}
+                </span>
+              </div>
+            </div>
+          );
+        })() : null}
       </DragOverlay>
     </DndContext>
   );
