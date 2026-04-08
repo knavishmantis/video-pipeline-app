@@ -104,9 +104,8 @@ function DraggableScriptCard({ short, onClick, currentUserId, isDragging }: {
         cursor: isDragging ? 'grabbing' : 'grab',
         transition: isDragging ? 'none' : 'background 0.12s, box-shadow 0.12s',
         boxShadow: isActive ? '0 0 0 1px var(--gold-border)' : undefined,
-        opacity: isDragging ? 0.4 : 1,
+        opacity: isDragging ? 0 : 1,
         userSelect: 'none',
-        transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
       }}
     >
       <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.35, marginBottom: short.description || short.idea ? '5px' : '8px', letterSpacing: '-0.01em' }}>
