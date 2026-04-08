@@ -151,32 +151,30 @@ function ScriptSubColumn({ id, title, color, cards, onCardClick, isAdmin, curren
 
   return (
     <div style={{
-      background: isOver ? `color-mix(in srgb, ${color} 5%, var(--column-bg))` : 'var(--column-bg)',
-      border: isOver ? `1px solid color-mix(in srgb, ${color} 50%, var(--border-default))` : '1px solid var(--border-default)',
-      borderRadius: '12px',
+      background: isOver ? `color-mix(in srgb, ${color} 6%, var(--bg-base))` : 'var(--bg-base)',
+      border: isOver ? `1px solid color-mix(in srgb, ${color} 45%, var(--border-subtle))` : '1px solid var(--border-subtle)',
+      borderRadius: '10px',
       display: 'flex',
       flexDirection: 'column',
-      minWidth: '270px',
-      height: 'calc(100vh - 220px)',
+      minWidth: '220px',
+      height: '100%',
       overflow: 'hidden',
       transition: 'background 0.12s, border-color 0.12s',
     }}>
-      {/* Header */}
-      <div style={{ padding: '16px 16px 14px', display: 'flex', alignItems: 'center', gap: '10px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-        <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: `color-mix(in srgb, ${color} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0 }}>
-          <IconFileText size={15} stroke={2} />
-        </div>
-        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
-        <div style={{ fontSize: '12px', fontWeight: 700, color, background: `color-mix(in srgb, ${color} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`, borderRadius: '6px', padding: '2px 8px', minWidth: '28px', textAlign: 'center', flexShrink: 0 }}>
+      {/* Minimal header — dot + title + count */}
+      <div style={{ padding: '10px 12px 9px', display: 'flex', alignItems: 'center', gap: '7px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, flexShrink: 0, display: 'block', opacity: 0.85 }} />
+        <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', letterSpacing: '0.04em', textTransform: 'uppercase', flex: 1 }}>{title}</span>
+        <span style={{ fontSize: '11px', fontWeight: 700, color, background: `color-mix(in srgb, ${color} 12%, transparent)`, borderRadius: '5px', padding: '1px 7px', minWidth: '22px', textAlign: 'center' }}>
           <AnimatedCount target={cards.length} />
-        </div>
+        </span>
       </div>
 
       {/* Cards */}
-      <div ref={setNodeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '12px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '40px' }}>
+      <div ref={setNodeRef} style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '7px', minHeight: '40px' }}>
           {cards.map((short, index) => (
-            <motion.div key={short.id} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04, duration: 0.22, ease: [0.4, 0, 0.2, 1] }}>
+            <motion.div key={short.id} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04, duration: 0.2, ease: [0.4, 0, 0.2, 1] }}>
               <DraggableScriptCard
                 short={short}
                 onClick={() => onCardClick(short)}
@@ -186,7 +184,7 @@ function ScriptSubColumn({ id, title, color, cards, onCardClick, isAdmin, curren
             </motion.div>
           ))}
           {cards.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '28px 12px', color: isOver ? color : 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', transition: 'color 0.12s' }}>
+            <div style={{ textAlign: 'center', padding: '24px 10px', color: isOver ? color : 'var(--text-muted)', fontSize: '11px', fontStyle: 'italic', transition: 'color 0.12s' }}>
               {isOver ? 'Drop here' : 'Empty'}
             </div>
           )}
@@ -195,12 +193,12 @@ function ScriptSubColumn({ id, title, color, cards, onCardClick, isAdmin, curren
 
       {/* Add button (idea sub-column only) */}
       {isAdmin && showAdd && onCreateClick && (
-        <div style={{ padding: '8px 12px 14px', flexShrink: 0 }}>
+        <div style={{ padding: '7px 10px 10px', flexShrink: 0 }}>
           <button
             onClick={onCreateClick}
-            style={{ padding: '8px 12px', background: 'transparent', color, border: `1.5px dashed ${color}50`, borderRadius: '10px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', width: '100%', transition: 'background 0.18s' }}
-            onMouseEnter={e => { e.currentTarget.style.background = `${color}16`; e.currentTarget.style.borderColor = color; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = `${color}50`; }}
+            style={{ padding: '7px 10px', background: 'transparent', color, border: `1.5px dashed ${color}40`, borderRadius: '8px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', width: '100%', transition: 'background 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.background = `${color}12`; e.currentTarget.style.borderColor = `${color}80`; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = `${color}40`; }}
           >
             + Add Script
           </button>
@@ -296,20 +294,41 @@ export function KanbanBoard({
 
       {/* ── Script expanded view ── */}
       {scriptExpanded && scriptColumn && (
-        <div style={{ marginBottom: '24px' }}>
-          {/* Back bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+        <div style={{
+          marginBottom: '24px',
+          border: `1px solid color-mix(in srgb, ${scriptColor} 25%, var(--border-default))`,
+          borderRadius: '14px',
+          background: `color-mix(in srgb, ${scriptColor} 3%, var(--column-bg))`,
+          overflow: 'hidden',
+          height: 'calc(100vh - 180px)',
+          display: 'flex',
+          flexDirection: 'column',
+        }}>
+          {/* Container header — Script label + collapse */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '12px 16px 11px',
+            borderBottom: `1px solid color-mix(in srgb, ${scriptColor} 18%, var(--border-subtle))`,
+            background: `color-mix(in srgb, ${scriptColor} 6%, var(--bg-elevated))`,
+            flexShrink: 0,
+          }}>
+            <div style={{ width: '26px', height: '26px', borderRadius: '7px', background: colDim('script'), border: `1px solid ${colBorder('script')}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: scriptColor, flexShrink: 0 }}>
+              <IconFileText size={13} stroke={2} />
+            </div>
+            <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Script</span>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{scriptCards.length} total</span>
+            <div style={{ flex: 1 }} />
             <button
               onClick={() => setScriptExpanded(false)}
-              style={{ fontSize: '11px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', padding: 0 }}
+              style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '5px', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', padding: '4px 10px', transition: 'color 0.1s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = scriptColor; e.currentTarget.style.borderColor = `color-mix(in srgb, ${scriptColor} 40%, var(--border-default))`; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
             >
               ← All Columns
             </button>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>·</span>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Script</span>
-            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600 }}>{scriptCards.length} total</span>
           </div>
-          {/* 3 sub-columns with their own DnD context */}
+
+          {/* 3 sub-columns */}
           <DndContext
             sensors={subSensors}
             onDragStart={e => setSubActiveDragId(String(e.active.id))}
@@ -323,7 +342,7 @@ export function KanbanBoard({
             }}
             onDragCancel={() => setSubActiveDragId(null)}
           >
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', padding: '12px', flex: 1, minHeight: 0 }}>
               <ScriptSubColumn
                 id="idea"
                 title="Idea"
