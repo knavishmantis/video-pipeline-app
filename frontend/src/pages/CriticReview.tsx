@@ -701,11 +701,13 @@ export default function CriticReview() {
             </button>
           );
         })}
-        <div style={{ flex: 1 }} />
-        <button onClick={() => setShowHelp(true)} title="Keyboard shortcuts (?)" style={{
-          padding: '5px 11px', fontSize: '10px', fontWeight: 700, background: 'var(--bg-elevated)', color: 'var(--text-muted)',
-          border: '1px solid var(--border-default)', borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
-        }}>? Shortcuts</button>
+        {!isMobile && <div style={{ flex: 1 }} />}
+        {!isMobile && (
+          <button onClick={() => setShowHelp(true)} title="Keyboard shortcuts (?)" style={{
+            padding: '5px 11px', fontSize: '10px', fontWeight: 700, background: 'var(--bg-elevated)', color: 'var(--text-muted)',
+            border: '1px solid var(--border-default)', borderRadius: '4px', cursor: 'pointer', letterSpacing: '0.04em', textTransform: 'uppercase',
+          }}>? Shortcuts</button>
+        )}
       </div>
 
       {showAxesHelp && (
@@ -717,8 +719,8 @@ export default function CriticReview() {
         </PNL>
       )}
 
-      {/* Stats strip (unmarked tab only) */}
-      {humanTab === 'unmarked' && distTotal > 0 && (
+      {/* Stats strip (unmarked tab only, desktop only) */}
+      {!isMobile && humanTab === 'unmarked' && distTotal > 0 && (
         <PNL style={{ marginBottom: '10px', padding: '12px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
