@@ -691,6 +691,18 @@ function SessionView({
     percentile_guess: isTooRecent ? undefined : guess,
   });
 
+  // Auto-save when form changes after reveal
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (phase !== 'revealed' || !video) return;
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    saveTimeoutRef.current = setTimeout(() => {
+      competitorAnalysisApi.saveReview(video.id, buildReviewData());
+    }, 1000);
+    return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, visualVerbal, hookType, topicCategory, initialAnalysis, hookNotes, conceptNotes, pacingNotes, payoffNotes, emotion, stealThis]);
+
   async function handleReveal() {
     await competitorAnalysisApi.saveReview(video.id, buildReviewData());
     const data = await competitorAnalysisApi.getReveal(video.id);
@@ -703,7 +715,7 @@ function SessionView({
   }
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <style>{`
         @media (max-width: 900px) {
           .competitor-session-grid { grid-template-columns: 1fr !important; height: auto !important; }
@@ -779,11 +791,13 @@ function SessionView({
       )}
 
       {(phase === 'watching' || phase === 'revealed' || phase === 'loading' || phase === 'error') && (
-        <ChannelNotes channel={channel} />
+        <div style={{ flexShrink: 0 }}>
+          <ChannelNotes channel={channel} />
+        </div>
       )}
 
       {(phase === 'watching' || phase === 'revealed') && video && (
-        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', height: '88vh', marginTop: '16px' }}>
+        <div className="competitor-session-grid" style={{ display: 'grid', gridTemplateColumns: 'calc(78vh * 9 / 16) 1fr', gap: '20px', alignItems: 'stretch', flex: 1, minHeight: 0, marginTop: '16px', overflow: 'hidden' }}>
           {/* Video column */}
           <div className="competitor-video-col" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div className="competitor-video-box" style={{ background: '#000', borderRadius: '10px', overflow: 'hidden', flex: 1 }}>
@@ -813,10 +827,10 @@ function SessionView({
 
           {/* Form column — flex column filling full height */}
           <div className="competitor-form-col" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', overflow: 'hidden' }}>
-            {phase === 'watching' && (
-              <>
+            {(phase === 'watching' || phase === 'revealed') && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 {/* Classifiers + Analysis — row that fills remaining height */}
-                <div className="competitor-classifiers-row" style={{ display: 'flex', gap: '10px', flex: 1, minHeight: 0 }}>
+                <div className="competitor-classifiers-row" style={{ display: 'flex', gap: '10px', flex: phase === 'watching' ? 1 : undefined, minHeight: 0 }}>
                   {/* Classifiers — fixed narrow column */}
                   <div className="competitor-classifiers-panel" style={{ width: '250px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto' }}>
                     <PNL label="Delivery">
@@ -877,9 +891,9 @@ function SessionView({
                     <textarea
                       value={initialAnalysis}
                       onChange={e => setInitialAnalysis(e.target.value)}
-                      placeholder="Notes while watching…"
+                      placeholder={phase === 'revealed' ? "Now that you've seen the stats — why did this perform the way it did?" : "Notes while watching…"}
                       style={{
-                        flex: 1, width: '100%', minHeight: 0, background: 'transparent',
+                        flex: 1, width: '100%', minHeight: phase === 'revealed' ? '80px' : 0, background: 'transparent',
                         border: 'none', outline: 'none', resize: 'none',
                         fontSize: '12px', color: 'var(--text-primary)', lineHeight: 1.6, fontFamily: 'inherit',
                       }}
@@ -887,79 +901,48 @@ function SessionView({
                   </PNL>
                 </div>
 
-                {/* Percentile + button — fixed bottom */}
-                <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {isTooRecent ? (
-                    <PNL>
-                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                        Disabled — video is less than 7 days old, views are still climbing.
-                      </div>
-                    </PNL>
-                  ) : (
-                    <PNL>
-                      <PercentileSlider value={guess} onChange={setGuess} />
-                    </PNL>
-                  )}
-                  <button
-                    onClick={handleReveal}
-                    style={{
-                      width: '100%', padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                      background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '13px', fontWeight: 700,
-                      letterSpacing: '-0.01em',
-                    }}
-                  >
-                    Reveal Stats
-                  </button>
-                </div>
-              </>
-            )}
-
-            {phase === 'revealed' && reveal && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', overflowY: 'auto', flex: 1 }}>
-                {(visualVerbal || hookType || topicCategory || emotion) && (
-                  <PNL>
-                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                      {visualVerbal && (
-                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--border-default)', color: 'var(--text-secondary)' }}>
-                          {visualVerbal === 'visual' ? 'Visual-first' : 'Verbal-first'}
-                        </span>
-                      )}
-                      {hookType && (
-                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--gold)', color: 'var(--bg-primary)' }}>
-                          {HOOK_TYPES.find(h => h.value === hookType)?.label}
-                        </span>
-                      )}
-                      {topicCategory && (
-                        <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: 'var(--border-default)', color: 'var(--text-secondary)' }}>
-                          {TOPIC_CATEGORIES.find(t => t.value === topicCategory)?.label}
-                        </span>
-                      )}
-                      {emotion && (() => {
-                        const em = EMOTIONS.find(e => e.value === emotion);
-                        return em ? (
-                          <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px', background: em.color, color: '#fff' }}>
-                            {em.label}
-                          </span>
-                        ) : null;
-                      })()}
-                    </div>
-                  </PNL>
+                {phase === 'watching' && (
+                  <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {isTooRecent ? (
+                      <PNL>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '6px' }}>Percentile guess</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          Disabled — video is less than 7 days old, views are still climbing.
+                        </div>
+                      </PNL>
+                    ) : (
+                      <PNL>
+                        <PercentileSlider value={guess} onChange={setGuess} />
+                      </PNL>
+                    )}
+                    <button
+                      onClick={handleReveal}
+                      style={{
+                        width: '100%', padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                        background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '13px', fontWeight: 700,
+                        letterSpacing: '-0.01em',
+                      }}
+                    >
+                      Reveal Stats
+                    </button>
+                  </div>
                 )}
 
-                {initialAnalysis && (
-                  <PNL label="Analysis">
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{initialAnalysis}</div>
-                  </PNL>
+                {phase === 'revealed' && reveal && (
+                  <>
+                    <RevealPanel
+                      reveal={reveal}
+                      guess={isTooRecent ? null : guess}
+                      onRate={handleRate}
+                      onNext={async () => {
+                        // Save any edits before moving on
+                        await competitorAnalysisApi.saveReview(video.id, buildReviewData());
+                        loadNext();
+                      }}
+                      hasMore={hasMore}
+                    />
+                  </>
                 )}
-
-                <RevealPanel
-                  reveal={reveal}
-                  guess={isTooRecent ? null : guess}
-                  onRate={handleRate}
-                  onNext={loadNext}
-                  hasMore={hasMore}
-                />
               </div>
             )}
           </div>
