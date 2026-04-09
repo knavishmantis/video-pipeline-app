@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS shorts (
   entered_editing_changes_at TIMESTAMP,
   clips_completed_at TIMESTAMP,
   editing_completed_at TIMESTAMP,
+  research_brief TEXT,
+  script_sub_stage VARCHAR(20) CHECK (script_sub_stage IN ('idea', 'written', 'scenes')),
+  script_format VARCHAR(50),
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -429,6 +432,16 @@ export async function migrate(): Promise<void> {
       } catch (error: any) {
         if (!error.message.includes('already exists')) {
           console.warn('Could not add research_brief column:', error.message);
+        }
+      }
+
+      // Add script_format column to shorts
+      try {
+        await query('ALTER TABLE shorts ADD COLUMN IF NOT EXISTS script_format VARCHAR(50)');
+        console.log('Added script_format column to shorts');
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn('Could not add script_format column:', error.message);
         }
       }
 
