@@ -10,6 +10,7 @@ export default function ScriptReview() {
   const [guess, setGuess] = useState(50);
   const [notes, setNotes] = useState('');
   const [result, setResult] = useState<ReviewResponse | null>(null);
+  const [savingNotes, setSavingNotes] = useState(false);
   const { showToast, ToastComponent } = useToast();
 
   useEffect(() => {
@@ -39,15 +40,23 @@ export default function ScriptReview() {
       const response = await analyzedShortsApi.submitReview(script.id, guess, notes);
       setResult(response);
       showToast('Review submitted!', 'success');
-      
-      // Auto-advance after 3 seconds
-      setTimeout(() => {
-        loadRandomScript();
-      }, 3000);
     } catch (error: any) {
       showToast(error.response?.data?.error || 'Failed to submit review', 'error');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!script) return;
+    try {
+      setSavingNotes(true);
+      await analyzedShortsApi.updateNotes(script.id, notes);
+      showToast('Notes saved!', 'success');
+    } catch (error: any) {
+      showToast(error.response?.data?.error || 'Failed to save notes', 'error');
+    } finally {
+      setSavingNotes(false);
     }
   };
 
@@ -232,14 +241,25 @@ export default function ScriptReview() {
             )}
           </div>
 
-          {notes && (
-            <div className="mb-6">
-              <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Your Notes</div>
-              <div className="rounded-lg p-4 whitespace-pre-wrap text-sm" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}>
-                {notes}
-              </div>
-            </div>
-          )}
+          <div className="mb-6">
+            <div className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'var(--text-muted)' }}>Notes</div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Why did this script perform the way it did? What can you learn from it?"
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none resize-none"
+              style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)' }}
+            />
+            <button
+              onClick={handleSaveNotes}
+              disabled={savingNotes}
+              className="mt-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50"
+              style={{ background: 'var(--bg-elevated)', color: 'var(--text-primary)', border: '1px solid var(--border-default)', cursor: savingNotes ? 'not-allowed' : 'pointer' }}
+            >
+              {savingNotes ? 'Saving…' : 'Save Notes'}
+            </button>
+          </div>
 
           <button
             onClick={handleNext}

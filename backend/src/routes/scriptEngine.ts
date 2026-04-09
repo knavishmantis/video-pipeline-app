@@ -1,6 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { Pool } from 'pg';
 import { authenticateToken, requireRole } from '../middleware/auth';
+import { getSignedUrlFromBucket } from '../services/gcpStorage';
+
+const SE_BUCKET = 'knavishmantis-script-engine';
 
 export const scriptEngineRouter = Router();
 
@@ -412,6 +415,77 @@ scriptEngineRouter.post('/critiques/:id/create-short', async (req: Request, res:
   }
 });
 
+
+// GET /api/script-engine/format-references — taxonomy definition + top examples per format
+const FORMAT_TAXONOMY = [
+  { id: 'myth-bust',        name: 'Myth Bust',        description: 'States a widely believed claim, tests it, reveals whether it\'s true or false.', avg_views: 8882890 },
+  { id: 'discovery-find',   name: 'Discovery Find',   description: 'Documents finding something rare, hidden, or obscure and explains why it matters.', avg_views: 8076783 },
+  { id: 'mechanic-reveal',  name: 'Mechanic Reveal',  description: 'Introduces a counterintuitive or hidden game mechanic, demonstrates it, delivers the implication.', avg_views: 7845120 },
+  { id: 'how-to',           name: 'How-To',           description: 'Addresses a player goal or problem, walks through a concrete method or strategy.', avg_views: 7743481 },
+  { id: 'creator-moment',   name: 'Creator Moment',   description: 'Personal story, behind-the-scenes anecdote, or meta channel event centered on the creator.', avg_views: 7665407 },
+  { id: 'hot-take',         name: 'Hot Take',         description: 'Opens with a strong opinion about game design, Mojang decisions, or player culture — argues it.', avg_views: 6856045 },
+  { id: 'challenge-run',    name: 'Challenge Run',    description: 'Establishes competitive stakes (speedrun, manhunt, elimination), plays out the attempt, delivers outcome.', avg_views: 5887316 },
+  { id: 'news-react',       name: 'News React',       description: 'Covers a real event — update drop, snapshot, industry news — and adds creator commentary.', avg_views: 5755780 },
+  { id: 'viewer-challenge', name: 'Viewer Challenge', description: 'Poses a quiz or puzzle directly to the viewer, lets suspense build, then reveals the answer.', avg_views: 5727224 },
+];
+
+async function enrichVideosWithUrls(videos: any[]) {
+  return Promise.all(videos.map(async (v) => {
+    let video_url: string | null = null;
+    if (v.gcs_path) {
+      try {
+        video_url = await getSignedUrlFromBucket(SE_BUCKET, v.gcs_path, 3600, 'video/mp4');
+      } catch { /* fall through to null */ }
+    }
+    return {
+      video_id: v.video_id,
+      title: v.title,
+      views: v.views,
+      transcript: v.auto_captions || null,
+      video_url,
+    };
+  }));
+}
+
+scriptEngineRouter.get('/format-references', async (_req: Request, res: Response) => {
+  try {
+    const formats = await Promise.all(
+      FORMAT_TAXONOMY.map(async (fmt) => {
+        const rows = await seQuery(
+          `SELECT video_id, title, views, gcs_path, auto_captions
+           FROM videos
+           WHERE channel = 'camman18' AND format_id = $1
+           ORDER BY views DESC LIMIT 5`,
+          [fmt.id]
+        );
+        const top_videos = await enrichVideosWithUrls(rows);
+        return { ...fmt, top_videos };
+      })
+    );
+    res.json(formats);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch format references' });
+  }
+});
+
+scriptEngineRouter.get('/format-references/:formatId', async (req: Request, res: Response) => {
+  try {
+    const { formatId } = req.params;
+    const fmt = FORMAT_TAXONOMY.find(f => f.id === formatId);
+    if (!fmt) return res.status(404).json({ error: 'Unknown format' });
+    const rows = await seQuery(
+      `SELECT video_id, title, views, gcs_path, auto_captions
+       FROM videos
+       WHERE channel = 'camman18' AND format_id = $1
+       ORDER BY views DESC LIMIT 5`,
+      [formatId]
+    );
+    const top_videos = await enrichVideosWithUrls(rows);
+    res.json({ ...fmt, top_videos });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch format reference' });
+  }
+});
 
 // PATCH /api/script-engine/critiques/:id/mark — mark human_status (used/not_used/null)
 scriptEngineRouter.patch('/critiques/:id/mark', async (req: Request, res: Response) => {

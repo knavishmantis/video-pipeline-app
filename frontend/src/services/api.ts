@@ -1,5 +1,21 @@
 import axios from 'axios';
 
+export interface FormatTopVideo {
+  video_id: string;
+  title: string;
+  views: number;
+  video_url: string | null;
+  transcript: string | null;
+}
+
+export interface FormatReference {
+  id: string;
+  name: string;
+  description: string;
+  avg_views: number;
+  top_videos: FormatTopVideo[];
+}
+
 export interface LintIssue {
   type: 'error' | 'warning' | 'info';
   check: string;
@@ -321,6 +337,9 @@ export const analyzedShortsApi = {
   submitReview: async (id: number, guess_percentile: number, notes?: string): Promise<ReviewResponse> => {
     const response = await api.post(`/analyzed-shorts/${id}/review`, { guess_percentile, notes });
     return response.data;
+  },
+  updateNotes: async (id: number, notes: string): Promise<void> => {
+    await api.patch(`/analyzed-shorts/${id}/notes`, { notes });
   },
   getStats: async (): Promise<ReviewStats> => {
     const response = await api.get('/analyzed-shorts/stats');
@@ -647,6 +666,10 @@ export const scriptEngineApi = {
     avg_score_unmarked: number; high_unmarked: number; mid_unmarked: number; low_unmarked: number;
   }> => {
     const response = await api.get('/script-engine/critiques/counts');
+    return response.data;
+  },
+  getFormatReferences: async (): Promise<FormatReference[]> => {
+    const response = await api.get('/script-engine/format-references');
     return response.data;
   },
 };

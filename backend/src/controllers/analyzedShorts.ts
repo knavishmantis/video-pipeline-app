@@ -183,6 +183,35 @@ export const analyzedShortsController = {
     }
   },
 
+  async updateNotes(req: AuthRequest, res: Response): Promise<void> {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    try {
+      if (!req.userId) {
+        res.status(401).json({ error: 'Not authenticated' });
+        return;
+      }
+
+      const isSqlite = process.env.DATABASE_URL?.startsWith('sqlite://');
+
+      if (isSqlite) {
+        await query(`
+          UPDATE analyzed_shorts SET notes = ? WHERE id = ? AND review_user_id = ?
+        `, [notes || null, id, req.userId]);
+      } else {
+        await query(`
+          UPDATE analyzed_shorts SET notes = $1 WHERE id = $2 AND review_user_id = $3
+        `, [notes || null, id, req.userId]);
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      logger.error('Update notes error', { error, shortId: id });
+      res.status(500).json({ error: 'Failed to update notes' });
+    }
+  },
+
   async getStats(req: AuthRequest, res: Response): Promise<void> {
     try {
       if (!req.userId) {

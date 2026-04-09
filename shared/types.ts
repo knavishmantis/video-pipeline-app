@@ -44,6 +44,7 @@ export interface Short {
   scene_count?: number;
   script_sub_stage?: 'idea' | 'written' | 'scenes' | null;
   research_brief?: string | null;
+  script_format?: string | null;
   created_at: string;
   updated_at: string;
   // Populated fields
@@ -120,6 +121,7 @@ export interface UpdateShortInput {
   status?: ShortStatus;
   script_writer_id?: number | null;
   research_brief?: string | null;
+  script_format?: string | null;
   reflection_what_worked?: string | null;
   reflection_what_didnt?: string | null;
   reflection_would_do_differently?: string | null;

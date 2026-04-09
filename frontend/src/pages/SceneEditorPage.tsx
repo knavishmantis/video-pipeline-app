@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { shortsApi, scenesApi } from '../services/api';
+import { shortsApi, scenesApi, scriptEngineApi } from '../services/api';
 import { Short, Scene } from '../../../shared/types';
 import SceneEditor from '../components/SceneEditor';
 import jsPDF from 'jspdf';
-import { LintIssue } from '../services/api';
+import { LintIssue, FormatReference } from '../services/api';
 
 async function fetchImageAsDataUrl(url: string): Promise<string | null> {
   try {
@@ -154,11 +154,14 @@ export default function SceneEditorPage() {
   const [lintResults, setLintResults] = useState<LintIssue[] | null>(null);
   const [lintLoading, setLintLoading] = useState(false);
   const [isEditingScript, setIsEditingScript] = useState(false);
+  const [formatRefs, setFormatRefs] = useState<FormatReference[]>([]);
+  const [showFormatPanel, setShowFormatPanel] = useState(false);
 
   const isAdmin = user?.roles?.includes('admin') || false;
 
   useEffect(() => {
     loadShort();
+    scriptEngineApi.getFormatReferences().then(setFormatRefs).catch(() => {});
   }, [id]);
 
   const loadShort = async () => {
@@ -171,6 +174,13 @@ export default function SceneEditorPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFormatChange = async (formatId: string | null) => {
+    if (!short) return;
+    const updated = await shortsApi.update(short.id, { script_format: formatId });
+    setShort(updated);
+    if (formatId) setShowFormatPanel(true);
   };
 
   const isScriptInProgress = short?.status === 'idea' || short?.status === 'script';
@@ -249,10 +259,10 @@ export default function SceneEditorPage() {
   }
 
   return (
-    <div className="w-full flex flex-col flex-1" style={{ minHeight: 0 }}>
+    <div className="w-full flex flex-col pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start gap-2 mb-4">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <button
             onClick={() => navigate('/')}
             className="px-3 py-1.5 rounded-lg text-sm font-medium transition-opacity hover:opacity-80"
@@ -265,11 +275,11 @@ export default function SceneEditorPage() {
           >
             &larr; Back to Dashboard
           </button>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-lg font-bold truncate" style={{ color: 'var(--text-primary)' }}>
             {isAdmin || user?.roles?.includes('script_writer') ? 'Scene Editor' : 'Scene Viewer'} — {short.title}
           </h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {short.script_content && (
             <button
               onClick={handleAnalyzeScript}
@@ -417,7 +427,7 @@ export default function SceneEditorPage() {
       )}
 
       {/* Scene Editor */}
-      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', minHeight: '60vh', display: 'flex', flexDirection: 'column' }}>
         <SceneEditor
           shortId={short.id}
           shortStatus={short.status}
@@ -435,6 +445,115 @@ export default function SceneEditorPage() {
           onEditingScriptChange={setIsEditingScript}
         />
       </div>
+
+      {/* Format Picker + Reference Panel — expands below the editor */}
+      {formatRefs.length > 0 && (
+        <div className="mt-4 rounded-xl overflow-hidden" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
+          {/* Format selector row */}
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid var(--border-default)' }}>
+            <span className="text-xs font-semibold uppercase tracking-wide shrink-0" style={{ color: 'var(--text-muted)' }}>Format</span>
+            <div className="flex flex-wrap gap-1.5 flex-1">
+              {formatRefs.map(fmt => {
+                const active = short?.script_format === fmt.id;
+                return (
+                  <button
+                    key={fmt.id}
+                    onClick={() => handleFormatChange(active ? null : fmt.id)}
+                    className="px-2.5 py-1 rounded-md text-xs font-medium transition-all"
+                    style={{
+                      background: active ? 'var(--gold)' : 'var(--bg-elevated)',
+                      color: active ? '#000' : 'var(--text-secondary)',
+                      border: `1px solid ${active ? 'var(--gold)' : 'var(--border-default)'}`,
+                      cursor: 'pointer',
+                    }}
+                    title={fmt.description}
+                  >
+                    {fmt.name}
+                  </button>
+                );
+              })}
+            </div>
+            {short?.script_format && (
+              <button
+                onClick={() => setShowFormatPanel(p => !p)}
+                className="shrink-0 text-xs flex items-center gap-1 transition-opacity hover:opacity-70"
+                style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                {showFormatPanel ? 'hide refs' : 'show refs'}
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ transform: showFormatPanel ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Reference videos — full-width grid, expands as needed */}
+          {showFormatPanel && short?.script_format && (() => {
+            const fmt = formatRefs.find(f => f.id === short.script_format);
+            if (!fmt) return null;
+            return (
+              <div className="p-4">
+                <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>
+                  {fmt.description} — avg <strong style={{ color: 'var(--text-secondary)' }}>{(fmt.avg_views / 1_000_000).toFixed(1)}M views</strong>
+                </p>
+                <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 200px), 1fr))' }}>
+                  {fmt.top_videos.map(v => (
+                    <div key={v.video_id} className="flex flex-col gap-2">
+                      {/* Video */}
+                      <div style={{ borderRadius: '8px', overflow: 'hidden', aspectRatio: '9/16', background: '#000', position: 'relative' }}>
+                        {v.video_url ? (
+                          <video
+                            src={v.video_url}
+                            controls
+                            playsInline
+                            preload="metadata"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <a
+                            href={`https://www.youtube.com/shorts/${v.video_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: 'var(--text-muted)', textDecoration: 'none', gap: '8px', position: 'relative' }}
+                          >
+                            <img
+                              src={`https://i.ytimg.com/vi/${v.video_id}/mqdefault.jpg`}
+                              alt={v.title}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0, opacity: 0.55 }}
+                            />
+                            <svg style={{ position: 'relative', zIndex: 1, width: '36px', height: '36px' }} fill="white" viewBox="0 0 24 24">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                            <span style={{ position: 'relative', zIndex: 1, fontSize: '10px', color: '#fff' }}>Open on YouTube</span>
+                          </a>
+                        )}
+                      </div>
+                      {/* Title + views */}
+                      <p className="text-xs font-medium leading-tight" style={{ color: 'var(--text-secondary)' }}>{v.title}</p>
+                      <p className="text-xs -mt-1" style={{ color: 'var(--text-muted)' }}>{(v.views / 1_000_000).toFixed(1)}M views</p>
+                      {/* Full transcript */}
+                      {v.transcript && (
+                        <div
+                          className="text-xs leading-relaxed p-2 rounded-lg"
+                          style={{
+                            background: 'var(--bg-elevated)',
+                            color: 'var(--text-muted)',
+                            border: '1px solid var(--border-default)',
+                            fontStyle: 'italic',
+                            lineHeight: '1.6',
+                          }}
+                        >
+                          {v.transcript}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }

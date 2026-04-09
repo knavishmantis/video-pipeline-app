@@ -11,6 +11,7 @@ router.get('/random-unrated', analyzedShortsController.getRandomUnrated);
 router.get('/stats', analyzedShortsController.getStats);
 router.get('/:id', analyzedShortsController.getById);
 router.post('/:id/review', analyzedShortsController.submitReview);
+router.patch('/:id/notes', analyzedShortsController.updateNotes);
 
 export default router;
 
