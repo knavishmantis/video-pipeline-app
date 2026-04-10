@@ -7,6 +7,22 @@ import SceneEditor from '../components/SceneEditor';
 import jsPDF from 'jspdf';
 import { LintIssue, FormatReference } from '../services/api';
 
+// Must stay in sync with LINK_COLORS / getLinkGroupColor in SceneEditor.tsx so the
+// PDF label colors match what the user sees in the scene editor.
+const LINK_COLORS = ['#FF7043', '#42A5F5', '#66BB6A', '#AB47BC', '#FFCA28', '#26C6DA'];
+function getLinkGroupColor(group: string): string {
+  let h = 0;
+  for (let i = 0; i < group.length; i++) h = (h * 31 + group.charCodeAt(i)) & 0xFFFF;
+  return LINK_COLORS[h % LINK_COLORS.length];
+}
+function hexToRgb(hex: string): [number, number, number] {
+  return [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+}
+
 async function fetchImageAsDataUrl(url: string): Promise<string | null> {
   try {
     const resp = await fetch(url);
@@ -90,6 +106,15 @@ function exportScriptPdf(title: string, scriptContent: string, scenes: Scene[], 
     checkPage(40);
     writeWrapped(`${num}. ${scene.script_line || '(no script line)'}`, 11, 'normal', 20);
     y += 2;
+
+    // Link group label (matches the colored badge shown in the SceneEditor UI)
+    if (scene.link_group) {
+      const [r, g, b] = hexToRgb(getLinkGroupColor(scene.link_group));
+      doc.setTextColor(r, g, b);
+      writeWrapped(`Label: ${scene.link_group}`, 10, 'italic', 40);
+      doc.setTextColor(0, 0, 0);
+      y += 2;
+    }
 
     // Clipper notes
     if (scene.clipper_notes) {
@@ -223,7 +248,24 @@ export default function SceneEditorPage() {
   const handleExportPdf = async () => {
     if (!short) return;
     try {
-      const scenes = await scenesApi.getAll(short.id);
+      const rawScenes = await scenesApi.getAll(short.id);
+      // Match the SceneEditor UI: sort scenes by the position of their script_line
+      // within the main script text, not by scene_order. scene_order can drift from
+      // text order when scenes get inserted out of sequence, so relying on it makes
+      // the PDF number differ from what the clipper sees. See SceneEditor.tsx
+      // sortedScenes for the same logic.
+      const scriptContent = short.script_content || '';
+      const scenes = scriptContent
+        ? [...rawScenes]
+            .map(s => ({ scene: s, pos: s.script_line ? scriptContent.indexOf(s.script_line) : -1 }))
+            .sort((a, b) => {
+              if (a.pos === -1 && b.pos === -1) return 0;
+              if (a.pos === -1) return 1;
+              if (b.pos === -1) return -1;
+              return a.pos - b.pos;
+            })
+            .map(p => p.scene)
+        : rawScenes;
       // Fetch image data URLs for scenes with images
       const imageDataUrls: Record<number, string> = {};
       const imagePromises = scenes
@@ -236,7 +278,7 @@ export default function SceneEditorPage() {
           } catch { /* skip */ }
         });
       await Promise.all(imagePromises);
-      exportScriptPdf(short.title, short.script_content || '', scenes, imageDataUrls);
+      exportScriptPdf(short.title, scriptContent, scenes, imageDataUrls);
     } catch (error) {
       console.error('Failed to export PDF:', error);
     }
