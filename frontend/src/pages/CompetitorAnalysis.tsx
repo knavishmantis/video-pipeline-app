@@ -10,6 +10,7 @@ const CHANNEL_META: Record<string, { displayName: string; mcUsername: string }> 
   'DashPum4':          { displayName: 'DashPum4',          mcUsername: 'DashPum4'     },
   'Skip the Tutorial': { displayName: 'Skip the Tutorial', mcUsername: 'skiptutorial' },
   'TurbaneMC':         { displayName: 'TurbaneMC',         mcUsername: 'TurbaneMC'    },
+  'BentReal':          { displayName: 'BentReal',          mcUsername: 'Bent'         },
 };
 
 function mcHeadUrl(mcUsername: string) {
