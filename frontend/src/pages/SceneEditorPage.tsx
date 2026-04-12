@@ -255,9 +255,23 @@ export default function SceneEditorPage() {
       // the PDF number differ from what the clipper sees. See SceneEditor.tsx
       // sortedScenes for the same logic.
       const scriptContent = short.script_content || '';
+      // Track used positions so duplicate text maps to successive occurrences
+      const usedPos = new Set<number>();
       const scenes = scriptContent
         ? [...rawScenes]
-            .map(s => ({ scene: s, pos: s.script_line ? scriptContent.indexOf(s.script_line) : -1 }))
+            .map(s => {
+              if (!s.script_line) return { scene: s, pos: -1 };
+              let searchFrom = 0;
+              let pos = -1;
+              while (searchFrom < scriptContent.length) {
+                const found = scriptContent.indexOf(s.script_line, searchFrom);
+                if (found === -1) break;
+                if (!usedPos.has(found)) { pos = found; break; }
+                searchFrom = found + 1;
+              }
+              if (pos !== -1) usedPos.add(pos);
+              return { scene: s, pos };
+            })
             .sort((a, b) => {
               if (a.pos === -1 && b.pos === -1) return 0;
               if (a.pos === -1) return 1;

@@ -114,14 +114,28 @@ function InteractiveScriptView({
     return () => window.removeEventListener('mousedown', close);
   }, [contextMenu]);
 
-  // Build position-ordered list of scene matches within scriptContent
+  // Build position-ordered list of scene matches within scriptContent.
+  // When the same text appears multiple times in the script, assign each scene
+  // to successive occurrences so that e.g. two "Depth Strider" scenes map to
+  // their respective positions rather than both mapping to the first one.
   type MatchEntry = { start: number; end: number; scene: Scene };
   const matchArr: MatchEntry[] = [];
+  const usedPositions = new Set<number>();
   for (const scene of scenes) {
     const effectiveText = localScriptLines[scene.id] ?? scene.script_line;
     if (!effectiveText) continue;
-    const idx = scriptContent.indexOf(effectiveText);
-    if (idx !== -1) matchArr.push({ start: idx, end: idx + effectiveText.length, scene });
+    let searchFrom = 0;
+    let idx = -1;
+    while (searchFrom < scriptContent.length) {
+      const found = scriptContent.indexOf(effectiveText, searchFrom);
+      if (found === -1) break;
+      if (!usedPositions.has(found)) { idx = found; break; }
+      searchFrom = found + 1;
+    }
+    if (idx !== -1) {
+      usedPositions.add(idx);
+      matchArr.push({ start: idx, end: idx + effectiveText.length, scene });
+    }
   }
   matchArr.sort((a, b) => a.start - b.start);
   const cleanMatches: MatchEntry[] = [];
@@ -577,10 +591,22 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
     // First, get script-order sorted scenes
     let ordered = [...scenes];
     if (scriptContent) {
-      const withPos = ordered.map(s => ({
-        scene: s,
-        pos: s.script_line ? scriptContent.indexOf(s.script_line) : -1,
-      }));
+      // Track used positions so duplicate text (e.g. "Depth Strider" twice)
+      // maps each scene to successive occurrences in the script
+      const used = new Set<number>();
+      const withPos = ordered.map(s => {
+        if (!s.script_line) return { scene: s, pos: -1 };
+        let searchFrom = 0;
+        let pos = -1;
+        while (searchFrom < scriptContent.length) {
+          const found = scriptContent.indexOf(s.script_line, searchFrom);
+          if (found === -1) break;
+          if (!used.has(found)) { pos = found; break; }
+          searchFrom = found + 1;
+        }
+        if (pos !== -1) used.add(pos);
+        return { scene: s, pos };
+      });
       withPos.sort((a, b) => {
         if (a.pos === -1 && b.pos === -1) return 0;
         if (a.pos === -1) return 1;
