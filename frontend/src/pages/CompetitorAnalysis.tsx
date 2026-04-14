@@ -11,6 +11,8 @@ const CHANNEL_META: Record<string, { displayName: string; mcUsername: string }> 
   'Skip the Tutorial': { displayName: 'Skip the Tutorial', mcUsername: 'skiptutorial' },
   'TurbaneMC':         { displayName: 'TurbaneMC',         mcUsername: 'TurbaneMC'    },
   'BentReal':          { displayName: 'BentReal',          mcUsername: 'Bent'         },
+  'Mogswamp':          { displayName: 'Mogswamp',          mcUsername: 'Mogswamp'     },
+  'fWhip':             { displayName: 'fWhip',             mcUsername: 'fWhip'        },
 };
 
 function mcHeadUrl(mcUsername: string) {
@@ -602,9 +604,11 @@ function ChannelNotes({ channel }: { channel: string }) {
 function SessionView({
   channel,
   onBack,
+  browseMode = false,
 }: {
   channel: string;
   onBack: () => void;
+  browseMode?: boolean;
 }) {
   const meta = CHANNEL_META[channel] || { displayName: channel, mcUsername: channel };
   const [video, setVideo] = useState<any>(null);
@@ -614,6 +618,7 @@ function SessionView({
   const [reveal, setReveal] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const [myShorts, setMyShorts] = useState<any[]>([]);
+  const [showTranscript, setShowTranscript] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Review form state
@@ -648,6 +653,7 @@ function SessionView({
     setReveal(null);
     setVideoUrl(null);
     setLoadError(null);
+    setShowTranscript(false);
   };
 
   const loadNext = useCallback(async () => {
@@ -655,7 +661,7 @@ function SessionView({
     resetForm();
     setVideo(null);
     try {
-      const v = await competitorAnalysisApi.getNextVideo(channel);
+      const v = await competitorAnalysisApi.getNextVideo(channel, browseMode);
       setVideo(v);
       const url = await competitorAnalysisApi.getVideoUrl(v.id);
       setVideoUrl(url);
@@ -670,7 +676,7 @@ function SessionView({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channel]);
+  }, [channel, browseMode]);
 
   useEffect(() => { loadNext(); }, [loadNext]);
 
@@ -757,6 +763,9 @@ function SessionView({
           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
         />
         <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{meta.displayName}</span>
+        {browseMode && (
+          <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '4px', padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Browse</span>
+        )}
         {phase === 'watching' && video && (
           <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
             {new Date(video.published_at).toLocaleDateString()} · {fmtDuration(video.duration_sec)}
@@ -816,10 +825,37 @@ function SessionView({
                 </div>
               )}
             </div>
-            {phase === 'revealed' && (
+            {(phase === 'revealed' || browseMode) && (
               <div style={{ flexShrink: 0, marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{video.title}</div>
             )}
-            {myShorts.length > 0 && (
+            {video.auto_captions && !browseMode && (
+              <div style={{ flexShrink: 0, marginTop: '6px' }}>
+                <button
+                  onClick={() => setShowTranscript(s => !s)}
+                  style={{
+                    width: '100%', padding: '5px 10px', borderRadius: '6px',
+                    border: '1px solid var(--border-default)', background: showTranscript ? 'var(--bg-elevated)' : 'transparent',
+                    color: 'var(--text-muted)', fontSize: '9px', fontWeight: 700, cursor: 'pointer',
+                    textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    textTransform: 'uppercase', letterSpacing: '0.08em',
+                  }}
+                >
+                  <span>Transcript</span>
+                  <span>{showTranscript ? '▲' : '▼'}</span>
+                </button>
+                {showTranscript && (
+                  <div style={{
+                    marginTop: '6px', maxHeight: '140px', overflowY: 'auto',
+                    background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+                    borderRadius: '6px', padding: '10px 12px',
+                    fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.6,
+                  }}>
+                    {video.auto_captions}
+                  </div>
+                )}
+              </div>
+            )}
+            {myShorts.length > 0 && !browseMode && (
               <div className="competitor-my-shorts" style={{ flexShrink: 0, marginTop: '10px' }}>
                 <MyShortsStrip shorts={myShorts} />
               </div>
@@ -828,7 +864,42 @@ function SessionView({
 
           {/* Form column — flex column filling full height */}
           <div className="competitor-form-col" style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px', overflow: 'hidden' }}>
-            {(phase === 'watching' || phase === 'revealed') && (
+            {/* Browse mode — transcript + stats + next */}
+            {browseMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0 }}>
+                <PNL label="Transcript" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                  {video.auto_captions ? (
+                    <div style={{ flex: 1, overflowY: 'auto', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                      {video.auto_captions}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No transcript available</div>
+                  )}
+                </PNL>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', flexShrink: 0 }}>
+                  {[
+                    { label: 'Views', value: fmtViews(Number(video.views || 0)) },
+                    { label: 'Duration', value: fmtDuration(video.duration_sec) },
+                  ].map(({ label, value }) => (
+                    <div key={label} style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', borderRadius: '8px', padding: '10px 12px' }}>
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '4px' }}>{label}</div>
+                      <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={loadNext}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                    background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '13px', fontWeight: 700,
+                    letterSpacing: '-0.01em', flexShrink: 0,
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+            {!browseMode && (phase === 'watching' || phase === 'revealed') && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 {/* Classifiers + Analysis — row that fills remaining height */}
                 <div className="competitor-classifiers-row" style={{ display: 'flex', gap: '10px', flex: phase === 'watching' ? 1 : undefined, minHeight: 0 }}>
@@ -955,8 +1026,11 @@ function SessionView({
 
 // ── Channel row ───────────────────────────────────────────────────────────────
 
-function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
-  const meta = CHANNEL_META[ch.channel] || { displayName: ch.channel, mcUsername: ch.channel };
+function ChannelRow({ ch, onStart, onBrowse }: { ch: any; onStart: () => void; onBrowse: () => void }) {
+  // Prefer DB-stored meta (from channel_meta table), fall back to hardcoded CHANNEL_META
+  const meta = (ch.display_name && ch.mc_username)
+    ? { displayName: ch.display_name, mcUsername: ch.mc_username }
+    : CHANNEL_META[ch.channel] || { displayName: ch.channel, mcUsername: ch.channel };
   const pct = ch.total > 0 ? Math.round((ch.reviewed / ch.total) * 100) : 0;
   const allDone = ch.reviewed >= ch.total;
 
@@ -1011,21 +1085,212 @@ function ChannelRow({ ch, onStart }: { ch: any; onStart: () => void }) {
           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>—</div>
         )}
       </div>
-      <button
-        onClick={onStart}
-        disabled={allDone}
-        style={{
-          padding: '7px 14px', borderRadius: '6px', border: 'none',
-          cursor: allDone ? 'default' : 'pointer',
-          background: allDone ? 'var(--border-default)' : 'var(--gold)',
-          color: allDone ? 'var(--text-muted)' : 'var(--bg-primary)',
-          fontSize: '11px', fontWeight: 700, letterSpacing: '-0.01em',
-          opacity: allDone ? 0.5 : 1,
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {allDone ? 'All reviewed' : 'Start Session →'}
-      </button>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+        <button
+          onClick={onStart}
+          disabled={allDone}
+          style={{
+            padding: '6px 12px', borderRadius: '6px', border: 'none',
+            cursor: allDone ? 'default' : 'pointer',
+            background: allDone ? 'var(--border-default)' : 'var(--gold)',
+            color: allDone ? 'var(--text-muted)' : 'var(--bg-primary)',
+            fontSize: '11px', fontWeight: 700, letterSpacing: '-0.01em',
+            opacity: allDone ? 0.5 : 1,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {allDone ? 'All reviewed' : 'Review →'}
+        </button>
+        <button
+          onClick={onBrowse}
+          style={{
+            padding: '6px 12px', borderRadius: '6px', border: '1px solid var(--border-default)',
+            cursor: 'pointer', background: 'transparent',
+            color: 'var(--text-secondary)',
+            fontSize: '11px', fontWeight: 700, letterSpacing: '-0.01em',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          Browse →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Add Channel modal ─────────────────────────────────────────────────────────
+
+const PHASE_LABELS: Record<string, string> = {
+  starting:             'Starting…',
+  resolving_channel:    'Resolving channel ID…',
+  fetching_video_list:  'Fetching video list…',
+  fetching_metadata:    'Fetching video metadata…',
+  fetching_transcripts: 'Fetching transcripts…',
+  downloading:          'Downloading + uploading videos…',
+  complete:             'Done',
+};
+
+function AddChannelModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [handle, setHandle] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [mcUsername, setMcUsername] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [job, setJob] = useState<any>(null);
+  const [channel, setChannel] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  async function handleSubmit() {
+    if (!handle.trim() || !displayName.trim()) return;
+    setErr(null);
+    setSubmitting(true);
+    try {
+      const result = await competitorAnalysisApi.startIngestion(
+        handle.trim(),
+        displayName.trim(),
+        mcUsername.trim() || displayName.trim(),
+      );
+      setChannel(result.channel);
+      // Start polling
+      pollRef.current = setInterval(async () => {
+        try {
+          const status = await competitorAnalysisApi.getIngestStatus(result.channel);
+          setJob(status);
+          if (status.status === 'done' || status.status === 'error') {
+            if (pollRef.current) clearInterval(pollRef.current);
+            if (status.status === 'done') onDone();
+          }
+        } catch {}
+      }, 3000);
+    } catch (e: any) {
+      setErr(e.response?.data?.error || e.message || 'Failed to start ingestion');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const isRunning = job && job.status === 'running';
+  const isDone = job && job.status === 'done';
+  const isError = job && job.status === 'error';
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+    }}>
+      <div style={{
+        background: 'var(--bg-elevated)', border: '1px solid var(--border-default)',
+        borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '440px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <div style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+            Add Channel
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '18px', lineHeight: 1 }}
+          >×</button>
+        </div>
+
+        {!job && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[
+              { label: 'YouTube handle', placeholder: '@mogswamp', value: handle, set: setHandle, hint: 'The @handle from their YouTube channel URL' },
+              { label: 'Display name', placeholder: 'Mogswamp', value: displayName, set: setDisplayName, hint: 'Name shown in the competitor analysis page' },
+              { label: 'MC username (optional)', placeholder: 'Mogswamp', value: mcUsername, set: setMcUsername, hint: 'For the Minecraft head avatar — leave blank to use display name' },
+            ].map(({ label, placeholder, value, set, hint }) => (
+              <div key={label}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '5px' }}>{label}</div>
+                <input
+                  value={value}
+                  onChange={e => set(e.target.value)}
+                  placeholder={placeholder}
+                  style={{
+                    width: '100%', padding: '8px 10px', borderRadius: '6px',
+                    border: '1px solid var(--border-default)', background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>{hint}</div>
+              </div>
+            ))}
+            {err && <div style={{ fontSize: '11px', color: '#E05A4E' }}>{err}</div>}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button onClick={onClose} style={{ flex: 1, padding: '9px', borderRadius: '7px', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !handle.trim() || !displayName.trim()}
+                style={{ flex: 2, padding: '9px', borderRadius: '7px', border: 'none', background: 'var(--gold)', color: 'var(--bg-primary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', opacity: (!handle.trim() || !displayName.trim()) ? 0.5 : 1 }}
+              >
+                {submitting ? 'Starting…' : 'Start Ingestion'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {job && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {isRunning && (
+                <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--gold)', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />
+              )}
+              {isDone && <div style={{ fontSize: '18px' }}>✓</div>}
+              {isError && <div style={{ fontSize: '18px', color: '#E05A4E' }}>✕</div>}
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: isError ? '#E05A4E' : isDone ? '#2DC97A' : 'var(--text-primary)' }}>
+                  {isError ? 'Ingestion failed' : isDone ? `${channel} added` : PHASE_LABELS[job.phase] || job.phase}
+                </div>
+                {job.message && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{job.message}</div>}
+              </div>
+            </div>
+
+            {(isRunning || isDone) && job.total_videos > 0 && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                    {job.phase === 'downloading' ? 'Videos downloaded' : 'Shorts found'}
+                  </span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                    {job.done_videos} / {job.total_videos}
+                    {job.fail_videos > 0 && ` (${job.fail_videos} failed)`}
+                  </span>
+                </div>
+                <div style={{ height: '4px', background: 'var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: '2px', transition: 'width 0.3s ease',
+                    background: isDone ? '#2DC97A' : 'var(--gold)',
+                    width: `${Math.round((job.done_videos / job.total_videos) * 100)}%`,
+                  }} />
+                </div>
+              </div>
+            )}
+
+            {isRunning && (
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                Keep this tab open. Downloading all Shorts may take 30–60 minutes.
+              </div>
+            )}
+
+            {(isDone || isError) && (
+              <button
+                onClick={isDone ? onClose : onClose}
+                style={{ width: '100%', padding: '9px', borderRadius: '7px', border: 'none', background: isDone ? '#2DC97A' : 'var(--border-default)', color: isDone ? '#fff' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {isDone ? 'Done' : 'Close'}
+              </button>
+            )}
+          </div>
+        )}
+
+        <style>{`@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }`}</style>
+      </div>
     </div>
   );
 }
@@ -1037,21 +1302,28 @@ export default function CompetitorAnalysis() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeChannel, setActiveChannel] = useState<string | null>(null);
+  const [browseMode, setBrowseMode] = useState(false);
+  const [showAddChannel, setShowAddChannel] = useState(false);
 
-  useEffect(() => {
-    if (activeChannel) return;
+  function loadChannels() {
     setLoading(true);
     competitorAnalysisApi.getChannels()
       .then(setChannels)
       .catch((e: any) => setError(e.response?.data?.error || 'Failed to load channels'))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    if (activeChannel) return;
+    loadChannels();
   }, [activeChannel]);
 
   if (activeChannel) {
     return (
       <SessionView
         channel={activeChannel}
-        onBack={() => setActiveChannel(null)}
+        browseMode={browseMode}
+        onBack={() => { setActiveChannel(null); setBrowseMode(false); }}
       />
     );
   }
@@ -1066,14 +1338,29 @@ export default function CompetitorAnalysis() {
           .competitor-channel-row > *:not(:first-child):not(:last-child) { display: none; }
         }
       `}</style>
-      <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>
-          Analytics
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>
+            Analytics
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
+            Competitor Analysis
+          </h1>
         </div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>
-          Competitor Analysis
-        </h1>
+        <button
+          onClick={() => setShowAddChannel(true)}
+          style={{ padding: '7px 14px', borderRadius: '7px', border: '1px solid var(--border-default)', background: 'transparent', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', letterSpacing: '-0.01em' }}
+        >
+          + Add Channel
+        </button>
       </div>
+
+      {showAddChannel && (
+        <AddChannelModal
+          onClose={() => setShowAddChannel(false)}
+          onDone={() => { setShowAddChannel(false); loadChannels(); }}
+        />
+      )}
 
       {loading && (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--text-muted)', fontSize: '12px' }}>
@@ -1109,7 +1396,8 @@ export default function CompetitorAnalysis() {
             <ChannelRow
               key={ch.channel}
               ch={ch}
-              onStart={() => setActiveChannel(ch.channel)}
+              onStart={() => { setBrowseMode(false); setActiveChannel(ch.channel); }}
+              onBrowse={() => { setBrowseMode(true); setActiveChannel(ch.channel); }}
             />
           ))}
         </div>

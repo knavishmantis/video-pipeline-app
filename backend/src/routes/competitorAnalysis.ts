@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import jwt from 'jsonwebtoken';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { getSignedUrlFromBucket, getStorage } from '../services/gcpStorage';
+import { startIngestion, getIngestionStatus, ensureIngestionTables, getAllChannelMeta } from '../services/channelIngestion';
 import { query } from '../db';
 import { config } from '../config/env';
 
@@ -200,8 +201,11 @@ async function ensureTable() {
 
 ensureTable().catch(console.error);
 
+// Also ensure ingestion tables exist on startup
+getPool().query('SELECT 1').then(() => ensureIngestionTables(getPool())).catch(() => {});
+
 // GET /api/competitor-analysis/channels
-// Returns per-channel stats with rich video metrics
+// Returns per-channel stats with rich video metrics + channel meta (display_name, mc_username)
 competitorAnalysisRouter.get('/channels', async (_req: Request, res: Response) => {
   try {
     const rows = await seQuery(`
@@ -227,9 +231,46 @@ competitorAnalysisRouter.get('/channels', async (_req: Request, res: Response) =
         LEFT JOIN competitor_reviews cr ON cr.video_id = cv.id
         GROUP BY cv.channel
       )
-      SELECT * FROM stats ORDER BY avg_views DESC
+      SELECT s.*, cm.display_name, cm.mc_username
+      FROM stats s
+      LEFT JOIN channel_meta cm ON cm.channel = s.channel
+      ORDER BY avg_views DESC
     `);
     res.json(rows);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/competitor-analysis/channels
+// Start ingestion for a new channel
+competitorAnalysisRouter.post('/channels', async (req: Request, res: Response) => {
+  try {
+    const { handle, displayName, mcUsername } = req.body;
+    if (!handle || !displayName) {
+      return res.status(400).json({ error: 'handle and displayName are required' });
+    }
+    if (!process.env.YOUTUBE_API_KEY) {
+      return res.status(500).json({ error: 'YOUTUBE_API_KEY not configured on server' });
+    }
+
+    // Derive channel name from displayName (used as DB key matching videos.channel)
+    const channel = displayName.trim();
+
+    const jobId = await startIngestion(channel, handle, displayName, mcUsername || displayName);
+    res.json({ jobId, channel });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/competitor-analysis/channels/:channel/ingest
+// Returns the latest ingestion job status for a channel
+competitorAnalysisRouter.get('/channels/:channel/ingest', async (req: Request, res: Response) => {
+  try {
+    const { channel } = req.params;
+    const job = await getIngestionStatus(channel);
+    res.json(job || { status: 'none' });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -269,20 +310,21 @@ competitorAnalysisRouter.get('/my-shorts', async (_req: Request, res: Response) 
 competitorAnalysisRouter.get('/channels/:channel/next', async (req: Request, res: Response) => {
   try {
     const { channel } = req.params;
+    const browse = req.query.browse === 'true';
     const rows = await seQuery(`
-      SELECT v.id, v.title, v.published_at, v.duration_sec, v.gcs_path
+      SELECT v.id, v.title, v.published_at, v.duration_sec, v.gcs_path, v.auto_captions, v.views
       FROM videos v
       LEFT JOIN competitor_reviews cr ON cr.video_id = v.id
       WHERE v.channel = $1
         AND v.is_short = true
         AND v.gcs_path IS NOT NULL
-        AND cr.id IS NULL
+        ${browse ? '' : 'AND cr.id IS NULL'}
       ORDER BY (v.published_at >= NOW() - INTERVAL '6 months') DESC, RANDOM()
       LIMIT 1
     `, [channel]);
 
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'No unreviewed videos for this channel' });
+      return res.status(404).json({ error: browse ? 'No videos for this channel' : 'No unreviewed videos for this channel' });
     }
     res.json(rows[0]);
   } catch (e: any) {

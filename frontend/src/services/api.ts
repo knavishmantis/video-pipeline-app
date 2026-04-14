@@ -783,8 +783,8 @@ export const competitorAnalysisApi = {
     const response = await api.get('/competitor-analysis/my-shorts');
     return response.data;
   },
-  getNextVideo: async (channel: string): Promise<any> => {
-    const response = await api.get(`/competitor-analysis/channels/${encodeURIComponent(channel)}/next`);
+  getNextVideo: async (channel: string, browse = false): Promise<any> => {
+    const response = await api.get(`/competitor-analysis/channels/${encodeURIComponent(channel)}/next${browse ? '?browse=true' : ''}`);
     return response.data;
   },
   getVideoUrl: async (id: string): Promise<string> => {
@@ -807,6 +807,14 @@ export const competitorAnalysisApi = {
   },
   saveChannelNotes: async (channel: string, notes_md: string): Promise<void> => {
     await api.put(`/competitor-analysis/channels/${encodeURIComponent(channel)}/notes`, { notes_md });
+  },
+  startIngestion: async (handle: string, displayName: string, mcUsername: string): Promise<{ jobId: number; channel: string }> => {
+    const response = await api.post('/competitor-analysis/channels', { handle, displayName, mcUsername });
+    return response.data;
+  },
+  getIngestStatus: async (channel: string): Promise<any> => {
+    const response = await api.get(`/competitor-analysis/channels/${encodeURIComponent(channel)}/ingest`);
+    return response.data;
   },
 };
 
