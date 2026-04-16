@@ -46,7 +46,7 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
       seQuery(`SELECT source, COUNT(*)::INTEGER as count FROM ideas GROUP BY source ORDER BY count DESC`),
       seQuery(`SELECT id, source, title, status, confidence, created_at FROM ideas ORDER BY id DESC LIMIT 15`),
       seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE verdict = 'validated' OR verdict = 'greenlight' OR verdict = 'confirmed' OR verdict = 'approved')::INTEGER as validated, COUNT(*) FILTER (WHERE verdict = 'rejected')::INTEGER as rejected FROM research_briefs`),
-      seQuery(`SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at, i.title, i.source FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id ORDER BY rb.created_at DESC LIMIT 10`),
+      seQuery(`SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.rating, rb.completed_at, rb.created_at, i.title, i.source FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id ORDER BY rb.created_at DESC LIMIT 10`),
       seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE is_short)::INTEGER as shorts, COUNT(*) FILTER (WHERE auto_captions IS NOT NULL AND is_short)::INTEGER as captions, COUNT(*) FILTER (WHERE gcs_path IS NOT NULL AND is_short)::INTEGER as in_gcs FROM videos WHERE channel IN ('camman18', 'DashPum4', 'Skip the Tutorial', 'TurbaneMC', 'BentReal', 'Mogswamp', 'fWhip')`),
       seQuery('SELECT COUNT(*)::INTEGER as c FROM bugs'),
       seQuery('SELECT COUNT(*)::INTEGER as c FROM reddit_posts'),
@@ -154,8 +154,8 @@ scriptEngineRouter.get('/ideas/:id', async (req: Request, res: Response) => {
 scriptEngineRouter.get('/briefs', async (_req: Request, res: Response) => {
   try {
     const briefs = await seQuery(`
-      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at,
-        i.title, i.source
+      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.rating, rb.completed_at,
+        rb.created_at, i.title, i.source
       FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id
       ORDER BY rb.created_at DESC
     `);
@@ -201,7 +201,9 @@ scriptEngineRouter.get('/scripts/:id', async (req: Request, res: Response) => {
 scriptEngineRouter.patch('/scripts/:id/status', async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
-    if (!['draft', 'approved', 'rejected', 'superseded', 'needs_review'].includes(status)) {
+    // 'needs_review' retained for legacy archive rows (critic agent retired 2026-04-16)
+    // but cannot be *set* via the API going forward.
+    if (!['draft', 'approved', 'rejected', 'superseded'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
     await seQuery('UPDATE scripts SET status = $1 WHERE id = $2', [status, req.params.id]);
@@ -365,6 +367,44 @@ scriptEngineRouter.patch('/critiques/:id/reject', async (req: Request, res: Resp
     res.json({ ok: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to reject' });
+  }
+});
+
+// POST /api/script-engine/briefs/:id/create-short — create a short directly from a research brief
+// (new primary path after write/critic agents were retired 2026-04-16; see also
+// /critiques/:id/create-short below, which remains for historical critique rows).
+scriptEngineRouter.post('/briefs/:id/create-short', async (req: Request, res: Response) => {
+  try {
+    const rows = await seQuery(`
+      SELECT rb.id, rb.idea_id, rb.full_brief, rb.summary, rb.rating,
+        i.title, i.hook, i.angle, i.content_points
+      FROM research_briefs rb
+      JOIN ideas i ON rb.idea_id = i.id
+      WHERE rb.id = $1
+    `, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Brief not found' });
+    const b = rows[0];
+
+    const ideaParts: string[] = [];
+    if (b.hook) ideaParts.push(`Hook: ${b.hook}`);
+    if (b.angle) ideaParts.push(`Angle: ${b.angle}`);
+    if (b.content_points) {
+      const pts = typeof b.content_points === 'string' ? b.content_points : JSON.stringify(b.content_points);
+      ideaParts.push(`Content points: ${pts}`);
+    }
+
+    const { query: mainQuery } = await import('../db');
+    const result = await mainQuery(
+      `INSERT INTO shorts (title, idea, research_brief, status)
+       VALUES ($1, $2, $3, 'script')
+       RETURNING *`,
+      [b.title, ideaParts.join('\n') || null, b.full_brief || b.summary || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Failed to create short from brief:', error.message);
+    res.status(500).json({ error: 'Failed to create short from brief' });
   }
 });
 

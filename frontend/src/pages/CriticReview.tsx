@@ -673,6 +673,17 @@ export default function CriticReview() {
 
   return (
     <div style={{ fontVariantNumeric: 'tabular-nums', width: '100%' }}>
+      {/* Archive notice — critic agent retired 2026-04-16, rows below are historical */}
+      <div style={{
+        padding: '8px 12px', marginBottom: '10px', borderRadius: '4px',
+        background: 'color-mix(in srgb, var(--text-muted) 10%, var(--bg-elevated))',
+        border: '1px solid var(--border-default)',
+        fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.5,
+      }}>
+        <strong style={{ color: 'var(--text-secondary)' }}>Archive view</strong> — the write + critic agents were retired 2026-04-16.
+        No new critiques are generated; the rows below are historical data preserved for reference.
+        Use the Briefs tab on the Script Engine page for the current backlog.
+      </div>
       {/* Header: title + tabs + help */}
       {isMobile ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>

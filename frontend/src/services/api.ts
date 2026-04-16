@@ -657,6 +657,10 @@ export const scriptEngineApi = {
     const response = await api.post(`/script-engine/critiques/${critiqueId}/create-short`);
     return response.data;
   },
+  createShortFromBrief: async (briefId: number): Promise<Short> => {
+    const response = await api.post(`/script-engine/briefs/${briefId}/create-short`);
+    return response.data;
+  },
   searchIdeasWithBriefs: async (q?: string): Promise<Array<{ id: number; title: string; source: string; status: string; full_brief: string | null; brief_summary: string | null }>> => {
     const response = await api.get('/script-engine/ideas/search', { params: q ? { q } : {} });
     return response.data;

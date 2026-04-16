@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { scriptEngineApi } from '../services/api';
 
-const S: Record<string, string> = { researched: 'var(--green)', approved: 'var(--blue)', rejected: 'var(--red)', duplicate: 'var(--text-muted)', new: 'var(--gold)', scripted: 'var(--col-script)', published: 'var(--col-uploaded)', needs_review: 'var(--gold)', rewrite_pending: 'var(--red)' };
-const SRC: Record<string, string> = { code: 'CODE', youtube: 'YT', reddit: 'RDT', bugs: 'BUGS', mods: 'MODS', wiki: 'WIKI', minecraft: 'MC' };
+// needs_review / rewrite_pending retained for legacy archive rows (critic agent retired 2026-04-16).
+// Do not surface them in filter UI; color rendering stays so archive views render correctly.
+const S: Record<string, string> = { researched: 'var(--green)', researching: 'var(--blue)', approved: 'var(--blue)', rejected: 'var(--red)', duplicate: 'var(--text-muted)', new: 'var(--gold)', scripted: 'var(--col-script)', published: 'var(--col-uploaded)', needs_review: 'var(--text-muted)', rewrite_pending: 'var(--text-muted)' };
+const SRC: Record<string, string> = { code: 'CODE', youtube: 'YT', reddit: 'RDT', bugs: 'BUGS', mods: 'MODS', wiki: 'WIKI', minecraft: 'MC', km_comments: 'KMC', mojang_twitter: 'MOJANG', feedback_mc: 'FDBK', speedrun: 'SRC', yarn_fabric: 'YARN' };
 
 const p = (d: string) => { if (!d) return null; const x = new Date(d); return !d.includes('Z') && !d.includes('+') && !d.includes('T') ? new Date(d + 'Z') : x; };
 const dur = (s: number | null) => !s ? '—' : s < 60 ? `${s}s` : `${Math.round(s / 60)}m`;
@@ -138,7 +140,7 @@ export default function ScriptEngine() {
         <button onClick={() => { setViewMode('dashboard'); setAllIdeas(null); }} style={{ fontSize: '10px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>&larr; Dashboard</button>
         <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>All Ideas</span>
         <div style={{ flex: 1 }} />
-        {['', 'researched', 'rejected', 'new', 'duplicate'].map(f => (
+        {['', 'researched', 'researching', 'approved', 'rejected', 'new', 'duplicate'].map(f => (
           <button key={f} onClick={() => loadAllIdeas(f || undefined)} style={{ padding: '3px 10px', borderRadius: '4px', fontSize: '9px', fontWeight: 700, cursor: 'pointer', border: 'none', background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>{f || 'All'}</button>
         ))}
       </div>
@@ -229,8 +231,23 @@ export default function ScriptEngine() {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--gold-border)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)'; }}>
             <span style={{ fontSize: '8px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px', textTransform: 'uppercase', background: b.verdict === 'rejected' ? 'color-mix(in srgb, var(--red) 15%, transparent)' : 'color-mix(in srgb, var(--green) 15%, transparent)', color: b.verdict === 'rejected' ? 'var(--red)' : 'var(--green)', width: '62px', textAlign: 'center' }}>{b.verdict}</span>
+            {b.rating != null && (
+              <span style={{ fontSize: '8px', fontWeight: 700, padding: '1px 5px', borderRadius: '3px', background: 'color-mix(in srgb, var(--gold) 18%, transparent)', color: 'var(--gold)', width: '26px', textAlign: 'center' }}>{b.rating}/10</span>
+            )}
             <span style={{ fontSize: '8px', color: 'var(--gold)', fontWeight: 700, width: '30px' }}>{SRC[b.source] || b.source}</span>
             <span style={{ fontSize: '10px', color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title}</span>
+            <button
+              onClick={async (e) => {
+                e.stopPropagation();
+                try {
+                  await scriptEngineApi.createShortFromBrief(b.id);
+                  alert('Short created');
+                } catch (err: any) {
+                  alert(`Failed: ${err?.message || err}`);
+                }
+              }}
+              style={{ fontSize: '8px', fontWeight: 700, padding: '2px 8px', borderRadius: '3px', border: '1px solid var(--gold-border)', background: 'transparent', color: 'var(--gold)', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+            >Create Short</button>
             <span style={{ fontSize: '8px', color: 'var(--text-muted)', flexShrink: 0 }}>{ago(b.created_at)}</span>
           </div>
         ))}
@@ -248,15 +265,17 @@ export default function ScriptEngine() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontVariantNumeric: 'tabular-nums' }}>
 
       {/* ═══ PIPELINE FLOW — Stage Overview ═══ */}
+      {/* Write + Critic retired 2026-04-16. Their archive tables still populate the
+          last two tiles for historical visibility but the live pipeline ends at Research. */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 20px 1fr 20px 1fr 20px 1fr', alignItems: 'center', gap: '0' }}>
         {[
-          { stage: '1', label: 'IDEA', desc: '7 sources → ideas', count: totalIdeas, color: 'var(--gold)' },
+          { stage: '1', label: 'IDEA', desc: '12 sources → ideas', count: totalIdeas, color: 'var(--gold)' },
           null,
           { stage: '2', label: 'RESEARCH', desc: 'validate + evidence', count: data.briefStats?.total || 0, color: 'var(--green)' },
           null,
-          { stage: '3', label: 'WRITE', desc: 'fine-tuned model', count: data.scriptStats?.total || 0, color: 'var(--col-script)' },
+          { stage: 'A', label: 'WRITE (ARCHIVE)', desc: 'retired Apr 2026', count: data.scriptStats?.total || 0, color: 'var(--text-muted)' },
           null,
-          { stage: '4', label: 'CRITIC', desc: 'score + rewrite', count: data.critiqueStats?.total || 0, color: 'var(--col-editing)' },
+          { stage: 'A', label: 'CRITIC (ARCHIVE)', desc: 'retired Apr 2026', count: data.critiqueStats?.total || 0, color: 'var(--text-muted)' },
         ].map((item, i) => item ? (
           <PNL key={i} style={{ padding: '8px 12px', textAlign: 'center', borderColor: `color-mix(in srgb, ${item.color} 30%, var(--border-default))` }}>
             <div style={{ fontSize: '8px', fontWeight: 800, color: item.color, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Stage {item.stage}</div>
