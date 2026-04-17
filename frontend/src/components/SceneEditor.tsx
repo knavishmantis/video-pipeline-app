@@ -3,7 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput, PresetClip, ShortStatus } from '../../../shared/types';
 import { scenesApi, filesApi, presetClipsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { ConfirmDialog } from './ui/confirm-dialog';
+import { MobileSceneForm } from './MobileSceneForm';
 
 interface SceneEditorProps {
   shortId: number;
@@ -308,6 +310,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
   const [editingScript, setEditingScript] = useState(false);
   const [scriptDraft, setScriptDraft] = useState(scriptContent);
   const [expandedScene, setExpandedScene] = useState<number | null>(null);
+  const isMobile = useIsMobile();
+  const [mobileForm, setMobileForm] = useState<{ mode: 'create' } | { mode: 'edit'; sceneId: number } | null>(null);
   const [imageSignedUrls, setImageSignedUrls] = useState<Record<number, string>>({});
   const [showBriefView, setShowBriefView] = useState(false);
   const saveTimeouts = useRef<Record<number, ReturnType<typeof setTimeout>>>({});
@@ -1229,8 +1233,9 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
             {/* Grid of scene cards */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: expandedScene !== null ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)',
-              gap: '8px',
+              gridTemplateColumns: isMobile ? '1fr' : (expandedScene !== null ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'),
+              gap: isMobile ? '10px' : '8px',
+              paddingBottom: isMobile && canEditScenes ? '88px' : undefined,
             }}>
               {sortedScenes.map((scene, index) => {
                 // Show group header when entering a new link_group in grouped mode
@@ -1272,7 +1277,13 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                   </div>
                 )}
                 <div
-                  onClick={() => setExpandedScene(expandedScene === scene.id ? null : scene.id)}
+                  onClick={() => {
+                    if (isMobile) {
+                      if (canEditScenes) setMobileForm({ mode: 'edit', sceneId: scene.id });
+                      return;
+                    }
+                    setExpandedScene(expandedScene === scene.id ? null : scene.id);
+                  }}
                   className="rounded-lg transition-all scene-card"
                   style={{
                     background: expandedScene === scene.id
@@ -1289,8 +1300,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                           : '1px solid var(--border-default)',
                     opacity: (linkingFromId !== null && linkingFromId !== scene.id) ? 0.75 : 1,
                     cursor: 'pointer',
-                    padding: '6px 8px',
-                    minHeight: '48px',
+                    padding: isMobile ? '12px 14px' : '6px 8px',
+                    minHeight: isMobile ? '72px' : '48px',
                   }}
                 >
                   {/* Scene number + saving indicator + badges */}
@@ -1443,7 +1454,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
         )}
       </div>
       </div>
-      {expandedScene !== null && (() => {
+      {!isMobile && expandedScene !== null && (() => {
         const _sc = scenes.find(s => s.id === expandedScene);
         const _idx = sortedScenes.findIndex(s => s.id === expandedScene);
         if (!_sc) return null;
@@ -1714,6 +1725,90 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
       confirmText="Delete All"
       variant="danger"
     />
+
+    {isMobile && canEditScenes && !mobileForm && (
+      <button
+        type="button"
+        onClick={() => setMobileForm({ mode: 'create' })}
+        style={{
+          position: 'fixed',
+          left: '16px',
+          right: '16px',
+          bottom: 'calc(16px + env(safe-area-inset-bottom))',
+          padding: '14px',
+          fontSize: '15px',
+          fontWeight: 700,
+          background: 'var(--gold)',
+          color: 'var(--bg-base)',
+          border: 'none',
+          borderRadius: '10px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+          cursor: 'pointer',
+          zIndex: 900,
+        }}
+      >
+        + Add Scene
+      </button>
+    )}
+
+    {isMobile && mobileForm?.mode === 'create' && (
+      <MobileSceneForm
+        mode="create"
+        scriptContent={scriptContent}
+        onCancel={() => setMobileForm(null)}
+        onSave={async (values) => {
+          try {
+            const created = await scenesApi.create(shortId, {
+              script_line: values.script_line,
+              clipper_notes: values.clipper_notes || null,
+              editor_notes: values.editor_notes || null,
+            });
+            setScenes(prev => [...prev, created]);
+            setMobileForm(null);
+          } catch (error) {
+            console.error('Failed to create scene:', error);
+          }
+        }}
+      />
+    )}
+
+    {isMobile && mobileForm?.mode === 'edit' && (() => {
+      const editing = scenes.find(s => s.id === mobileForm.sceneId);
+      if (!editing) return null;
+      const idx = sortedScenes.findIndex(s => s.id === editing.id);
+      return (
+        <MobileSceneForm
+          mode="edit"
+          sceneNumber={idx >= 0 ? idx + 1 : undefined}
+          scriptContent={scriptContent}
+          initial={{
+            script_line: editing.script_line || '',
+            clipper_notes: editing.clipper_notes || '',
+            editor_notes: editing.editor_notes || '',
+          }}
+          onCancel={() => setMobileForm(null)}
+          onSave={async (values) => {
+            const input = {
+              script_line: values.script_line,
+              clipper_notes: values.clipper_notes || null,
+              editor_notes: values.editor_notes || null,
+            };
+            setScenes(prev => prev.map(s => s.id === editing.id ? { ...s, ...input } : s));
+            try {
+              await scenesApi.update(shortId, editing.id, input);
+            } catch (error) {
+              console.error('Failed to update scene:', error);
+              loadScenes();
+            }
+            setMobileForm(null);
+          }}
+          onDelete={async () => {
+            await deleteScene(editing.id);
+            setMobileForm(null);
+          }}
+        />
+      );
+    })()}
     </React.Fragment>
   );
 }
