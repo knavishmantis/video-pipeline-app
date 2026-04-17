@@ -108,14 +108,26 @@ scriptEngineRouter.get('/ideas', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/script-engine/ideas/search — search ideas for linking briefs to existing shorts
-// Must be before /ideas/:id to avoid Express matching "search" as an id
+// GET /api/script-engine/ideas/search — search ideas for linking briefs to existing shorts.
+// Fuzzy: splits the query into tokens and requires each token to appear in
+// one of title / hook / angle / brief.summary / brief.full_brief. Ranks by
+// number of fields that matched + whether the title matched.
+// Must be before /ideas/:id to avoid Express matching "search" as an id.
 scriptEngineRouter.get('/ideas/search', async (req: Request, res: Response) => {
   try {
-    const q = (req.query.q as string || '').trim();
+    const raw = (req.query.q as string || '').trim();
+    // Tokenize on whitespace; drop stopwords-free since Minecraft nouns are the signal.
+    const tokens = raw.split(/\s+/).filter(t => t.length >= 2);
+
     let sql = `
-      SELECT i.id, i.title, i.source, i.status,
-        rb.full_brief, rb.summary as brief_summary
+      SELECT i.id, i.title, i.source, i.status, i.hook, i.angle,
+        rb.full_brief, rb.rating, rb.summary as brief_summary,
+        (
+          (CASE WHEN i.title ILIKE '%' || $1 || '%' THEN 3 ELSE 0 END) +
+          (CASE WHEN i.hook  ILIKE '%' || $1 || '%' THEN 2 ELSE 0 END) +
+          (CASE WHEN rb.summary ILIKE '%' || $1 || '%' THEN 1 ELSE 0 END) +
+          (CASE WHEN rb.full_brief ILIKE '%' || $1 || '%' THEN 1 ELSE 0 END)
+        ) AS score
       FROM ideas i
       LEFT JOIN research_briefs rb ON rb.id = (
         SELECT MAX(rb2.id) FROM research_briefs rb2
@@ -123,15 +135,25 @@ scriptEngineRouter.get('/ideas/search', async (req: Request, res: Response) => {
       )
       WHERE rb.full_brief IS NOT NULL
     `;
-    const params: any[] = [];
-    if (q) {
-      sql += ` AND i.title ILIKE $1`;
-      params.push(`%${q}%`);
-    }
-    sql += ' ORDER BY i.id DESC LIMIT 50';
+    const params: any[] = [raw || '']; // $1 used for scoring
+
+    // Per-token AND filter — each token must appear somewhere in the record.
+    tokens.forEach((t, idx) => {
+      const i = idx + 2; // $2, $3, ...
+      sql += ` AND (i.title ILIKE $${i} OR i.hook ILIKE $${i} OR COALESCE(i.angle, '') ILIKE $${i}
+               OR COALESCE(rb.summary, '') ILIKE $${i} OR COALESCE(rb.full_brief, '') ILIKE $${i})`;
+      params.push(`%${t}%`);
+    });
+
+    // When no query, just list recent.
+    sql += tokens.length
+      ? ` ORDER BY score DESC, rb.rating DESC NULLS LAST, i.id DESC LIMIT 50`
+      : ` ORDER BY rb.rating DESC NULLS LAST, i.id DESC LIMIT 50`;
+
     const rows = await seQuery(sql, params);
     res.json(rows);
   } catch (error: any) {
+    console.error('ideas/search failed:', error.message);
     res.status(500).json({ error: 'Failed to search ideas' });
   }
 });
@@ -158,6 +180,8 @@ scriptEngineRouter.get('/briefs', async (req: Request, res: Response) => {
   try {
     const humanStatus = req.query.human_status as string;
     const source = req.query.source as string;
+    const angle = req.query.angle as string;
+    const q = (req.query.q as string || '').trim();
     const minRating = req.query.min_rating ? parseInt(req.query.min_rating as string, 10) : null;
 
     let sql = `
@@ -179,9 +203,20 @@ scriptEngineRouter.get('/briefs', async (req: Request, res: Response) => {
       sql += ` AND i.source = $${p++}`;
       params.push(source);
     }
+    if (angle) {
+      sql += ` AND i.angle = $${p++}`;
+      params.push(angle);
+    }
     if (minRating !== null && !Number.isNaN(minRating)) {
       sql += ` AND rb.rating >= $${p++}`;
       params.push(minRating);
+    }
+    if (q) {
+      // Case-insensitive match against title, summary, AND full_brief so the
+      // search covers the whole brief body, not just the top.
+      sql += ` AND (i.title ILIKE $${p} OR rb.summary ILIKE $${p} OR rb.full_brief ILIKE $${p})`;
+      params.push(`%${q}%`);
+      p++;
     }
     sql += ` ORDER BY rb.rating DESC NULLS LAST, rb.created_at DESC`;
     const briefs = await seQuery(sql, params);
@@ -621,6 +656,48 @@ scriptEngineRouter.patch('/critiques/:id/mark', async (req: Request, res: Respon
     res.json({ ok: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to mark critique' });
+  }
+});
+
+// GET /api/script-engine/token-usage — cost + token rollups for the Pipeline tab.
+// Returns per-day totals for the last 14 days + per-task totals for the last 7d.
+// Will be all-zeroes until a flow starts using the ai/ SDK path — treat empty
+// arrays as "SDK not wired yet" on the frontend.
+scriptEngineRouter.get('/token-usage', async (_req: Request, res: Response) => {
+  try {
+    const byDay = await seQuery(`
+      SELECT
+        DATE_TRUNC('day', created_at)::DATE AS day,
+        SUM(input_tokens + output_tokens + cache_read_input_tokens + cache_creation_input_tokens)::BIGINT AS tokens,
+        SUM(cost_usd)::FLOAT AS cost_usd
+      FROM token_usage
+      WHERE created_at > NOW() - INTERVAL '14 days'
+      GROUP BY day ORDER BY day ASC
+    `);
+    const byTask = await seQuery(`
+      SELECT task,
+        COUNT(*)::INT AS calls,
+        SUM(input_tokens + output_tokens)::BIGINT AS tokens,
+        SUM(cache_read_input_tokens)::BIGINT AS cache_read_tokens,
+        SUM(cost_usd)::FLOAT AS cost_usd
+      FROM token_usage
+      WHERE created_at > NOW() - INTERVAL '7 days'
+      GROUP BY task ORDER BY cost_usd DESC
+    `);
+    const totals = await seQuery(`
+      SELECT
+        COALESCE(SUM(cost_usd) FILTER (WHERE created_at > NOW() - INTERVAL '7 days'), 0)::FLOAT AS cost_7d,
+        COALESCE(SUM(cost_usd) FILTER (WHERE created_at > NOW() - INTERVAL '1 day'), 0)::FLOAT AS cost_24h,
+        COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::INT AS calls_7d
+      FROM token_usage
+    `);
+    res.json({
+      by_day: byDay,
+      by_task: byTask,
+      totals: totals[0] || { cost_7d: 0, cost_24h: 0, calls_7d: 0 },
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch token usage' });
   }
 });
 

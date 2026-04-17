@@ -657,7 +657,13 @@ export const scriptEngineApi = {
     const response = await api.post(`/script-engine/briefs/${briefId}/create-short`);
     return response.data;
   },
-  getBriefs: async (opts?: { human_status?: 'unreviewed' | 'starred' | 'created' | 'skipped'; source?: string; min_rating?: number }): Promise<any[]> => {
+  getBriefs: async (opts?: {
+    human_status?: 'unreviewed' | 'starred' | 'created' | 'skipped';
+    source?: string;
+    angle?: string;
+    q?: string;
+    min_rating?: number;
+  }): Promise<any[]> => {
     const response = await api.get('/script-engine/briefs', { params: opts });
     return response.data;
   },
@@ -674,6 +680,14 @@ export const scriptEngineApi = {
   },
   markBrief: async (id: number, human_status: 'created' | 'skipped' | 'starred' | null): Promise<any> => {
     const response = await api.patch(`/script-engine/briefs/${id}/mark`, { human_status });
+    return response.data;
+  },
+  getTokenUsage: async (): Promise<{
+    by_day: Array<{ day: string; tokens: number; cost_usd: number }>;
+    by_task: Array<{ task: string; calls: number; tokens: number; cache_read_tokens: number; cost_usd: number }>;
+    totals: { cost_7d: number; cost_24h: number; calls_7d: number };
+  }> => {
+    const response = await api.get('/script-engine/token-usage');
     return response.data;
   },
   searchIdeasWithBriefs: async (q?: string): Promise<Array<{ id: number; title: string; source: string; status: string; full_brief: string | null; brief_summary: string | null }>> => {

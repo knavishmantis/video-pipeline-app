@@ -60,6 +60,7 @@ const MdRenderer = ({ content }: { content: string }) => (
 export default function ScriptEngine() {
   const [data, setData] = useState<any>(null);
   const [runs, setRuns] = useState<any[]>([]);
+  const [tokenUsage, setTokenUsage] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedIdea, setSelectedIdea] = useState<any>(null);
   const [allIdeas, setAllIdeas] = useState<any[] | null>(null);
@@ -71,8 +72,12 @@ export default function ScriptEngine() {
   useEffect(() => { loadData(); }, []);
   const loadData = async () => {
     try {
-      const [status, runHistory] = await Promise.all([scriptEngineApi.getStatus(), scriptEngineApi.getRuns()]);
-      setData(status); setRuns(runHistory);
+      const [status, runHistory, tu] = await Promise.all([
+        scriptEngineApi.getStatus(),
+        scriptEngineApi.getRuns(),
+        scriptEngineApi.getTokenUsage().catch(() => null), // optional — may not exist on older backend
+      ]);
+      setData(status); setRuns(runHistory); setTokenUsage(tu);
     } catch (e) { console.error(e); } finally { setLoading(false); }
   };
   const loadIdea = async (id: number) => { try { setSelectedIdea(await scriptEngineApi.getIdea(id)); } catch (e) { console.error(e); } };
@@ -384,6 +389,36 @@ export default function ScriptEngine() {
               <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-primary)', width: '28px', textAlign: 'right' }}>{label === 'Duration' ? dur((data as number[])[(data as number[]).length - 1] || 0) : (data as number[])[(data as number[]).length - 1] || 0}</span>
             </div>
           ))}
+          {/* Token cost row — shows $ spend when the ai/ SDK path is live, else
+              dormant. Spark is the last 14 days of daily cost. */}
+          <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', width: 50 }}>Cost 14d</span>
+            <Spark
+              data={(tokenUsage?.by_day || []).map((d: any) => Number(d.cost_usd || 0))}
+              color="var(--green)" w={100} h={18}
+            />
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-primary)', width: 60, textAlign: 'right' }}>
+              ${(tokenUsage?.totals?.cost_7d ?? 0).toFixed(2)}
+              <span style={{ fontSize: 8, color: 'var(--text-muted)', marginLeft: 4 }}>7d</span>
+            </span>
+          </div>
+          {tokenUsage && tokenUsage.totals?.calls_7d === 0 && (
+            <div style={{ marginTop: 8, fontSize: 8, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+              Token cost is dormant — pipeline uses Claude CLI (subscription) today.
+              Populates when a stage migrates to the Anthropic SDK.
+            </div>
+          )}
+          {tokenUsage && (tokenUsage.by_task || []).length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>7d by stage</div>
+              {tokenUsage.by_task.map((t: any) => (
+                <div key={t.task} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, padding: '1px 0' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>{t.task}</span>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>${Number(t.cost_usd || 0).toFixed(3)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </PNL>
       </div>
 

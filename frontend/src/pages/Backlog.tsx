@@ -61,6 +61,21 @@ const SORT_LABELS: Record<SortKey, string> = {
   rating_desc: 'Rating ↓', rating_asc: 'Rating ↑', age_desc: 'Newest', age_asc: 'Oldest',
 };
 
+// Canonical angles from style-guide/editorial-standards.md. Older ideas may have
+// free-form angles so we treat these as soft filters (select shows canonical +
+// "Other").
+const ANGLES = [
+  'myth-bust',
+  'hidden-cost',
+  'timeline-absurd',
+  'dev-intent',
+  'mechanic-combo',
+  'how-to-weird',
+  'speedrun-trick',
+  'community-wants',
+  'other',
+] as const;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const ago = (d: string) => {
   if (!d) return '—';
@@ -130,11 +145,13 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
     ['j / ↓', 'Next brief (auto-preview on desktop)'],
     ['k / ↑', 'Previous brief'],
     ['Enter', 'Open full detail'],
-    ['Esc', 'Close detail / back to list'],
+    ['Esc', 'Close detail / clear selection'],
     ['c', 'Create Short (and advance)'],
     ['t', 'Star / save for later (and advance)'],
     ['s', 'Skip (and advance)'],
     ['u', 'Unmark (back to Unreviewed)'],
+    ['Shift+click', 'Range-select rows for bulk action'],
+    ['⌘/Ctrl+click', 'Toggle row in selection'],
     ['/', 'Focus search'],
     ['?', 'Toggle this help'],
   ];
@@ -332,11 +349,17 @@ export default function Backlog() {
   const [creating, setCreating] = useState(false);
   const [tab, setTab] = useState<Tab>('unreviewed');
   const [source, setSource] = useState('');
+  const [angle, setAngle] = useState('');
   const [minRating, setMinRating] = useState(0);
   const [sort, setSort] = useState<SortKey>('rating_desc');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [focusIdx, setFocusIdx] = useState(0);
   const [showHelp, setShowHelp] = useState(false);
+  // Multi-select for bulk actions. selected brief IDs + last-selected idx (anchor for shift-click).
+  const [multiSelect, setMultiSelect] = useState<Set<number>>(new Set());
+  const [lastSelectedIdx, setLastSelectedIdx] = useState<number | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const searchRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef<Record<number, HTMLDivElement | null>>({});
@@ -349,7 +372,9 @@ export default function Backlog() {
       const data = await scriptEngineApi.getBriefs({
         human_status: tab,
         source: source || undefined,
+        angle: angle || undefined,
         min_rating: minRating || undefined,
+        q: debouncedSearch || undefined,
       });
       setBriefs(data);
     } catch {
@@ -357,7 +382,7 @@ export default function Backlog() {
     } finally {
       setLoading(false); setRefreshing(false);
     }
-  }, [tab, source, minRating, push]);
+  }, [tab, source, angle, minRating, debouncedSearch, push]);
 
   const loadCounts = useCallback(async () => {
     try { setCounts(await scriptEngineApi.getBriefCounts()); } catch { /* non-fatal */ }
@@ -371,17 +396,22 @@ export default function Backlog() {
   useEffect(() => {
     loadBriefs(briefs.length === 0);
     loadCounts();
+    // Clear any stale multi-selection when the filter changes
+    setMultiSelect(new Set());
+    setLastSelectedIdx(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, source, minRating]);
+  }, [tab, source, angle, minRating, debouncedSearch]);
+
+  // Debounce the search input — send to server 250ms after last keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
   // ── derived ──
+  // Server handles tab/source/angle/rating/q filtering now. Only sort locally.
   const filtered = useMemo(() => {
-    let r = briefs;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      r = r.filter(b => (b.title || '').toLowerCase().includes(q) || (b.summary || '').toLowerCase().includes(q));
-    }
-    const sorted = [...r];
+    const sorted = [...briefs];
     sorted.sort((a, b) => {
       switch (sort) {
         case 'rating_desc': return (b.rating || 0) - (a.rating || 0);
@@ -391,7 +421,7 @@ export default function Backlog() {
       }
     });
     return sorted;
-  }, [briefs, search, sort]);
+  }, [briefs, sort]);
 
   useEffect(() => { setFocusIdx(i => Math.min(i, Math.max(0, filtered.length - 1))); }, [filtered.length]);
 
@@ -544,14 +574,69 @@ export default function Backlog() {
     rowRefs.current[f.id]?.scrollIntoView({ block: 'nearest' });
   }, [focusIdx, filtered]);
 
-  const handleRowTap = useCallback((b: any, i: number) => {
+  const handleRowTap = useCallback((b: any, i: number, ev?: React.MouseEvent) => {
+    // Shift+click → range-select from lastSelectedIdx to i (no preview change).
+    if (ev?.shiftKey && lastSelectedIdx !== null) {
+      ev.preventDefault();
+      const lo = Math.min(lastSelectedIdx, i);
+      const hi = Math.max(lastSelectedIdx, i);
+      setMultiSelect(prev => {
+        const next = new Set(prev);
+        for (let k = lo; k <= hi; k++) {
+          const row = filtered[k];
+          if (row) next.add(row.id);
+        }
+        return next;
+      });
+      return;
+    }
+    // Cmd/Ctrl+click → toggle single selection (no preview change).
+    if (ev?.metaKey || ev?.ctrlKey) {
+      ev.preventDefault();
+      setMultiSelect(prev => {
+        const next = new Set(prev);
+        if (next.has(b.id)) next.delete(b.id); else next.add(b.id);
+        return next;
+      });
+      setLastSelectedIdx(i);
+      return;
+    }
+    // Plain click → preview + clear any multi-selection.
+    setMultiSelect(new Set());
+    setLastSelectedIdx(i);
     setFocusIdx(i);
     if (isNarrow) {
-      // Mobile: tap opens full-screen detail
       loadFull(b.id).then(full => { if (full) setSelected(full); });
     }
     // Desktop: preview auto-updates via focusIdx effect
-  }, [isNarrow, loadFull]);
+  }, [filtered, lastSelectedIdx, isNarrow, loadFull]);
+
+  // Bulk apply — sequential to keep the Prefect-free backend simple; fine for <50 rows.
+  const handleBulkMark = useCallback(async (status: HumanStatus) => {
+    if (bulkBusy || multiSelect.size === 0) return;
+    setBulkBusy(true);
+    const ids = [...multiSelect];
+    try {
+      for (const id of ids) {
+        try { await scriptEngineApi.markBrief(id, status); }
+        catch (e) { /* keep going; surface at end */ }
+      }
+      const staysInTab =
+        (tab === 'unreviewed' && status === null) ||
+        (tab === 'created' && status === 'created') ||
+        (tab === 'skipped' && status === 'skipped') ||
+        (tab === 'starred' && status === 'starred');
+      setBriefs(bs => staysInTab
+        ? bs.map(b => multiSelect.has(b.id) ? { ...b, human_status: status } : b)
+        : bs.filter(b => !multiSelect.has(b.id)));
+      setMultiSelect(new Set());
+      loadCounts();
+      const label = status === 'starred' ? 'starred' : status === 'skipped' ? 'skipped' : status === null ? 'unmarked' : String(status);
+      push({ kind: 'info', message: `${ids.length} briefs ${label}` });
+    } finally {
+      setBulkBusy(false);
+    }
+  }, [bulkBusy, multiSelect, tab, loadCounts, push]);
 
   // ── Top-level view switcher (rendered on both sub-views so the user can flip back) ──
   const TopViewSwitcher = () => (
@@ -686,6 +771,14 @@ export default function Backlog() {
           <option value="">All sources</option>
           {SOURCE_KEYS.map(k => <option key={k} value={k}>{SRC[k].full}</option>)}
         </select>
+        <select value={angle} onChange={e => setAngle(e.target.value)} style={{
+          padding: isNarrow ? '8px 8px' : '5px 8px', fontSize: isNarrow ? 12 : 10,
+          color: 'var(--text-secondary)', background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)', borderRadius: 4,
+        }}>
+          <option value="">All angles</option>
+          {ANGLES.map(a => <option key={a} value={a}>{a}</option>)}
+        </select>
         <select value={minRating} onChange={e => setMinRating(parseInt(e.target.value, 10))} style={{
           padding: isNarrow ? '8px 8px' : '5px 8px', fontSize: isNarrow ? 12 : 10,
           color: 'var(--text-secondary)', background: 'var(--bg-elevated)',
@@ -727,7 +820,7 @@ export default function Backlog() {
                   <div
                     key={b.id}
                     ref={el => (rowRefs.current[b.id] = el)}
-                    onClick={() => handleRowTap(b, i)}
+                    onClick={(e) => handleRowTap(b, i, e)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: isNarrow ? '10px 10px' : '7px 10px', cursor: 'pointer',
                       borderRadius: 5,
@@ -833,6 +926,41 @@ export default function Backlog() {
           </div>
         )}
       </div>
+
+      {/* Bulk action bar — shown when 2+ rows are multi-selected */}
+      {multiSelect.size >= 2 && (
+        <div style={{
+          position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--bg-elevated)', border: '1px solid var(--gold-border)',
+          borderRadius: 8, padding: '10px 16px', zIndex: 90,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 700 }}>
+            {multiSelect.size} selected
+          </span>
+          <button disabled={bulkBusy} onClick={() => handleBulkMark('starred')} style={{
+            padding: '6px 12px', background: 'color-mix(in srgb, var(--gold) 12%, transparent)', color: 'var(--gold)',
+            border: '1px solid var(--gold-border)', borderRadius: 4, fontSize: 11, fontWeight: 700,
+            cursor: bulkBusy ? 'wait' : 'pointer', opacity: bulkBusy ? 0.6 : 1,
+          }}>★ Star {multiSelect.size}</button>
+          <button disabled={bulkBusy} onClick={() => handleBulkMark('skipped')} style={{
+            padding: '6px 12px', background: 'color-mix(in srgb, var(--red) 10%, transparent)', color: 'var(--red)',
+            border: '1px solid color-mix(in srgb, var(--red) 25%, transparent)', borderRadius: 4,
+            fontSize: 11, fontWeight: 700, cursor: bulkBusy ? 'wait' : 'pointer', opacity: bulkBusy ? 0.6 : 1,
+          }}>Skip {multiSelect.size}</button>
+          {(tab === 'starred' || tab === 'skipped' || tab === 'created') && (
+            <button disabled={bulkBusy} onClick={() => handleBulkMark(null)} style={{
+              padding: '6px 12px', background: 'var(--bg-base)', color: 'var(--text-muted)',
+              border: '1px solid var(--border-default)', borderRadius: 4, fontSize: 11, fontWeight: 700,
+              cursor: bulkBusy ? 'wait' : 'pointer', opacity: bulkBusy ? 0.6 : 1,
+            }}>Unmark {multiSelect.size}</button>
+          )}
+          <button onClick={() => setMultiSelect(new Set())} title="Clear selection" style={{
+            background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: '0 4px',
+          }}>×</button>
+        </div>
+      )}
 
       {showHelp && <HelpOverlay onClose={() => setShowHelp(false)} />}
       <ToastStack toasts={toasts} onDismiss={dismiss} />
