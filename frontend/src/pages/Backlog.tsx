@@ -728,7 +728,6 @@ export default function Backlog() {
                     key={b.id}
                     ref={el => (rowRefs.current[b.id] = el)}
                     onClick={() => handleRowTap(b, i)}
-                    onMouseEnter={() => !isNarrow && setFocusIdx(i)}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8, padding: isNarrow ? '10px 10px' : '7px 10px', cursor: 'pointer',
                       borderRadius: 5,
