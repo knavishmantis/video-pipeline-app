@@ -176,8 +176,8 @@ export function SidebarNav() {
       href: "/script-engine",
       icon: <IconBolt className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     }, {
-      label: "Critic Review",
-      href: "/critic",
+      label: "Backlog",
+      href: "/backlog",
       icon: <IconStarFilled className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     }, {
       label: "Competitor Analysis",

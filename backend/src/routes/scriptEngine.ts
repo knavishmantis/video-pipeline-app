@@ -46,7 +46,7 @@ scriptEngineRouter.get('/status', async (_req: Request, res: Response) => {
       seQuery(`SELECT source, COUNT(*)::INTEGER as count FROM ideas GROUP BY source ORDER BY count DESC`),
       seQuery(`SELECT id, source, title, status, confidence, created_at FROM ideas ORDER BY id DESC LIMIT 15`),
       seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE verdict = 'validated' OR verdict = 'greenlight' OR verdict = 'confirmed' OR verdict = 'approved')::INTEGER as validated, COUNT(*) FILTER (WHERE verdict = 'rejected')::INTEGER as rejected FROM research_briefs`),
-      seQuery(`SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at, i.title, i.source FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id ORDER BY rb.created_at DESC LIMIT 10`),
+      seQuery(`SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.rating, rb.completed_at, rb.created_at, i.title, i.source FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id ORDER BY rb.created_at DESC LIMIT 10`),
       seQuery(`SELECT COUNT(*)::INTEGER as total, COUNT(*) FILTER (WHERE is_short)::INTEGER as shorts, COUNT(*) FILTER (WHERE auto_captions IS NOT NULL AND is_short)::INTEGER as captions, COUNT(*) FILTER (WHERE gcs_path IS NOT NULL AND is_short)::INTEGER as in_gcs FROM videos WHERE channel IN ('camman18', 'DashPum4', 'Skip the Tutorial', 'TurbaneMC', 'BentReal', 'Mogswamp', 'fWhip')`),
       seQuery('SELECT COUNT(*)::INTEGER as c FROM bugs'),
       seQuery('SELECT COUNT(*)::INTEGER as c FROM reddit_posts'),
@@ -150,18 +150,98 @@ scriptEngineRouter.get('/ideas/:id', async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/script-engine/briefs — all research briefs
-scriptEngineRouter.get('/briefs', async (_req: Request, res: Response) => {
+// GET /api/script-engine/briefs — research briefs, filterable by human_status.
+// Default (no ?human_status) returns ALL; pass 'unreviewed' / 'created' / 'skipped'
+// to filter for the Backlog tabs. Verdict-rejected briefs excluded from the
+// Unreviewed tab so reviewers don't waste time on dead-ends.
+scriptEngineRouter.get('/briefs', async (req: Request, res: Response) => {
   try {
-    const briefs = await seQuery(`
-      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.created_at,
-        i.title, i.source
+    const humanStatus = req.query.human_status as string;
+    const source = req.query.source as string;
+    const minRating = req.query.min_rating ? parseInt(req.query.min_rating as string, 10) : null;
+
+    let sql = `
+      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.rating, rb.completed_at,
+        rb.created_at, rb.human_status, rb.summary,
+        i.title, i.source, i.hook, i.angle, i.is_time_sensitive
       FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id
-      ORDER BY rb.created_at DESC
-    `);
+      WHERE 1=1
+    `;
+    const params: any[] = [];
+    let p = 1;
+    if (humanStatus === 'unreviewed') {
+      sql += ` AND rb.human_status IS NULL AND rb.verdict != 'rejected'`;
+    } else if (humanStatus === 'created' || humanStatus === 'skipped' || humanStatus === 'starred') {
+      sql += ` AND rb.human_status = $${p++}`;
+      params.push(humanStatus);
+    }
+    if (source) {
+      sql += ` AND i.source = $${p++}`;
+      params.push(source);
+    }
+    if (minRating !== null && !Number.isNaN(minRating)) {
+      sql += ` AND rb.rating >= $${p++}`;
+      params.push(minRating);
+    }
+    sql += ` ORDER BY rb.rating DESC NULLS LAST, rb.created_at DESC`;
+    const briefs = await seQuery(sql, params);
     res.json(briefs);
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch briefs' });
+  }
+});
+
+// GET /api/script-engine/briefs/counts — tab counts for Backlog header
+scriptEngineRouter.get('/briefs/counts', async (_req: Request, res: Response) => {
+  try {
+    const rows = await seQuery(`
+      SELECT
+        COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected')::INTEGER AS unreviewed,
+        COUNT(*) FILTER (WHERE rb.human_status = 'starred')::INTEGER AS starred,
+        COUNT(*) FILTER (WHERE rb.human_status = 'created')::INTEGER AS created,
+        COUNT(*) FILTER (WHERE rb.human_status = 'skipped')::INTEGER AS skipped,
+        COUNT(*)::INTEGER AS total,
+        ROUND(AVG(rb.rating) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected'), 1)::FLOAT AS avg_rating_unreviewed,
+        COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND rb.rating >= 8)::INTEGER AS high_unreviewed,
+        COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND rb.rating BETWEEN 6 AND 7)::INTEGER AS mid_unreviewed,
+        COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND (rb.rating < 6 OR rb.rating IS NULL))::INTEGER AS low_unreviewed
+      FROM research_briefs rb
+    `);
+    res.json(rows[0] || { unreviewed: 0, starred: 0, created: 0, skipped: 0, total: 0, avg_rating_unreviewed: 0, high_unreviewed: 0, mid_unreviewed: 0, low_unreviewed: 0 });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch brief counts' });
+  }
+});
+
+// GET /api/script-engine/briefs/:id — single brief with full detail for review pane
+scriptEngineRouter.get('/briefs/:id', async (req: Request, res: Response) => {
+  try {
+    const rows = await seQuery(`
+      SELECT rb.*, i.title, i.source, i.hook, i.angle, i.content_points,
+        i.why_surprising, i.why_fits_km, i.confidence, i.is_time_sensitive,
+        i.status AS idea_status, i.source_video_id
+      FROM research_briefs rb
+      JOIN ideas i ON rb.idea_id = i.id
+      WHERE rb.id = $1
+    `, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Brief not found' });
+    res.json(rows[0]);
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to fetch brief' });
+  }
+});
+
+// PATCH /api/script-engine/briefs/:id/mark — set human_status ('created' | 'skipped' | null)
+scriptEngineRouter.patch('/briefs/:id/mark', async (req: Request, res: Response) => {
+  try {
+    const { human_status } = req.body;
+    if (human_status !== 'created' && human_status !== 'skipped' && human_status !== 'starred' && human_status !== null) {
+      return res.status(400).json({ error: 'human_status must be "created", "skipped", "starred", or null' });
+    }
+    await seQuery('UPDATE research_briefs SET human_status = $1 WHERE id = $2', [human_status, req.params.id]);
+    res.json({ ok: true });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to mark brief' });
   }
 });
 
@@ -201,7 +281,9 @@ scriptEngineRouter.get('/scripts/:id', async (req: Request, res: Response) => {
 scriptEngineRouter.patch('/scripts/:id/status', async (req: Request, res: Response) => {
   try {
     const { status } = req.body;
-    if (!['draft', 'approved', 'rejected', 'superseded', 'needs_review'].includes(status)) {
+    // 'needs_review' retained for legacy archive rows (critic agent retired 2026-04-16)
+    // but cannot be *set* via the API going forward.
+    if (!['draft', 'approved', 'rejected', 'superseded'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
     await seQuery('UPDATE scripts SET status = $1 WHERE id = $2', [status, req.params.id]);
@@ -365,6 +447,47 @@ scriptEngineRouter.patch('/critiques/:id/reject', async (req: Request, res: Resp
     res.json({ ok: true });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to reject' });
+  }
+});
+
+// POST /api/script-engine/briefs/:id/create-short — create a short directly from a research brief
+// (new primary path after write/critic agents were retired 2026-04-16; see also
+// /critiques/:id/create-short below, which remains for historical critique rows).
+scriptEngineRouter.post('/briefs/:id/create-short', async (req: Request, res: Response) => {
+  try {
+    const rows = await seQuery(`
+      SELECT rb.id, rb.idea_id, rb.full_brief, rb.summary, rb.rating,
+        i.title, i.hook, i.angle, i.content_points
+      FROM research_briefs rb
+      JOIN ideas i ON rb.idea_id = i.id
+      WHERE rb.id = $1
+    `, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Brief not found' });
+    const b = rows[0];
+
+    const ideaParts: string[] = [];
+    if (b.hook) ideaParts.push(`Hook: ${b.hook}`);
+    if (b.angle) ideaParts.push(`Angle: ${b.angle}`);
+    if (b.content_points) {
+      const pts = typeof b.content_points === 'string' ? b.content_points : JSON.stringify(b.content_points);
+      ideaParts.push(`Content points: ${pts}`);
+    }
+
+    const { query: mainQuery } = await import('../db');
+    const result = await mainQuery(
+      `INSERT INTO shorts (title, idea, research_brief, status)
+       VALUES ($1, $2, $3, 'script')
+       RETURNING *`,
+      [b.title, ideaParts.join('\n') || null, b.full_brief || b.summary || null]
+    );
+
+    // Mark the brief as 'created' so the Backlog tab tracking stays in sync.
+    await seQuery(`UPDATE research_briefs SET human_status = 'created' WHERE id = $1`, [req.params.id]);
+
+    res.status(201).json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Failed to create short from brief:', error.message);
+    res.status(500).json({ error: 'Failed to create short from brief' });
   }
 });
 
