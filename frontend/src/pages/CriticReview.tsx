@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { scriptEngineApi } from '../services/api';
+import { useIsMobile } from '../hooks/useIsMobile';
 
 // Shared code block renderer for ReactMarkdown
 function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -60,18 +61,6 @@ function InlineCode({ children }: { children: React.ReactNode }) {
       {children}
     </code>
   );
-}
-
-// ─── Hooks ────────────────────────────────────────────────────────────────────
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 767px)').matches);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
-    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  return isMobile;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
