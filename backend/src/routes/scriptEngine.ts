@@ -171,7 +171,7 @@ scriptEngineRouter.get('/briefs', async (req: Request, res: Response) => {
     let p = 1;
     if (humanStatus === 'unreviewed') {
       sql += ` AND rb.human_status IS NULL AND rb.verdict != 'rejected'`;
-    } else if (humanStatus === 'created' || humanStatus === 'skipped') {
+    } else if (humanStatus === 'created' || humanStatus === 'skipped' || humanStatus === 'starred') {
       sql += ` AND rb.human_status = $${p++}`;
       params.push(humanStatus);
     }
@@ -197,6 +197,7 @@ scriptEngineRouter.get('/briefs/counts', async (_req: Request, res: Response) =>
     const rows = await seQuery(`
       SELECT
         COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected')::INTEGER AS unreviewed,
+        COUNT(*) FILTER (WHERE rb.human_status = 'starred')::INTEGER AS starred,
         COUNT(*) FILTER (WHERE rb.human_status = 'created')::INTEGER AS created,
         COUNT(*) FILTER (WHERE rb.human_status = 'skipped')::INTEGER AS skipped,
         COUNT(*)::INTEGER AS total,
@@ -206,7 +207,7 @@ scriptEngineRouter.get('/briefs/counts', async (_req: Request, res: Response) =>
         COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND (rb.rating < 6 OR rb.rating IS NULL))::INTEGER AS low_unreviewed
       FROM research_briefs rb
     `);
-    res.json(rows[0] || { unreviewed: 0, created: 0, skipped: 0, total: 0, avg_rating_unreviewed: 0, high_unreviewed: 0, mid_unreviewed: 0, low_unreviewed: 0 });
+    res.json(rows[0] || { unreviewed: 0, starred: 0, created: 0, skipped: 0, total: 0, avg_rating_unreviewed: 0, high_unreviewed: 0, mid_unreviewed: 0, low_unreviewed: 0 });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch brief counts' });
   }
@@ -234,8 +235,8 @@ scriptEngineRouter.get('/briefs/:id', async (req: Request, res: Response) => {
 scriptEngineRouter.patch('/briefs/:id/mark', async (req: Request, res: Response) => {
   try {
     const { human_status } = req.body;
-    if (human_status !== 'created' && human_status !== 'skipped' && human_status !== null) {
-      return res.status(400).json({ error: 'human_status must be "created", "skipped", or null' });
+    if (human_status !== 'created' && human_status !== 'skipped' && human_status !== 'starred' && human_status !== null) {
+      return res.status(400).json({ error: 'human_status must be "created", "skipped", "starred", or null' });
     }
     await seQuery('UPDATE research_briefs SET human_status = $1 WHERE id = $2', [human_status, req.params.id]);
     res.json({ ok: true });
