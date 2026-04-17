@@ -16,6 +16,7 @@ import Metrics from './pages/Metrics';
 import ScriptReview from './pages/ScriptReview';
 import Reflections from './pages/Reflections';
 import ScriptEngine from './pages/ScriptEngine';
+import Backlog from './pages/Backlog';
 import CriticReview from './pages/CriticReview';
 import CompetitorAnalysis from './pages/CompetitorAnalysis';
 import SceneEditorPage from './pages/SceneEditorPage';
@@ -209,6 +210,16 @@ function AppContent() {
               <ProfileCheckRoute requiredRole="admin">
                 <AppLayout>
                   <ScriptEngine />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/backlog"
+            element={
+              <ProfileCheckRoute requiredRole="admin">
+                <AppLayout>
+                  <Backlog />
                 </AppLayout>
               </ProfileCheckRoute>
             }

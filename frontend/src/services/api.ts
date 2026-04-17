@@ -614,10 +614,6 @@ export const scriptEngineApi = {
     const response = await api.get(`/script-engine/ideas/${id}`);
     return response.data;
   },
-  getBriefs: async (): Promise<any> => {
-    const response = await api.get('/script-engine/briefs');
-    return response.data;
-  },
   getScripts: async (): Promise<any> => {
     const response = await api.get('/script-engine/scripts');
     return response.data;
@@ -659,6 +655,25 @@ export const scriptEngineApi = {
   },
   createShortFromBrief: async (briefId: number): Promise<Short> => {
     const response = await api.post(`/script-engine/briefs/${briefId}/create-short`);
+    return response.data;
+  },
+  getBriefs: async (opts?: { human_status?: 'unreviewed' | 'created' | 'skipped'; source?: string; min_rating?: number }): Promise<any[]> => {
+    const response = await api.get('/script-engine/briefs', { params: opts });
+    return response.data;
+  },
+  getBrief: async (id: number): Promise<any> => {
+    const response = await api.get(`/script-engine/briefs/${id}`);
+    return response.data;
+  },
+  getBriefCounts: async (): Promise<{
+    unreviewed: number; created: number; skipped: number; total: number;
+    avg_rating_unreviewed: number; high_unreviewed: number; mid_unreviewed: number; low_unreviewed: number;
+  }> => {
+    const response = await api.get('/script-engine/briefs/counts');
+    return response.data;
+  },
+  markBrief: async (id: number, human_status: 'created' | 'skipped' | null): Promise<any> => {
+    const response = await api.patch(`/script-engine/briefs/${id}/mark`, { human_status });
     return response.data;
   },
   searchIdeasWithBriefs: async (q?: string): Promise<Array<{ id: number; title: string; source: string; status: string; full_brief: string | null; brief_summary: string | null }>> => {
