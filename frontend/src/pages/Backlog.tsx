@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { scriptEngineApi } from '../services/api';
+import ScriptEngine from './ScriptEngine';
 
 // ─── Markdown helpers ─────────────────────────────────────────────────────────
 function CodeBlock({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -306,9 +307,19 @@ function BriefDetail({
   );
 }
 
+// ─── Top-level view switcher ──────────────────────────────────────────────────
+type TopView = 'backlog' | 'pipeline';
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function Backlog() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const topView: TopView = (searchParams.get('view') as TopView) === 'pipeline' ? 'pipeline' : 'backlog';
+  const setTopView = (v: TopView) => {
+    const p = new URLSearchParams(searchParams);
+    if (v === 'backlog') p.delete('view'); else p.set('view', v);
+    setSearchParams(p, { replace: true });
+  };
   const isNarrow = useIsNarrow();
   const { toasts, push, dismiss } = useToasts();
 
@@ -527,15 +538,54 @@ export default function Backlog() {
     // Desktop: preview auto-updates via focusIdx effect
   }, [isNarrow, loadFull]);
 
+  // ── Top-level view switcher (rendered on both sub-views so the user can flip back) ──
+  const TopViewSwitcher = () => (
+    <div style={{ display: 'flex', gap: 2, marginBottom: 12, borderBottom: '1px solid var(--border-default)' }}>
+      {([
+        ['backlog', 'Backlog'],
+        ['pipeline', 'Pipeline'],
+      ] as [TopView, string][]).map(([v, label]) => (
+        <button
+          key={v}
+          onClick={() => setTopView(v)}
+          style={{
+            padding: '8px 18px',
+            fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            background: 'transparent', border: 'none',
+            borderBottom: `2px solid ${topView === v ? 'var(--gold)' : 'transparent'}`,
+            color: topView === v ? 'var(--gold)' : 'var(--text-muted)',
+            marginBottom: -1, letterSpacing: '0.04em',
+          }}
+        >{label}</button>
+      ))}
+    </div>
+  );
+
+  // Pipeline sub-view: embed the existing ScriptEngine dashboard
+  if (topView === 'pipeline') {
+    return (
+      <div style={{ width: '100%' }}>
+        <TopViewSwitcher />
+        <ScriptEngine />
+      </div>
+    );
+  }
+
   // ── Render ──
-  if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-    <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Loading...</div>
-  </div>;
+  if (loading) return (
+    <div style={{ width: '100%' }}>
+      <TopViewSwitcher />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
+        <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.15em', textTransform: 'uppercase' }}>Loading...</div>
+      </div>
+    </div>
+  );
 
   // Full-screen detail (mobile, or explicit Enter on desktop)
   if (selected) {
     return (
       <div style={{ width: '100%' }}>
+        <TopViewSwitcher />
         <BriefDetail
           brief={selected}
           creating={creating}
@@ -565,6 +615,7 @@ export default function Backlog() {
 
   return (
     <div style={{ fontVariantNumeric: 'tabular-nums', width: '100%' }}>
+      <TopViewSwitcher />
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.03em', margin: 0 }}>Backlog</h1>

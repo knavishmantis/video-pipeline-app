@@ -204,16 +204,7 @@ function AppContent() {
               </ProfileCheckRoute>
             }
           />
-          <Route
-            path="/script-engine"
-            element={
-              <ProfileCheckRoute requiredRole="admin">
-                <AppLayout>
-                  <ScriptEngine />
-                </AppLayout>
-              </ProfileCheckRoute>
-            }
-          />
+          <Route path="/script-engine" element={<Navigate to="/backlog" replace />} />
           <Route
             path="/backlog"
             element={

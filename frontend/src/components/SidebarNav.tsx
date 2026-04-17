@@ -173,12 +173,8 @@ export function SidebarNav() {
       ),
     }, {
       label: "Script Engine",
-      href: "/script-engine",
-      icon: <IconBolt className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
-    }, {
-      label: "Backlog",
       href: "/backlog",
-      icon: <IconStarFilled className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+      icon: <IconBolt className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     }, {
       label: "Competitor Analysis",
       href: "/competitor-analysis",
