@@ -33,11 +33,11 @@ const textareaStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: '11px',
+  fontSize: '10px',
   fontWeight: 700,
   textTransform: 'uppercase',
   letterSpacing: '0.08em',
-  marginBottom: '6px',
+  marginBottom: '4px',
   color: 'var(--text-muted)',
 };
 
@@ -105,7 +105,7 @@ export function MobileSceneForm({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 14px',
+          padding: '8px 12px',
           borderBottom: '1px solid var(--border-default)',
           background: 'var(--bg-base)',
         }}
@@ -114,29 +114,29 @@ export function MobileSceneForm({
           type="button"
           onClick={onCancel}
           style={{
-            fontSize: '15px',
+            fontSize: '13px',
             fontWeight: 600,
             color: 'var(--text-muted)',
             background: 'transparent',
             border: 'none',
-            padding: '8px 10px',
+            padding: '6px 8px',
             cursor: 'pointer',
           }}
         >
           Cancel
         </button>
-        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--gold)' }}>{title}</span>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--gold)' }}>{title}</span>
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
           style={{
-            fontSize: '15px',
+            fontSize: '13px',
             fontWeight: 700,
             color: 'var(--gold)',
             background: 'transparent',
             border: 'none',
-            padding: '8px 10px',
+            padding: '6px 8px',
             cursor: saving ? 'default' : 'pointer',
             opacity: saving ? 0.5 : 1,
           }}
@@ -149,7 +149,7 @@ export function MobileSceneForm({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '16px 14px 120px',
+          padding: '12px 12px 96px',
         }}
       >
         {hasScriptRef && (

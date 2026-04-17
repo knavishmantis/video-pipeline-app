@@ -955,16 +955,20 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
     <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 0, flex: 1, height: '100%' }}>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
       {/* Main Script Section */}
-      <div className="px-6 py-4" style={{ borderBottom: '1px solid var(--border-default)' }}>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>
+      <div style={{
+        padding: isMobile ? '8px 12px 10px' : '16px 24px',
+        paddingTop: isMobile ? '12px' : '16px',
+        borderBottom: '1px solid var(--border-default)',
+      }}>
+        <div className="flex items-center justify-between mb-3" style={{ flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '6px' : undefined }}>
+          <h3 className="font-semibold uppercase tracking-wide" style={{ color: 'var(--text-muted)', fontSize: isMobile ? '10px' : '12px' }}>
             Main Script
           </h3>
           <div className="flex items-center gap-2">
             {!editingScript && scriptContent && scenes.length > 0 && (
               <button
                 onClick={() => setShowSceneAnnotations(v => !v)}
-                style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'var(--bg-elevated)', color: showSceneAnnotations ? 'var(--gold)' : 'var(--text-muted)', cursor: 'pointer' }}
+                style={{ fontSize: isMobile ? '10px' : '11px', fontWeight: 600, padding: isMobile ? '2px 8px' : '3px 10px', borderRadius: '6px', border: '1px solid var(--border-default)', background: 'var(--bg-elevated)', color: showSceneAnnotations ? 'var(--gold)' : 'var(--text-muted)', cursor: 'pointer' }}
               >
                 {showSceneAnnotations ? 'Scenes on' : 'Scenes off'}
               </button>
@@ -979,8 +983,10 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                     onEditingScriptChange?.(true);
                   }
                 }}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-80"
+                className="rounded-lg font-semibold transition-opacity hover:opacity-80"
                 style={{
+                  padding: isMobile ? '4px 10px' : '6px 12px',
+                  fontSize: isMobile ? '11px' : '12px',
                   background: editingScript ? 'var(--green)' : 'var(--bg-elevated)',
                   color: editingScript ? '#fff' : 'var(--text-primary)',
                   border: editingScript ? 'none' : '1px solid var(--border-default)',
@@ -997,12 +1003,15 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
           <textarea
             value={scriptDraft}
             onChange={(e) => setScriptDraft(e.target.value)}
-            className="w-full p-4 rounded-lg text-sm leading-relaxed font-mono resize-y focus:outline-none"
+            className="w-full rounded-lg leading-relaxed font-mono resize-y focus:outline-none"
             style={{
               background: 'var(--bg-elevated)',
               border: '1px solid var(--gold)',
               color: 'var(--text-primary)',
-              minHeight: '200px',
+              minHeight: isMobile ? '140px' : '200px',
+              padding: isMobile ? '10px' : '16px',
+              fontSize: isMobile ? '16px' : '14px',
+              scrollMarginTop: isMobile ? '64px' : undefined,
             }}
             placeholder="Write your main script here..."
           />
@@ -1039,7 +1048,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
 
       {/* Scenes Grid Section (or Research Brief) */}
       <style>{sceneCardStyles}</style>
-      <div className="px-6 py-4" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+      <div style={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: isMobile ? '10px 12px' : '16px 24px' }}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             {researchBrief ? (
@@ -1234,8 +1243,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
             <div style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : (expandedScene !== null ? 'repeat(3, 1fr)' : 'repeat(4, 1fr)'),
-              gap: isMobile ? '10px' : '8px',
-              paddingBottom: isMobile && canEditScenes ? '88px' : undefined,
+              gap: isMobile ? '6px' : '8px',
+              paddingBottom: isMobile && canEditScenes ? '72px' : undefined,
             }}>
               {sortedScenes.map((scene, index) => {
                 // Show group header when entering a new link_group in grouped mode
@@ -1300,8 +1309,8 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                           : '1px solid var(--border-default)',
                     opacity: (linkingFromId !== null && linkingFromId !== scene.id) ? 0.75 : 1,
                     cursor: 'pointer',
-                    padding: isMobile ? '12px 14px' : '6px 8px',
-                    minHeight: isMobile ? '72px' : '48px',
+                    padding: isMobile ? '8px 10px' : '6px 8px',
+                    minHeight: isMobile ? '56px' : '48px',
                   }}
                 >
                   {/* Scene number + saving indicator + badges */}
@@ -1732,17 +1741,17 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
         onClick={() => setMobileForm({ mode: 'create' })}
         style={{
           position: 'fixed',
-          left: '16px',
-          right: '16px',
-          bottom: 'calc(16px + env(safe-area-inset-bottom))',
-          padding: '14px',
-          fontSize: '15px',
+          left: '12px',
+          right: '12px',
+          bottom: 'calc(12px + env(safe-area-inset-bottom))',
+          padding: '10px',
+          fontSize: '13px',
           fontWeight: 700,
           background: 'var(--gold)',
           color: 'var(--bg-base)',
           border: 'none',
-          borderRadius: '10px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
           cursor: 'pointer',
           zIndex: 900,
         }}
