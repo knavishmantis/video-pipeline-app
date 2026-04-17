@@ -416,10 +416,12 @@ export default function Backlog() {
     if (creating) return;
     setCreating(true);
     const currentIdx = filtered.findIndex(b => b.id === id);
-    const next = advance ? (filtered[currentIdx + 1] || filtered[currentIdx - 1] || null) : null;
+    const removedFromList = tab === 'unreviewed' || tab === 'starred' || tab === 'skipped';
     try {
       await scriptEngineApi.createShortFromBrief(id);
-      setBriefs(bs => tab === 'unreviewed' ? bs.filter(b => b.id !== id) : bs.map(b => b.id === id ? { ...b, human_status: 'created' } : b));
+      setBriefs(bs => removedFromList
+        ? bs.filter(b => b.id !== id)
+        : bs.map(b => b.id === id ? { ...b, human_status: 'created' } : b));
       loadCounts();
       push({
         kind: 'info',
@@ -427,9 +429,16 @@ export default function Backlog() {
         actionLabel: 'View',
         onAction: () => navigate('/'),
       });
-      if (advance && next && isNarrow) setSelected(null);
+      if (advance && isNarrow) setSelected(null);
       else if (selected?.id === id) setSelected((s: any) => s ? { ...s, human_status: 'created' } : s);
       if (preview?.id === id) setPreview((p: any) => p ? { ...p, human_status: 'created' } : p);
+      if (advance && !isNarrow) {
+        if (removedFromList) {
+          setFocusIdx(Math.min(currentIdx, Math.max(0, filtered.length - 2)));
+        } else {
+          setFocusIdx(Math.min(currentIdx + 1, Math.max(0, filtered.length - 1)));
+        }
+      }
     } catch {
       push({ kind: 'error', message: 'Failed to create Short' });
     } finally {
@@ -472,10 +481,16 @@ export default function Backlog() {
       if (advance && next && isNarrow) setSelected(null);
       else if (selected?.id === id) setSelected((s: any) => s ? { ...s, human_status: status } : s);
       if (preview?.id === id) setPreview((p: any) => p ? { ...p, human_status: status } : p);
-      // advance focus on desktop so the preview follows
-      if (advance && next && !isNarrow) {
-        const ni = filtered.findIndex(b => b.id === next.id);
-        if (ni >= 0) setFocusIdx(ni);
+      // advance focus on desktop so the preview follows.
+      // When the brief leaves the current tab (e.g. starring from Unreviewed),
+      // the next item slides INTO currentIdx — stay there. When it stays in
+      // the tab (starring a starred brief), move to currentIdx + 1.
+      if (advance && !isNarrow) {
+        if (staysInTab) {
+          setFocusIdx(Math.min(currentIdx + 1, Math.max(0, filtered.length - 1)));
+        } else {
+          setFocusIdx(Math.min(currentIdx, Math.max(0, filtered.length - 2)));
+        }
       }
     } catch {
       push({ kind: 'error', message: 'Failed to mark brief' });
