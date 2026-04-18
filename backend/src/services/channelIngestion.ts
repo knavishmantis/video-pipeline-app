@@ -117,12 +117,24 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
 
 // ── Video download + transcode ────────────────────────────────────────────────
 
-function run(bin: string, args: string[], timeoutMs: number): Promise<boolean> {
+function run(bin: string, args: string[], timeoutMs: number, captureLabel?: string): Promise<boolean> {
   return new Promise(resolve => {
-    const proc = spawn(bin, args, { stdio: 'ignore' });
+    const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stderr = '';
+    proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); if (stderr.length > 4000) stderr = stderr.slice(-4000); });
     const timer = setTimeout(() => { proc.kill('SIGKILL'); resolve(false); }, timeoutMs);
-    proc.on('error', () => { clearTimeout(timer); resolve(false); });
-    proc.on('close', code => { clearTimeout(timer); resolve(code === 0); });
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      if (captureLabel) logger.warn(`${captureLabel} spawn failed`, { bin, error: err.message });
+      resolve(false);
+    });
+    proc.on('close', code => {
+      clearTimeout(timer);
+      if (code !== 0 && captureLabel) {
+        logger.warn(`${captureLabel} exit ${code}`, { bin, stderr: stderr.slice(-800) });
+      }
+      resolve(code === 0);
+    });
   });
 }
 
@@ -147,10 +159,10 @@ async function downloadAndPrepare(videoId: string, tmpDir: string): Promise<stri
   const ok = await run(YTDLP_PATH, [
     '-f', 'bestvideo[height<=1080]+bestaudio/best',
     '--merge-output-format', 'mp4',
-    '--no-playlist', '--quiet', '--no-warnings', '--no-progress',
+    '--no-playlist', '--no-progress',
     '-o', rawPath,
     `https://www.youtube.com/shorts/${videoId}`,
-  ], 8 * 60 * 1000); // 8-minute timeout per video
+  ], 8 * 60 * 1000, `yt-dlp[${videoId}]`); // 8-minute timeout per video
 
   if (!ok) return null;
 
