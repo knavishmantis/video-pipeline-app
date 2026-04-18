@@ -121,20 +121,44 @@ function run(bin: string, args: string[], timeoutMs: number, captureLabel?: stri
   return new Promise(resolve => {
     const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
+    let stdout = '';
     proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); if (stderr.length > 4000) stderr = stderr.slice(-4000); });
+    proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); if (stdout.length > 2000) stdout = stdout.slice(-2000); });
     const timer = setTimeout(() => { proc.kill('SIGKILL'); resolve(false); }, timeoutMs);
     proc.on('error', (err) => {
       clearTimeout(timer);
       if (captureLabel) logger.warn(`${captureLabel} spawn failed`, { bin, error: err.message });
       resolve(false);
     });
-    proc.on('close', code => {
+    proc.on('close', (code, signal) => {
       clearTimeout(timer);
       if (code !== 0 && captureLabel) {
-        logger.warn(`${captureLabel} exit ${code}`, { bin, stderr: stderr.slice(-800) });
+        logger.warn(`${captureLabel} exit code=${code} signal=${signal}`, {
+          bin,
+          stderr: stderr.slice(-800) || '(empty)',
+          stdout: stdout.slice(-400) || '(empty)',
+        });
       }
       resolve(code === 0);
     });
+  });
+}
+
+// Debug helper — runs a binary with simple args, returns captured stdout/stderr/code
+export async function probeBin(bin: string, args: string[], timeoutMs = 10_000): Promise<{ code: number | null; signal: string | null; stdout: string; stderr: string; error?: string }> {
+  return new Promise(resolve => {
+    let stderr = '', stdout = '';
+    let err: string | undefined;
+    try {
+      const proc = spawn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+      proc.stdout?.on('data', (d: Buffer) => { stdout += d.toString(); });
+      proc.stderr?.on('data', (d: Buffer) => { stderr += d.toString(); });
+      const timer = setTimeout(() => { proc.kill('SIGKILL'); }, timeoutMs);
+      proc.on('error', (e) => { err = e.message; clearTimeout(timer); resolve({ code: null, signal: null, stdout, stderr, error: err }); });
+      proc.on('close', (code, signal) => { clearTimeout(timer); resolve({ code, signal, stdout, stderr }); });
+    } catch (e: any) {
+      resolve({ code: null, signal: null, stdout: '', stderr: '', error: e?.message || String(e) });
+    }
   });
 }
 

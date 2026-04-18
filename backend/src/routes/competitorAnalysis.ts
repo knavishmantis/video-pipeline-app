@@ -12,6 +12,7 @@ import {
   invalidateCutCache,
   estimateIngestCostUsd,
 } from '../services/competitorCutAnalysis';
+import { probeBin } from '../services/channelIngestion';
 import { query } from '../db';
 import { config } from '../config/env';
 import { logger } from '../utils/logger';
@@ -591,6 +592,34 @@ competitorAnalysisRouter.get('/channels/:channel/cuts-progress', async (req: Req
       WHERE v.channel = $1
     `, [channel]);
     res.json({ ...rows[0], cut_count: cutCountRows[0]?.cut_count ?? 0 });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message });
+  }
+});
+
+// GET /api/competitor-analysis/diagnose
+// Admin-only probe of container tools used by ingestion: yt-dlp, ffmpeg, ffprobe.
+// Returns their versions + a harmless test run to help diagnose container issues.
+competitorAnalysisRouter.get('/diagnose', async (req: Request, res: Response) => {
+  try {
+    const [ytVer, ffVer, ffpVer, ytFormats] = await Promise.all([
+      probeBin('/usr/local/bin/yt-dlp', ['--version']),
+      probeBin('/usr/bin/ffmpeg', ['-version']),
+      probeBin('/usr/bin/ffprobe', ['-version']),
+      probeBin('/usr/local/bin/yt-dlp', ['--list-formats', '--no-playlist', 'https://www.youtube.com/shorts/-5xq38qHYC0'], 30_000),
+    ]);
+    res.json({
+      ytdlp_version: ytVer,
+      ffmpeg_version: { code: ffVer.code, signal: ffVer.signal, first_line: ffVer.stdout.split('\n')[0] },
+      ffprobe_version: { code: ffpVer.code, signal: ffpVer.signal, first_line: ffpVer.stdout.split('\n')[0] },
+      ytdlp_test_formats: {
+        code: ytFormats.code,
+        signal: ytFormats.signal,
+        stdout_first_1kb: ytFormats.stdout.slice(0, 1000),
+        stderr_last_1kb: ytFormats.stderr.slice(-1000),
+        error: ytFormats.error,
+      },
+    });
   } catch (e: any) {
     res.status(500).json({ error: e?.message });
   }
