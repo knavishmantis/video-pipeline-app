@@ -102,7 +102,10 @@ async function fetchTranscript(videoId: string): Promise<string | null> {
   try {
     const { YouTubeTranscriptApi } = await import('@playzone/youtube-transcript/dist/api');
     const api = new YouTubeTranscriptApi();
-    const data = await api.fetch(videoId);
+    const data = await Promise.race([
+      api.fetch(videoId),
+      new Promise<null>((_, rej) => setTimeout(() => rej(new Error('transcript timeout')), 12000)),
+    ]);
     if (!data?.snippets?.length) return null;
     return he.decode(
       data.snippets.map((s: any) => s.text).join(' ').replace(/\s+/g, ' ').trim()
@@ -263,14 +266,33 @@ async function runJob(jobId: number, channel: string, youtubeHandle: string): Pr
     await setJob(pool, jobId, { total_videos: totalShorts });
 
     // ── Fetch transcripts ──
+    // Scraper-based; unreliable when YouTube changes its internal HTML. If the
+    // first several calls fail in a row, skip the rest of the phase rather than
+    // stalling the whole job. Transcripts are optional downstream (Gemini
+    // extracts per-cut narration from the video directly).
     await setJob(pool, jobId, { phase: 'fetching_transcripts' });
     const { rows: noTranscript } = await pool.query(
       `SELECT video_id FROM videos WHERE channel = $1 AND is_short = true AND auto_captions IS NULL`,
       [channel]
     );
+    let consecutiveFailures = 0;
+    const ABORT_AFTER_FAILURES = 5;
+    let transcriptsFetched = 0;
     for (const { video_id } of noTranscript) {
       const t = await fetchTranscript(video_id);
-      if (t) await pool.query(`UPDATE videos SET auto_captions = $1 WHERE video_id = $2`, [t, video_id]);
+      if (t) {
+        await pool.query(`UPDATE videos SET auto_captions = $1 WHERE video_id = $2`, [t, video_id]);
+        transcriptsFetched++;
+        consecutiveFailures = 0;
+      } else {
+        consecutiveFailures++;
+        if (consecutiveFailures >= ABORT_AFTER_FAILURES) {
+          logger.warn('Transcript fetching aborted — scraper unreliable, proceeding to downloads', {
+            channel, attempted: transcriptsFetched + consecutiveFailures, fetched: transcriptsFetched,
+          });
+          break;
+        }
+      }
       await new Promise(r => setTimeout(r, 2000)); // Rate limit
     }
 
