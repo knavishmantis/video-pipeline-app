@@ -179,14 +179,20 @@ async function downloadAndPrepare(videoId: string, tmpDir: string): Promise<stri
   const rawPath = join(tmpDir, `${videoId}_raw.mp4`);
   const h264Path = join(tmpDir, `${videoId}.mp4`);
 
-  // Download
-  const ok = await run(YTDLP_PATH, [
-    '-f', 'bestvideo[height<=1080]+bestaudio/best',
+  // Download — try multiple player clients to bypass YouTube's "Sign in to
+  // confirm you're not a bot" block on server IPs. tv_embedded + web_safari
+  // are the most reliable cookie-free bypasses as of 2026-Q1.
+  const ytdlpArgs = [
+    '-f', 'bestvideo[height<=1080]+bestaudio/best/best',
     '--merge-output-format', 'mp4',
     '--no-playlist', '--no-progress',
+    '--extractor-args', 'youtube:player_client=tv_embedded,web_safari,mweb,default',
     '-o', rawPath,
-    `https://www.youtube.com/shorts/${videoId}`,
-  ], 8 * 60 * 1000, `yt-dlp[${videoId}]`); // 8-minute timeout per video
+  ];
+  if (process.env.YTDLP_COOKIES_FILE) ytdlpArgs.push('--cookies', process.env.YTDLP_COOKIES_FILE);
+  ytdlpArgs.push(`https://www.youtube.com/shorts/${videoId}`);
+
+  const ok = await run(YTDLP_PATH, ytdlpArgs, 8 * 60 * 1000, `yt-dlp[${videoId}]`);
 
   if (!ok) return null;
 

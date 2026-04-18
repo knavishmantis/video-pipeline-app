@@ -606,7 +606,7 @@ competitorAnalysisRouter.get('/diagnose', async (req: Request, res: Response) =>
       probeBin('/usr/local/bin/yt-dlp', ['--version']),
       probeBin('/usr/bin/ffmpeg', ['-version']),
       probeBin('/usr/bin/ffprobe', ['-version']),
-      probeBin('/usr/local/bin/yt-dlp', ['--list-formats', '--no-playlist', 'https://www.youtube.com/shorts/-5xq38qHYC0'], 30_000),
+      probeBin('/usr/local/bin/yt-dlp', ['--list-formats', '--no-playlist', '--extractor-args', 'youtube:player_client=tv_embedded,web_safari,mweb,default', 'https://www.youtube.com/shorts/-5xq38qHYC0'], 30_000),
       probeBin('/bin/ls', ['-la', '/usr/local/bin/']),
       probeBin('/usr/bin/which', ['yt-dlp']),
       probeBin('/usr/bin/file', ['/usr/local/bin/yt-dlp']),
