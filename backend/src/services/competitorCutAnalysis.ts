@@ -217,10 +217,55 @@ export async function analyzeVideoCuts(params: {
   if (!text.trim()) throw new Error('Vertex AI returned empty text');
 
   const jsonText = text.trim().replace(/^```json\n?/s, '').replace(/\n?```\s*$/s, '').trim();
-  const cuts = JSON.parse(jsonText) as CutRecord[];
+  const cuts = parseCutsJsonResilient(jsonText);
 
   validateCuts(cuts);
   return cuts;
+}
+
+/**
+ * Parse Gemini's JSON output, salvaging what we can if the response was
+ * truncated mid-stream (happens occasionally — we've seen "Unterminated
+ * string at position N" on videos with dense narration). Strategy:
+ *   1. Try strict parse. If it works, return.
+ *   2. Otherwise, scan for the last complete top-level object within the array
+ *      and re-parse a closed array of those objects. Drop the trailing partial.
+ * Accept a salvaged array only if it has at least 8 cuts — anything less
+ * suggests the truncation happened too early to be useful, and we'd rather
+ * fail and retry than ingest a half-analyzed short.
+ */
+function parseCutsJsonResilient(raw: string): CutRecord[] {
+  try {
+    return JSON.parse(raw) as CutRecord[];
+  } catch (firstErr) {
+    // Find the last "}," that's followed only by whitespace + optional "{" (next object) OR EOF
+    // Simpler: walk backwards finding the last '},' pair and truncate there.
+    const trimmed = raw.trim().replace(/^\[/, '').trim(); // drop leading [
+    let depth = 0;
+    let lastGoodEnd = -1;
+    let inString = false;
+    let escape = false;
+    for (let i = 0; i < trimmed.length; i++) {
+      const ch = trimmed[i];
+      if (escape) { escape = false; continue; }
+      if (ch === '\\' && inString) { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) lastGoodEnd = i; // end of a complete object
+      }
+    }
+    if (lastGoodEnd < 0) throw firstErr;
+    const salvaged = '[' + trimmed.slice(0, lastGoodEnd + 1) + ']';
+    const parsed = JSON.parse(salvaged) as CutRecord[];
+    if (parsed.length < 8) {
+      throw new Error(`Salvaged only ${parsed.length} cuts from truncated response — too few, rejecting`);
+    }
+    logger.warn('Salvaged truncated Gemini JSON response', { rescued_cuts: parsed.length, first_err: (firstErr as Error).message });
+    return parsed;
+  }
 }
 
 function validateCuts(cuts: CutRecord[]): void {
