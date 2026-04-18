@@ -4,9 +4,10 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
-import { IconBook, IconMovie, IconUpload, IconCircleCheck, IconLogout, IconClock, IconCamera, IconBrandDiscord } from '@tabler/icons-react';
+import { IconBook, IconMovie, IconUpload, IconCircleCheck, IconLogout, IconClock, IconBrandDiscord } from '@tabler/icons-react';
 import { useAuth } from '../contexts/AuthContext';
 import { samplesApi, formulaGuidesApi, SampleDetail } from '../services/api';
+import { SampleSceneCard } from '../components/SampleSceneCard';
 
 declare global {
   interface Window {
@@ -609,7 +610,7 @@ function AssignmentTab({ sample, onSubmitted }: { sample: SampleDetail; onSubmit
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {scenes.map((scene: any, idx: number) => (
-            <SceneCard key={scene.id} scene={scene} index={idx + 1} />
+            <SampleSceneCard key={scene.id} scene={scene} index={idx + 1} />
           ))}
         </div>
       </div>
@@ -620,91 +621,6 @@ function AssignmentTab({ sample, onSubmitted }: { sample: SampleDetail; onSubmit
       ) : (
         <SubmissionZone onSubmitted={onSubmitted} />
       )}
-    </div>
-  );
-}
-
-// ── Scene card ─────────────────────────────────────────────────────────────────
-function SceneCard({ scene, index }: { scene: any; index: number }) {
-  return (
-    <div style={{
-      background: 'var(--bg-surface)',
-      border: '1px solid var(--border-default)',
-      borderRadius: '10px',
-      padding: '18px 20px',
-      boxShadow: 'var(--card-shadow)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-        <div style={{
-          width: '28px',
-          height: '28px',
-          borderRadius: '6px',
-          background: 'var(--gold-dim)',
-          border: '1px solid var(--gold-border)',
-          color: 'var(--gold)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '12px',
-          fontWeight: 700,
-          flexShrink: 0,
-        }}>
-          {index}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {scene.script_line && (
-            <p style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600, marginBottom: '6px', lineHeight: '1.5' }}>
-              "{scene.script_line}"
-            </p>
-          )}
-          {scene.direction && (
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: '1.6' }}>
-              <strong style={{ color: 'var(--text-primary)' }}>Direction:</strong> {scene.direction}
-            </p>
-          )}
-          {scene.clipper_notes && (
-            <div style={{
-              marginTop: '10px',
-              padding: '10px 12px',
-              background: 'var(--col-clips-dim, rgba(120,180,220,0.1))',
-              border: '1px solid var(--col-clips-border, rgba(120,180,220,0.25))',
-              borderRadius: '6px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-            }}>
-              <IconCamera size={14} style={{ color: 'var(--col-clips, rgb(90,150,200))', marginTop: '2px', flexShrink: 0 }} />
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.55', whiteSpace: 'pre-wrap' }}>
-                {scene.clipper_notes}
-              </div>
-            </div>
-          )}
-          {scene.link_group && (
-            <div style={{
-              marginTop: '8px',
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              fontStyle: 'italic',
-            }}>
-              Filming group: <strong style={{ color: 'var(--text-secondary)' }}>{scene.link_group}</strong>
-            </div>
-          )}
-          {scene.images && scene.images.length > 0 && (
-            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
-              {scene.images.map((img: any) => (
-                img.url && (
-                  <img
-                    key={img.id}
-                    src={img.url}
-                    alt="scene reference"
-                    style={{ height: '80px', borderRadius: '6px', border: '1px solid var(--border-default)' }}
-                  />
-                )
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

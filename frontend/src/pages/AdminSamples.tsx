@@ -4,6 +4,7 @@ import { samplesApi, scenesApi, SampleListItem, SampleDetail } from '../services
 import { Scene } from '../../../shared/types';
 import { useToast } from '../hooks/useToast';
 import { useConfirm } from '../hooks/useConfirm';
+import { SampleSceneCard } from '../components/SampleSceneCard';
 
 // Hardcoded sample configuration — every prospect sample uses the first N scenes of this short.
 // Dev uses short #5 (test data); prod uses short #77.
@@ -470,32 +471,25 @@ function SampleDetailModal({ sample, onClose, onChanged }: { sample: SampleDetai
           )}
         </div>
 
-        {/* Source short + scenes */}
+        {/* Source short + scenes — full annotations so the reviewer sees exactly
+            what the clipper was instructed to film. */}
         <div style={{ marginBottom: '18px' }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
             Source short · {(sample.scenes || []).length} scenes
           </div>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px' }}>
             {(sample as any).source_short_title || 'Unknown'}
           </div>
           <div style={{
-            background: 'var(--bg-base)',
-            border: '1px solid var(--border-default)',
-            borderRadius: '8px',
-            maxHeight: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            maxHeight: '420px',
             overflowY: 'auto',
+            paddingRight: '4px',
           }}>
             {(sample.scenes || []).map((scene: any, idx: number) => (
-              <div key={scene.id} style={{
-                padding: '8px 12px',
-                borderBottom: '1px solid var(--border-subtle)',
-                fontSize: '11px',
-              }}>
-                <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>#{idx + 1}</span>
-                <span style={{ color: 'var(--text-primary)', marginLeft: '8px' }}>
-                  {scene.script_line || '(no script line)'}
-                </span>
-              </div>
+              <SampleSceneCard key={scene.id} scene={scene} index={idx + 1} compact />
             ))}
           </div>
         </div>
