@@ -206,6 +206,79 @@ server.tool(
   }
 );
 
+// --- Competitor Ingestion + Cut Analysis (admin) ---
+
+server.tool(
+  'start_channel_ingestion',
+  'Kick off YouTube → GCS ingestion for a competitor channel (metadata + transcripts + video downloads). Background job; use get_channel_ingestion_status to poll. Display_name becomes the channel key used everywhere. mc_username defaults to display_name.',
+  {
+    handle: z.string().describe('YouTube handle including @, e.g. "@Mogswamp"'),
+    display_name: z.string().describe('Channel key + display, e.g. "Mogswamp"'),
+    mc_username: z.string().optional().describe('Minecraft username (defaults to display_name)'),
+  },
+  async ({ handle, display_name, mc_username }) => {
+    const result = await apiRequest('POST', '/competitor-analysis/channels', {
+      handle, displayName: display_name, mcUsername: mc_username || display_name,
+    });
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  'get_channel_ingestion_status',
+  'Get the latest ingestion job state for a channel (phase, total_videos, done_videos, fail_videos, message). Use this to poll progress of start_channel_ingestion.',
+  {
+    channel: z.string().describe('Channel name (e.g. "Mogswamp")'),
+  },
+  async ({ channel }) => {
+    const result = await apiRequest('GET', `/competitor-analysis/channels/${encodeURIComponent(channel)}/ingest`);
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  'analyze_channel_cuts',
+  'Run Gemini cut-level analysis on a competitor channel, batching all videos whose cuts have not been analyzed yet. Hard-stops at $20 estimated cost unless approve_over_budget=true. Default model gemini-2.5-flash. Runs as a background job; poll with get_channel_cuts_progress.',
+  {
+    channel: z.string().describe('Channel name'),
+    limit: z.number().optional().describe('Max videos to analyze (for pilots)'),
+    model: z.enum(['gemini-2.5-flash', 'gemini-2.5-pro']).optional().describe('Default: gemini-2.5-flash'),
+    approve_over_budget: z.boolean().optional().describe('Only needed if estimated cost >$20'),
+  },
+  async ({ channel, limit, model, approve_over_budget }) => {
+    const qs = approve_over_budget ? '?approveOverBudget=true' : '';
+    const result = await apiRequest('POST', `/competitor-analysis/channels/${encodeURIComponent(channel)}/analyze-cuts${qs}`, {
+      limit, model,
+    });
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  'get_channel_cuts_progress',
+  'Get cut-analysis progress for a channel: total videos, how many done/analyzing/failed, total cut count across all analyzed videos.',
+  {
+    channel: z.string().describe('Channel name'),
+  },
+  async ({ channel }) => {
+    const result = await apiRequest('GET', `/competitor-analysis/channels/${encodeURIComponent(channel)}/cuts-progress`);
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+server.tool(
+  'analyze_one_video_cuts',
+  'Run Gemini cut-level analysis on ONE specific competitor video (synchronous, typically 15-60s). Good for pilot testing or retrying a single failure.',
+  {
+    video_id: z.number().describe('The script_engine.videos.id (integer, not YouTube id)'),
+    model: z.enum(['gemini-2.5-flash', 'gemini-2.5-pro']).optional(),
+  },
+  async ({ video_id, model }) => {
+    const result = await apiRequest('POST', `/competitor-analysis/videos/${video_id}/analyze-cuts`, { model });
+    return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
 server.tool(
   'suggest_similar_cuts',
   `Retrieve grounded reference cuts from our Mogswamp (or other competitor) cut library for one or more scenes of a short.
