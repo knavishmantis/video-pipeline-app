@@ -206,6 +206,72 @@ server.tool(
   }
 );
 
+server.tool(
+  'suggest_similar_cuts',
+  `Retrieve grounded reference cuts from our Mogswamp (or other competitor) cut library for one or more scenes of a short.
+Every suggestion is anchored to a REAL indexed cut (cut_id + timestamp + video). The technique/composition is from the real cut; the subject can be adapted (adaptation_notes returns explicit swaps like "chicken → dolphin"). Use this BEFORE writing clipper_notes from scratch — prefer adapting a real precedent to inventing a shot.`,
+  {
+    short_id: z.number().describe('The short whose scenes we want suggestions for'),
+    scene_orders: z.array(z.number()).optional().describe('Optional subset of scene_order values (0-indexed). Omit to run for every scene.'),
+    k: z.number().optional().describe('How many suggestions per scene. Default 5, max 10.'),
+    channel: z.string().optional().describe('Optional filter: e.g. "Mogswamp". Omit to search all indexed channels.'),
+  },
+  async ({ short_id, scene_orders, k, channel }) => {
+    const scenes: any[] = await apiRequest('GET', `/shorts/${short_id}/scenes`);
+    const target = Array.isArray(scene_orders) && scene_orders.length > 0
+      ? scenes.filter(s => scene_orders.includes(s.scene_order))
+      : scenes;
+
+    const results = await Promise.all(target.map(async (scene) => {
+      try {
+        const r = await apiRequest('POST', `/shorts/${short_id}/scenes/${scene.id}/similar-cuts`, {
+          k: k ?? 5,
+          channel,
+        });
+        return {
+          scene_order: scene.scene_order,
+          scene_id: scene.id,
+          script_line: scene.script_line,
+          candidates: r.suggestions.map((s: any) => ({
+            cut_id: s.cut_id,
+            channel: s.channel,
+            youtube_video_id: s.youtube_video_id,
+            video_title: s.video_title,
+            timestamp: `${formatMs(s.start_ms)}-${formatMs(s.end_ms)}`,
+            clip_type: s.clip_type,
+            pov: s.pov,
+            editing_effects: s.editing_effects,
+            visual_description: s.visual_description,
+            transcript_segment: s.transcript_segment,
+            why_it_fits: s.why_it_fits,
+            adaptation_notes: s.adaptation_notes,
+            signed_video_url: s.signed_video_url,
+          })),
+        };
+      } catch (err: any) {
+        return {
+          scene_order: scene.scene_order,
+          scene_id: scene.id,
+          script_line: scene.script_line,
+          error: err?.message || 'lookup failed',
+          candidates: [],
+        };
+      }
+    }));
+
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify({ suggestions: results }, null, 2) }],
+    };
+  }
+);
+
+function formatMs(ms: number): string {
+  const totalS = Math.floor(ms / 1000);
+  const m = Math.floor(totalS / 60);
+  const s = totalS % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 // Start server
 async function main() {
   const transport = new StdioServerTransport();

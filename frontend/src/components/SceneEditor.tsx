@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import { MobileSceneForm } from './MobileSceneForm';
+import { SimilarCutsPanel } from './SimilarCutsPanel';
 
 interface SceneEditorProps {
   shortId: number;
@@ -1566,6 +1567,17 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                 <p style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>
                   {scene.clipper_notes || <span style={{ color: 'var(--text-muted)' }}>—</span>}
                 </p>
+              )}
+              {canEditScenes && (
+                <SimilarCutsPanel
+                  shortId={shortId}
+                  scene={scene}
+                  onAdopt={(adopted) => {
+                    const prev = scene.clipper_notes?.trim();
+                    const next = prev ? `${prev}\n\n${adopted}` : adopted;
+                    updateScene(scene.id, { clipper_notes: next });
+                  }}
+                />
               )}
             </div>
 

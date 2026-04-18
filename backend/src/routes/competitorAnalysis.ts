@@ -4,8 +4,17 @@ import jwt from 'jsonwebtoken';
 import { authenticateToken, requireRole } from '../middleware/auth';
 import { getSignedUrlFromBucket, getStorage } from '../services/gcpStorage';
 import { startIngestion, getIngestionStatus, ensureIngestionTables, getAllChannelMeta } from '../services/channelIngestion';
+import {
+  ensureCompetitorCutTables,
+  ingestOneVideo,
+  searchSimilarCuts,
+  rerankCandidates,
+  invalidateCutCache,
+  estimateIngestCostUsd,
+} from '../services/competitorCutAnalysis';
 import { query } from '../db';
 import { config } from '../config/env';
+import { logger } from '../utils/logger';
 
 export const competitorAnalysisRouter = Router();
 
@@ -203,6 +212,11 @@ ensureTable().catch(console.error);
 
 // Also ensure ingestion tables exist on startup
 getPool().query('SELECT 1').then(() => ensureIngestionTables(getPool())).catch(() => {});
+
+// And ensure the competitor_cuts table + videos.cuts_* columns exist
+getPool().query('SELECT 1').then(() => ensureCompetitorCutTables(getPool())).catch(err =>
+  logger.error('ensureCompetitorCutTables failed', { error: err?.message })
+);
 
 // GET /api/competitor-analysis/channels
 // Returns per-channel stats with rich video metrics + channel meta (display_name, mc_username)
@@ -467,5 +481,169 @@ competitorAnalysisRouter.put('/channels/:channel/notes', async (req: Request, re
     res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
+  }
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Cut-level analysis endpoints (admin)
+// ──────────────────────────────────────────────────────────────────────────
+
+// POST /api/competitor-analysis/videos/:id/analyze-cuts
+// Runs Gemini cut-level analysis on ONE video. Synchronous (typically 15-60s).
+competitorAnalysisRouter.post('/videos/:id/analyze-cuts', async (req: Request, res: Response) => {
+  try {
+    const videoId = parseInt(req.params.id, 10);
+    if (!videoId) return res.status(400).json({ error: 'Invalid video id' });
+    const model = typeof req.body?.model === 'string' ? req.body.model : undefined;
+    const result = await ingestOneVideo(getPool(), videoId, { model });
+    invalidateCutCache();
+    res.json(result);
+  } catch (e: any) {
+    logger.error('analyze-cuts failed', { videoId: req.params.id, error: e?.message });
+    res.status(500).json({ error: e?.message || 'analysis failed' });
+  }
+});
+
+// POST /api/competitor-analysis/channels/:channel/analyze-cuts
+// Kicks off a background job analyzing ALL un-analyzed videos for a channel.
+// Enforces the $20 AI inference cap per invocation unless ?approveOverBudget=true.
+// Body optional: { model?: 'gemini-2.5-flash' | 'gemini-2.5-pro', limit?: number }
+competitorAnalysisRouter.post('/channels/:channel/analyze-cuts', async (req: Request, res: Response) => {
+  try {
+    const { channel } = req.params;
+    const model = typeof req.body?.model === 'string' ? req.body.model : 'gemini-2.5-flash';
+    const limit = typeof req.body?.limit === 'number' ? Math.max(1, Math.floor(req.body.limit)) : null;
+    const approveOverBudget = req.query.approveOverBudget === 'true';
+
+    const videos = await seQuery(`
+      SELECT v.id, v.duration_sec
+      FROM videos v
+      WHERE v.channel = $1 AND v.is_short = true AND v.gcs_path IS NOT NULL
+        AND (v.cuts_status IS NULL OR v.cuts_status = 'failed')
+      ORDER BY v.views DESC NULLS LAST
+      ${limit ? `LIMIT ${limit}` : ''}
+    `, [channel]) as Array<{ id: number; duration_sec: number | null }>;
+
+    if (videos.length === 0) {
+      return res.json({ started: false, reason: 'No unanalyzed videos for this channel.' });
+    }
+
+    const avgDur = videos.reduce((s, v) => s + (v.duration_sec || 45), 0) / videos.length;
+    const estCost = estimateIngestCostUsd({
+      shortCount: videos.length,
+      avgDurationSec: avgDur,
+      avgCutsPerShort: 45,
+      model,
+    });
+
+    if (estCost > 20 && !approveOverBudget) {
+      return res.status(409).json({
+        error: 'Budget cap',
+        estimated_cost_usd: Number(estCost.toFixed(2)),
+        cap_usd: 20,
+        hint: 'Pass ?approveOverBudget=true to proceed, or reduce limit/model.',
+      });
+    }
+
+    // Kick off background job — do not await
+    (async () => {
+      let done = 0, failed = 0;
+      for (const v of videos) {
+        try {
+          await ingestOneVideo(getPool(), v.id, { model });
+          done++;
+        } catch (err: any) {
+          failed++;
+          logger.warn('cut analysis failed in batch', { videoId: v.id, error: err?.message });
+        }
+      }
+      invalidateCutCache();
+      logger.info('channel cut analysis batch complete', { channel, done, failed });
+    })().catch(err => logger.error('channel cut analysis crashed', { channel, error: err?.message }));
+
+    res.json({
+      started: true,
+      total: videos.length,
+      estimated_cost_usd: Number(estCost.toFixed(2)),
+      model,
+    });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || 'analyze-cuts batch failed' });
+  }
+});
+
+// GET /api/competitor-analysis/channels/:channel/cuts-progress
+competitorAnalysisRouter.get('/channels/:channel/cuts-progress', async (req: Request, res: Response) => {
+  try {
+    const { channel } = req.params;
+    const rows = await seQuery(`
+      SELECT
+        COUNT(*) FILTER (WHERE is_short = true AND gcs_path IS NOT NULL)::INTEGER AS total,
+        COUNT(*) FILTER (WHERE cuts_status = 'done')::INTEGER AS done,
+        COUNT(*) FILTER (WHERE cuts_status = 'analyzing')::INTEGER AS analyzing,
+        COUNT(*) FILTER (WHERE cuts_status = 'failed')::INTEGER AS failed
+      FROM videos
+      WHERE channel = $1
+    `, [channel]);
+    const cutCountRows = await seQuery(`
+      SELECT COUNT(*)::INTEGER AS cut_count
+      FROM competitor_cuts c JOIN videos v ON v.id = c.video_id
+      WHERE v.channel = $1
+    `, [channel]);
+    res.json({ ...rows[0], cut_count: cutCountRows[0]?.cut_count ?? 0 });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message });
+  }
+});
+
+// POST /api/competitor-analysis/cuts/similar
+// Body: { script_line, short_context?, k?, channel?, include_signed_urls? }
+// This endpoint is also used by the SceneEditor panel (via the non-admin scenes
+// router wrapper below). This copy stays admin-only for direct API exploration.
+competitorAnalysisRouter.post('/cuts/similar', async (req: Request, res: Response) => {
+  try {
+    const {
+      script_line = '',
+      short_context = '',
+      k = 5,
+      channel,
+      include_signed_urls = true,
+      retrieve_multiplier = 4,
+    } = req.body || {};
+    if (!script_line.trim() && !short_context.trim()) {
+      return res.status(400).json({ error: 'script_line or short_context required' });
+    }
+    const finalK = Math.min(10, Math.max(1, Math.floor(k)));
+    const pool = getPool();
+    const queryText = [script_line, short_context].filter(Boolean).join('. ');
+    const candidates = await searchSimilarCuts(pool, {
+      queryText,
+      k: finalK * retrieve_multiplier,
+      channel,
+    });
+    const ranked = await rerankCandidates({
+      scriptLine: script_line,
+      shortContext: short_context,
+      candidates,
+      finalK,
+    });
+
+    if (!include_signed_urls) return res.json({ suggestions: ranked });
+
+    const withUrls = await Promise.all(ranked.map(async (r) => {
+      const rows = await seQuery('SELECT gcs_path FROM videos WHERE id = $1', [r.competitor_video_id]);
+      const gcs = rows[0]?.gcs_path;
+      let signedUrl: string | null = null;
+      if (gcs) {
+        const base = await getCompetitorSignedUrl(gcs, 3600);
+        const fragment = `#t=${(r.start_ms / 1000).toFixed(2)},${(r.end_ms / 1000).toFixed(2)}`;
+        signedUrl = base + fragment;
+      }
+      return { ...r, signed_video_url: signedUrl };
+    }));
+    res.json({ suggestions: withUrls });
+  } catch (e: any) {
+    logger.error('cuts/similar failed', { error: e?.message });
+    res.status(500).json({ error: e?.message || 'search failed' });
   }
 });
