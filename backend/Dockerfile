@@ -23,11 +23,14 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine
 
-# Install ffmpeg (for H.264 transcoding) and yt-dlp (for video downloads)
-RUN apk add --no-cache ffmpeg python3 curl && \
-    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
-      -o /usr/local/bin/yt-dlp && \
-    chmod +x /usr/local/bin/yt-dlp
+# Install ffmpeg (for H.264 transcoding) and yt-dlp (for video downloads).
+# Alpine ships a musl-compatible yt-dlp in the community repo. Previously we
+# pulled yt-dlp_linux from GitHub, which is a glibc PyInstaller bundle — it
+# would land on disk but spawn(ENOENT) on Alpine because the glibc interpreter
+# isn't present. Using apk guarantees a working binary + keeps it upgradable.
+RUN apk add --no-cache ffmpeg yt-dlp && \
+    yt-dlp --version && \
+    ln -sf $(which yt-dlp) /usr/local/bin/yt-dlp
 
 WORKDIR /app
 

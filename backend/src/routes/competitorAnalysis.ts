@@ -602,11 +602,15 @@ competitorAnalysisRouter.get('/channels/:channel/cuts-progress', async (req: Req
 // Returns their versions + a harmless test run to help diagnose container issues.
 competitorAnalysisRouter.get('/diagnose', async (req: Request, res: Response) => {
   try {
-    const [ytVer, ffVer, ffpVer, ytFormats] = await Promise.all([
+    const [ytVer, ffVer, ffpVer, ytFormats, lsBin, which, fileType, headFile] = await Promise.all([
       probeBin('/usr/local/bin/yt-dlp', ['--version']),
       probeBin('/usr/bin/ffmpeg', ['-version']),
       probeBin('/usr/bin/ffprobe', ['-version']),
       probeBin('/usr/local/bin/yt-dlp', ['--list-formats', '--no-playlist', 'https://www.youtube.com/shorts/-5xq38qHYC0'], 30_000),
+      probeBin('/bin/ls', ['-la', '/usr/local/bin/']),
+      probeBin('/usr/bin/which', ['yt-dlp']),
+      probeBin('/usr/bin/file', ['/usr/local/bin/yt-dlp']),
+      probeBin('/bin/sh', ['-c', 'head -c 200 /usr/local/bin/yt-dlp 2>&1; echo; echo "---SIZE---"; wc -c /usr/local/bin/yt-dlp 2>&1']),
     ]);
     res.json({
       ytdlp_version: ytVer,
@@ -618,6 +622,12 @@ competitorAnalysisRouter.get('/diagnose', async (req: Request, res: Response) =>
         stdout_first_1kb: ytFormats.stdout.slice(0, 1000),
         stderr_last_1kb: ytFormats.stderr.slice(-1000),
         error: ytFormats.error,
+      },
+      fs_check: {
+        ls_usr_local_bin: { code: lsBin.code, stdout: lsBin.stdout.slice(0, 1500), stderr: lsBin.stderr.slice(-300), error: lsBin.error },
+        which_ytdlp: { code: which.code, stdout: which.stdout.trim(), stderr: which.stderr.trim(), error: which.error },
+        file_ytdlp: { code: fileType.code, stdout: fileType.stdout.trim(), stderr: fileType.stderr.trim(), error: fileType.error },
+        head_ytdlp: { code: headFile.code, stdout: headFile.stdout.slice(0, 800), stderr: headFile.stderr.slice(0, 200), error: headFile.error },
       },
     });
   } catch (e: any) {
