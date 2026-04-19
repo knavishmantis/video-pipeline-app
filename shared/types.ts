@@ -188,6 +188,32 @@ export interface UpdatePresetClipInput {
   description?: string | null;
 }
 
+export interface World {
+  id: number;
+  name: string;
+  description?: string | null;
+  bucket_path: string;
+  screenshot_path?: string | null;
+  file_size?: number | null;
+  screenshot_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateWorldInput {
+  name: string;
+  description?: string;
+  bucket_path: string;
+  screenshot_path?: string;
+  file_size?: number;
+}
+
+export interface UpdateWorldInput {
+  name?: string;
+  description?: string | null;
+  screenshot_path?: string;
+}
+
 export interface SceneImage {
   id: number;
   scene_id: number;
@@ -207,6 +233,8 @@ export interface Scene {
   image_url?: string | null;
   preset_clip_id?: number | null;
   preset_clip?: PresetClip | null;
+  world_id?: number | null;
+  world?: World | null;
   images?: SceneImage[];
   needs_rework?: boolean;
   clipper_checked?: boolean;
@@ -223,6 +251,7 @@ export interface CreateSceneInput {
   scene_order?: number;
   image_url?: string | null;
   preset_clip_id?: number | null;
+  world_id?: number | null;
 }
 
 export interface UpdateSceneInput {
@@ -233,6 +262,7 @@ export interface UpdateSceneInput {
   scene_order?: number;
   image_url?: string | null;
   preset_clip_id?: number | null;
+  world_id?: number | null;
   needs_rework?: boolean;
   clipper_checked?: boolean;
   link_group?: string | null;

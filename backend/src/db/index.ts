@@ -324,6 +324,7 @@ async function runAllMigrations(): Promise<void> {
   const { migratePresetClips } = await import('./migratePresetClips');
   const { migrateIncentiveRules } = await import('./migrateIncentiveRules');
   const { migrateScriptSubStage } = await import('./migrateScriptSubStage');
+  const { migrateWorlds } = await import('./migrateWorlds');
 
   const migrations = [
     { name: 'base schema', fn: migrate },
@@ -346,6 +347,7 @@ async function runAllMigrations(): Promise<void> {
     { name: 'preset clips', fn: migratePresetClips },
     { name: 'incentive rules', fn: migrateIncentiveRules },
     { name: 'script sub stage', fn: migrateScriptSubStage },
+    { name: 'worlds', fn: migrateWorlds },
   ];
 
   for (const { name, fn } of migrations) {

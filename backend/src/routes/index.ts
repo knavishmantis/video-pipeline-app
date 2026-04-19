@@ -12,6 +12,7 @@ import { teamMetricsRouter } from './teamMetrics';
 import { formulaGuidesRouter } from './formulaGuides';
 import { researchRouter } from './research';
 import { presetClipsRouter } from './presetClips';
+import { worldsRouter } from './worlds';
 import { scriptEngineRouter } from './scriptEngine';
 import { pipelineAnalyticsRouter } from './pipelineAnalytics';
 import { competitorAnalysisRouter } from './competitorAnalysis';
@@ -32,6 +33,7 @@ export function setupRoutes(app: Express): void {
   app.use('/api/formula-guides', formulaGuidesRouter);
   app.use('/api/research', researchRouter);
   app.use('/api/preset-clips', presetClipsRouter);
+  app.use('/api/worlds', worldsRouter);
   app.use('/api/script-engine', scriptEngineRouter);
   app.use('/api/analytics/pipeline', pipelineAnalyticsRouter);
   app.use('/api/competitor-analysis', competitorAnalysisRouter);

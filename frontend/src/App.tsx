@@ -21,6 +21,7 @@ import CriticReview from './pages/CriticReview';
 import CompetitorAnalysis from './pages/CompetitorAnalysis';
 import SceneEditorPage from './pages/SceneEditorPage';
 import Presets from './pages/Presets';
+import Worlds from './pages/Worlds';
 import Assets from './pages/Assets';
 import ClipperSample from './pages/ClipperSample';
 import AdminSamples from './pages/AdminSamples';
@@ -190,6 +191,16 @@ function AppContent() {
               <ProfileCheckRoute>
                 <AppLayout>
                   <Presets />
+                </AppLayout>
+              </ProfileCheckRoute>
+            }
+          />
+          <Route
+            path="/worlds"
+            element={
+              <ProfileCheckRoute>
+                <AppLayout>
+                  <Worlds />
                 </AppLayout>
               </ProfileCheckRoute>
             }

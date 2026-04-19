@@ -22,7 +22,7 @@ export interface LintIssue {
   message: string;
   matches?: string[];
 }
-import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, IncentiveRule, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput, SampleAssignment, CreateSampleInput } from '../../../shared/types';
+import { User, UserRole, Short, Assignment, File as FileType, Payment, CreateShortInput, UpdateShortInput, CreateAssignmentInput, AuthResponse, UserRate, IncentiveRule, Scene, CreateSceneInput, UpdateSceneInput, PresetClip, CreatePresetClipInput, UpdatePresetClipInput, World, CreateWorldInput, UpdateWorldInput, SampleAssignment, CreateSampleInput } from '../../../shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -475,6 +475,40 @@ export const presetClipsApi = {
   },
   getVideoUrl: async (id: number): Promise<string> => {
     const response = await api.get(`/preset-clips/${id}/video-url`);
+    return response.data.url;
+  },
+};
+
+export const worldsApi = {
+  getAll: async (): Promise<World[]> => {
+    const response = await api.get('/worlds');
+    return response.data;
+  },
+  getById: async (id: number): Promise<World> => {
+    const response = await api.get(`/worlds/${id}`);
+    return response.data;
+  },
+  getUploadUrl: async (fileName: string, fileSize: number, contentType: string, fileType: 'zip' | 'screenshot'): Promise<{ upload_url: string; bucket_path: string; expires_in: number }> => {
+    const response = await api.post('/worlds/upload-url', { file_name: fileName, file_size: fileSize, content_type: contentType, file_type: fileType });
+    return response.data;
+  },
+  create: async (input: CreateWorldInput): Promise<World> => {
+    const response = await api.post('/worlds', input);
+    return response.data;
+  },
+  update: async (id: number, input: UpdateWorldInput): Promise<World> => {
+    const response = await api.put(`/worlds/${id}`, input);
+    return response.data;
+  },
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/worlds/${id}`);
+  },
+  getScreenshotUrl: async (id: number): Promise<string> => {
+    const response = await api.get(`/worlds/${id}/screenshot-url`);
+    return response.data.url;
+  },
+  getDownloadUrl: async (id: number): Promise<string> => {
+    const response = await api.get(`/worlds/${id}/download-url`);
     return response.data.url;
   },
 };

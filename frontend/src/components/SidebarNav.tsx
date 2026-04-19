@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "./ui/sidebar";
-import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie, IconBolt, IconChartBar, IconStarFilled, IconSword, IconPhoto, IconUserPlus } from "@tabler/icons-react";
+import { IconDashboard, IconUsers, IconCurrencyDollar, IconLogout, IconHelp, IconCamera, IconEdit, IconSun, IconMoon, IconPencil, IconReportSearch, IconMovie, IconBolt, IconChartBar, IconStarFilled, IconSword, IconPhoto, IconUserPlus, IconGlobe } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../contexts/AuthContext";
 import { useTheme } from "../contexts/ThemeContext";
@@ -184,6 +184,11 @@ export function SidebarNav() {
       label: "Presets",
       href: "/presets",
       icon: <IconMovie className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
+    },
+    {
+      label: "Worlds",
+      href: "/worlds",
+      icon: <IconGlobe className="h-5 w-5 shrink-0" style={{ color: ICON_COLOR }} />,
     },
     ...((isEditor || isAdmin) ? [{
       label: "Assets",

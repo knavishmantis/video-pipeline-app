@@ -17,6 +17,7 @@ export const updateSceneSchema = z.object({
   scene_order: z.number().int().min(0).optional(),
   image_url: z.string().max(1000).nullable().optional(),
   preset_clip_id: z.number().int().positive().nullable().optional(),
+  world_id: z.number().int().positive().nullable().optional(),
   needs_rework: z.boolean().optional(),
   clipper_checked: z.boolean().optional(),
   link_group: z.string().max(200).nullable().optional(),

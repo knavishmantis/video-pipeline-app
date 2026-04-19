@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput, PresetClip, ShortStatus } from '../../../shared/types';
-import { scenesApi, filesApi, presetClipsApi } from '../services/api';
+import { Scene, SceneImage, CreateSceneInput, UpdateSceneInput, PresetClip, World, ShortStatus } from '../../../shared/types';
+import { scenesApi, filesApi, presetClipsApi, worldsApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { ConfirmDialog } from './ui/confirm-dialog';
@@ -318,8 +318,18 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
   const [presetThumbnailUrls, setPresetThumbnailUrls] = useState<Record<number, string>>({});
   const loadingPresetThumbs = useRef<Set<number>>(new Set());
   const [showPresetPicker, setShowPresetPicker] = useState<number | null>(null);
-  const [presetPickerFlipped, setPresetPickerFlipped] = useState(false);
   const [presetSearch, setPresetSearch] = useState('');
+
+  // Worlds state
+  const [worlds, setWorlds] = useState<World[]>([]);
+  const [worldScreenshotUrls, setWorldScreenshotUrls] = useState<Record<number, string>>({});
+  const loadingWorldScreenshots = useRef<Set<number>>(new Set());
+  const [showWorldPicker, setShowWorldPicker] = useState<number | null>(null);
+  const [worldSearch, setWorldSearch] = useState('');
+
+  // Picker anchor coords (for position: fixed dropdowns that escape overflow container)
+  const [presetPickerAnchor, setPresetPickerAnchor] = useState<{ top: number; left: number; width: number; flipped: boolean } | null>(null);
+  const [worldPickerAnchor, setWorldPickerAnchor] = useState<{ top: number; left: number; width: number; flipped: boolean } | null>(null);
   const [autoLinking, setAutoLinking] = useState(false);
   const [autoLinkResult, setAutoLinkResult] = useState<string | null>(null);
   const [linkingFromId, setLinkingFromId] = useState<number | null>(null);
@@ -342,6 +352,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
   useEffect(() => {
     loadScenes();
     loadPresetClips();
+    loadWorlds();
   }, [shortId]);
 
   useEffect(() => {
@@ -379,6 +390,25 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
     } catch {
       // presets may not be available
     }
+  };
+
+  const loadWorlds = async () => {
+    try {
+      const data = await worldsApi.getAll();
+      setWorlds(data);
+    } catch {
+      // worlds may not be available
+    }
+  };
+
+  const loadWorldScreenshotUrl = (world: World) => {
+    if (!world.screenshot_path) return;
+    if (worldScreenshotUrls[world.id] || loadingWorldScreenshots.current.has(world.id)) return;
+    loadingWorldScreenshots.current.add(world.id);
+    worldsApi.getScreenshotUrl(world.id)
+      .then(url => setWorldScreenshotUrls(prev => ({ ...prev, [world.id]: url })))
+      .catch(() => {})
+      .finally(() => loadingWorldScreenshots.current.delete(world.id));
   };
 
   const loadPresetVideoUrl = (presetId: number) => {
@@ -491,6 +521,12 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
       if (input.preset_clip_id !== undefined) {
         updated.preset_clip = input.preset_clip_id
           ? presetClips.find(p => p.id === input.preset_clip_id) || null
+          : null;
+      }
+      // If world_id changed, attach or clear world
+      if (input.world_id !== undefined) {
+        updated.world = input.world_id
+          ? worlds.find(w => w.id === input.world_id) || null
           : null;
       }
       return updated;
@@ -659,16 +695,17 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
       </div>
     );
 
+    const anchor = presetPickerAnchor;
     return (
       <div
         style={{
-          position: 'absolute',
-          ...(presetPickerFlipped
-            ? { bottom: '100%', marginBottom: '4px' }
-            : { top: '100%', marginTop: '4px' }),
-          left: 0,
-          right: 0,
-          zIndex: 10,
+          position: 'fixed',
+          ...(anchor?.flipped
+            ? { bottom: anchor ? `${window.innerHeight - anchor.top + 4}px` : 'auto' }
+            : { top: anchor ? `${anchor.top + 4}px` : 'auto' }),
+          left: anchor ? `${anchor.left}px` : 'auto',
+          width: anchor ? `${anchor.width}px` : '320px',
+          zIndex: 2000,
           background: 'var(--modal-bg)',
           border: '1px solid var(--border-default)',
           borderRadius: '8px',
@@ -718,7 +755,14 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                     ].filter(v => v.preset).map(({ preset, label }) => (
                       <button
                         key={preset!.id}
-                        onClick={() => { updateScene(sceneId, { preset_clip_id: preset!.id }); setShowPresetPicker(null); setPresetSearch(''); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPresetPicker(null); setPresetSearch('');
+                          if (saveTimeouts.current[sceneId]) { clearTimeout(saveTimeouts.current[sceneId]); delete saveTimeouts.current[sceneId]; }
+                          const p = preset!;
+                          setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, preset_clip_id: p.id, preset_clip: { ...p } } : s));
+                          scenesApi.update(shortId, sceneId, { preset_clip_id: p.id }).then(() => loadScenes()).catch(() => loadScenes());
+                        }}
                         style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'transparent', border: '1px solid var(--border-default)', borderRadius: '6px', padding: '6px', cursor: 'pointer', transition: 'background 0.15s' }}
                         onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; e.currentTarget.style.borderColor = 'var(--gold-border)'; }}
                         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
@@ -731,7 +775,14 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
                 ) : (
                   // Standalone
                   <button
-                    onClick={() => { updateScene(sceneId, { preset_clip_id: group.standalone!.id }); setShowPresetPicker(null); setPresetSearch(''); }}
+                    onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPresetPicker(null); setPresetSearch('');
+                          if (saveTimeouts.current[sceneId]) { clearTimeout(saveTimeouts.current[sceneId]); delete saveTimeouts.current[sceneId]; }
+                          const p = group.standalone!;
+                          setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, preset_clip_id: p.id, preset_clip: { ...p } } : s));
+                          scenesApi.update(shortId, sceneId, { preset_clip_id: p.id }).then(() => loadScenes()).catch(() => loadScenes());
+                        }}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'transparent', border: 'none', borderRadius: '6px', padding: '2px 4px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
@@ -754,103 +805,149 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
     );
   };
 
-  // Preset display for a scene (in expanded panel or flashcard)
+  // Linked preset display (only shown when a preset is linked)
   const renderPresetSection = (scene: Scene) => {
     const preset = scene.preset_clip;
-    if (preset?.id) {
-      loadPresetVideoUrl(preset.id);
-    }
-
+    if (!preset) return null;
+    loadPresetVideoUrl(preset.id);
     return (
-      <div style={{ marginBottom: '14px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Preset Clip</label>
-        {preset ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: 'color-mix(in srgb, var(--gold) 8%, var(--bg-base))', border: '1px solid var(--gold-border, var(--border-default))' }}>
-            {presetVideoUrls[preset.id] && (
-              <video
-                src={presetVideoUrls[preset.id]}
-                style={{ width: '80px', height: '45px', objectFit: 'cover', borderRadius: '4px' }}
-                muted
-                preload="metadata"
-              />
-            )}
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.label ? `${preset.label}. ` : ''}{getBaseName(preset.name)}</span>
-                <NametagBadge name={preset.name} />
-              </div>
-              {preset.description && (
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>{preset.description}</p>
-              )}
-            </div>
-            {presetVideoUrls[preset.id] && (
-              <a
-                href={presetVideoUrls[preset.id]}
-                download={`${preset.name}.mp4`}
-                onClick={e => {
-                  e.stopPropagation();
-                  const url = presetVideoUrls[preset.id];
-                  fetch(url).then(r => r.blob()).then(blob => {
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `${preset.name}.mp4`;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                  });
-                  e.preventDefault();
-                }}
-                style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                title="Download preset MP4"
-              >
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Download
-              </a>
-            )}
-            {canEditScenes && (
-              <button
-                onClick={() => updateScene(scene.id, { preset_clip_id: null })}
-                style={{ fontSize: '12px', color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600' }}
-              >
-                Unlink
-              </button>
-            )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: 'color-mix(in srgb, var(--gold) 8%, var(--bg-base))', border: '1px solid var(--gold-border, var(--border-default))', marginBottom: '8px' }}>
+        {presetVideoUrls[preset.id] && (
+          <video src={presetVideoUrls[preset.id]} style={{ width: '72px', height: '40px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} muted preload="metadata" />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{preset.label ? `${preset.label}. ` : ''}{getBaseName(preset.name)}</span>
+            <NametagBadge name={preset.name} />
           </div>
-        ) : canEditScenes ? (
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={(e) => {
-                if (showPresetPicker === scene.id) {
-                  setShowPresetPicker(null);
-                } else {
-                  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                  setPresetPickerFlipped(rect.bottom + 210 > window.innerHeight);
-                  setShowPresetPicker(scene.id);
-                }
-              }}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '7px',
-                border: '1px dashed var(--border-strong)',
-                background: 'var(--bg-base)',
-                cursor: 'pointer',
-                fontSize: '13px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              + Link Preset Clip
-            </button>
-            {renderPresetPicker(scene.id)}
-          </div>
-        ) : (
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>None</span>
+        </div>
+        {presetVideoUrls[preset.id] && (
+          <a href={presetVideoUrls[preset.id]} onClick={e => { e.stopPropagation(); const url = presetVideoUrls[preset.id]; fetch(url).then(r => r.blob()).then(blob => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${preset.name}.mp4`; a.click(); URL.revokeObjectURL(a.href); }); e.preventDefault(); }} style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', textDecoration: 'none', flexShrink: 0 }}>↓</a>
+        )}
+        {canEditScenes && (
+          <button onClick={() => updateScene(scene.id, { preset_clip_id: null })} style={{ fontSize: '11px', color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', flexShrink: 0 }}>✕</button>
         )}
       </div>
     );
   };
 
+
+  // World picker dropdown for expanded scene
+  const renderWorldPicker = (sceneId: number) => {
+    if (showWorldPicker !== sceneId) return null;
+    const q = worldSearch.trim().toLowerCase();
+    const filtered = q ? worlds.filter(w => w.name.toLowerCase().includes(q) || (w.description || '').toLowerCase().includes(q)) : worlds;
+    filtered.forEach(w => loadWorldScreenshotUrl(w));
+
+    const anchor = worldPickerAnchor;
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          ...(anchor?.flipped
+            ? { bottom: anchor ? `${window.innerHeight - anchor.top + 4}px` : 'auto' }
+            : { top: anchor ? `${anchor.top + 4}px` : 'auto' }),
+          left: anchor ? `${anchor.left}px` : 'auto',
+          width: anchor ? `${anchor.width}px` : '320px',
+          zIndex: 2000,
+          background: 'var(--modal-bg)',
+          border: '1px solid var(--border-default)',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          maxHeight: '400px',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search worlds…"
+            value={worldSearch}
+            onChange={e => setWorldSearch(e.target.value)}
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', padding: '6px 10px', borderRadius: '6px',
+              border: '1px solid var(--border-default)', background: 'var(--bg-base)',
+              color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1 }}>
+          {filtered.length === 0 ? (
+            <div style={{ padding: '12px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' }}>
+              No worlds yet. Add some on the Worlds page.
+            </div>
+          ) : (
+            filtered.map((world) => (
+              <button
+                key={world.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowWorldPicker(null); setWorldSearch('');
+                  if (saveTimeouts.current[sceneId]) {
+                    clearTimeout(saveTimeouts.current[sceneId]);
+                    delete saveTimeouts.current[sceneId];
+                  }
+                  const worldCopy = { ...world };
+                  setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, world_id: worldCopy.id, world: worldCopy } : s));
+                  scenesApi.update(shortId, sceneId, { world_id: worldCopy.id })
+                    .then(() => loadScenes())
+                    .catch(() => loadScenes());
+                }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border-subtle)', padding: '8px 10px', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--gold-dim)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <div style={{ width: '56px', height: '42px', borderRadius: '4px', overflow: 'hidden', background: 'var(--bg-surface)', flexShrink: 0 }}>
+                  {worldScreenshotUrls[world.id] ? (
+                    <img src={worldScreenshotUrls[world.id]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" opacity="0.4"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{world.name}</div>
+                  {world.description && (
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{world.description}</div>
+                  )}
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Linked world display (only shown when a world is linked)
+  const renderWorldSection = (scene: Scene) => {
+    const world = scene.world;
+    if (!world) return null;
+    if (world.screenshot_path) loadWorldScreenshotUrl(world);
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: 'color-mix(in srgb, #4CAF50 8%, var(--bg-base))', border: '1px solid color-mix(in srgb, #4CAF50 30%, transparent)', marginBottom: '8px' }}>
+        {world.screenshot_path && worldScreenshotUrls[world.id] ? (
+          <img src={worldScreenshotUrls[world.id]} alt={world.name} style={{ width: '72px', height: '45px', objectFit: 'cover', borderRadius: '4px', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: '72px', height: '45px', borderRadius: '4px', background: 'var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="1.5" opacity="0.4"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>{world.name}</div>
+          {world.description && <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '1px 0 0' }}>{world.description}</p>}
+        </div>
+        <button onClick={async () => { try { const url = await worldsApi.getDownloadUrl(world.id); const a = document.createElement('a'); a.href = url; a.download = world.name.replace(/\s+/g, '-').toLowerCase() + '.zip'; a.click(); } catch {} }} style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', flexShrink: 0 }} title="Download world ZIP">↓ ZIP</button>
+        {canEditScenes && (
+          <button onClick={() => updateScene(scene.id, { world_id: null })} style={{ fontSize: '11px', color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', flexShrink: 0 }}>✕</button>
+        )}
+      </div>
+    );
+  };
 
   // const generateSegments = async () => {
   //   setGeneratingSegments(true);
@@ -1588,71 +1685,90 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
               )}
             </div>
 
+            {/* Linked preset / world chips */}
             {renderPresetSection(scene)}
+            {renderWorldSection(scene)}
 
-            {((scene.images?.length ?? 0) > 0 || canEditScenes) && (
-              <div>
-                <label className="sidebar-label" style={{ color: 'var(--text-muted)', marginBottom: '8px' }}>Scene Media</label>
-                {(scene.images?.length ?? 0) > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
-                    {scene.images!.map(img => (
-                      <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
-                        {imageSignedUrls[img.id] ? (
-                          <div style={{ resize: 'both', overflow: 'hidden', width: '220px', minWidth: '80px', minHeight: '60px', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'inline-block' }}>
-                            {img.file_type === 'video' ? (
-                              <video src={imageSignedUrls[img.id]} controls style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }} />
-                            ) : (
-                              <img
-                                src={imageSignedUrls[img.id]}
-                                alt="Scene reference"
-                                style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }}
-                              />
-                            )}
-                          </div>
+            {/* Uploaded scene images */}
+            {(scene.images?.length ?? 0) > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                {scene.images!.map(img => (
+                  <div key={img.id} style={{ position: 'relative', display: 'inline-block' }}>
+                    {imageSignedUrls[img.id] ? (
+                      <div style={{ resize: 'both', overflow: 'hidden', width: '220px', minWidth: '80px', minHeight: '60px', borderRadius: '8px', border: '1px solid var(--border-default)', display: 'inline-block' }}>
+                        {img.file_type === 'video' ? (
+                          <video src={imageSignedUrls[img.id]} controls style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }} />
                         ) : (
-                          <div style={{ width: '120px', height: '90px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
-                            Loading…
-                          </div>
-                        )}
-                        {canEditScenes && (
-                          <button
-                            onClick={() => handleDeleteImage(scene.id, img.id)}
-                            style={{ position: 'absolute', top: '4px', right: '4px', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', lineHeight: 1 }}
-                            title="Remove"
-                          >
-                            ×
-                          </button>
+                          <img src={imageSignedUrls[img.id]} alt="Scene reference" style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block', borderRadius: '8px' }} />
                         )}
                       </div>
-                    ))}
+                    ) : (
+                      <div style={{ width: '120px', height: '90px', borderRadius: '8px', border: '1px solid var(--border-default)', background: 'var(--bg-base)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>Loading…</div>
+                    )}
+                    {canEditScenes && (
+                      <button onClick={() => handleDeleteImage(scene.id, img.id)} style={{ position: 'absolute', top: '4px', right: '4px', width: '20px', height: '20px', borderRadius: '4px', background: 'rgba(0,0,0,0.6)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', lineHeight: 1 }} title="Remove">×</button>
+                    )}
                   </div>
-                )}
-                {canEditScenes && (
-                  <label style={{
-                    display: 'inline-flex', alignItems: 'center', gap: '8px',
-                    padding: '8px 14px', borderRadius: '7px', border: '1px dashed var(--border-strong)',
-                    background: 'var(--bg-base)', cursor: 'pointer', fontSize: '13px', color: 'var(--text-muted)',
-                  }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                    Add Image / Video
-                    <input
-                      type="file"
-                      accept="image/*,video/mp4"
-                      style={{ display: 'none' }}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleImageUpload(scene.id, file);
-                        e.target.value = '';
-                      }}
-                    />
-                  </label>
-                )}
+                ))}
               </div>
             )}
+
+            {/* Compact inline actions row */}
+            {canEditScenes && (
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {!scene.preset_clip && (
+                  <button
+                    onClick={(e) => {
+                      if (showPresetPicker === scene.id) {
+                        setShowPresetPicker(null);
+                      } else {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setPresetPickerAnchor({ top: rect.bottom, left: rect.left, width: Math.max(rect.width, 340), flipped: rect.bottom + 300 > window.innerHeight });
+                        setShowPresetPicker(scene.id);
+                      }
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '6px', border: '1px dashed var(--border-strong)', background: 'var(--bg-base)', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    Preset
+                  </button>
+                )}
+                {!scene.world && (
+                  <button
+                    onClick={(e) => {
+                      if (showWorldPicker === scene.id) {
+                        setShowWorldPicker(null);
+                      } else {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setWorldPickerAnchor({ top: rect.bottom, left: rect.left, width: Math.max(rect.width, 320), flipped: rect.bottom + 300 > window.innerHeight });
+                        setShowWorldPicker(scene.id);
+                      }
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '6px', border: '1px dashed var(--border-strong)', background: 'var(--bg-base)', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    World
+                  </button>
+                )}
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 10px', borderRadius: '6px', border: '1px dashed var(--border-strong)', background: 'var(--bg-base)', cursor: 'pointer', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Media
+                  <input type="file" accept="image/*,video/mp4" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) handleImageUpload(scene.id, file); e.target.value = ''; }} />
+                </label>
+              </div>
+            )}
+
+            {/* Click-outside overlay closes any open picker */}
+            {(showPresetPicker !== null || showWorldPicker !== null) && (
+              <div
+                style={{ position: 'fixed', inset: 0, zIndex: 1999 }}
+                onClick={() => { setShowPresetPicker(null); setShowWorldPicker(null); setPresetSearch(''); setWorldSearch(''); }}
+              />
+            )}
+
+            {/* Pickers rendered here so they use position:fixed and escape overflow clipping */}
+            {renderPresetPicker(scene.id)}
+            {renderWorldPicker(scene.id)}
           </div>
 
             {/* Prev / Next navigation — pinned to bottom */}
