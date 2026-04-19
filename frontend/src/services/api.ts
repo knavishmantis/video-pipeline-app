@@ -443,33 +443,7 @@ export const scenesApi = {
     const response = await api.post(`/shorts/${shortId}/scenes/generate-segments`);
     return response.data.segments;
   },
-  similarCuts: async (
-    shortId: number,
-    sceneId: number,
-    opts?: { k?: number; channel?: string }
-  ): Promise<{ scene_id: number; suggestions: SimilarCutSuggestion[] }> => {
-    const response = await api.post(`/shorts/${shortId}/scenes/${sceneId}/similar-cuts`, opts || {});
-    return response.data;
-  },
 };
-
-export interface SimilarCutSuggestion {
-  cut_id: number;
-  competitor_video_id: number;
-  youtube_video_id: string;
-  channel: string;
-  video_title: string | null;
-  start_ms: number;
-  end_ms: number;
-  visual_description: string;
-  clip_type: string;
-  pov: string;
-  editing_effects: string[];
-  transcript_segment: string;
-  why_it_fits: string;
-  adaptation_notes: string[];
-  signed_video_url: string | null;
-}
 
 export const presetClipsApi = {
   getAll: async (): Promise<PresetClip[]> => {

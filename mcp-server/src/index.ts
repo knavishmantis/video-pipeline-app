@@ -279,47 +279,72 @@ server.tool(
   }
 );
 
+// Shared helper — call the admin /cuts/similar endpoint with script_line + context.
+async function queryCutsByText(
+  script_line: string,
+  short_context: string,
+  k: number,
+  channel?: string
+): Promise<any[]> {
+  const r = await apiRequest('POST', '/competitor-analysis/cuts/similar', {
+    script_line,
+    short_context,
+    k,
+    channel,
+    include_signed_urls: true,
+  });
+  return (r.suggestions || []).map((s: any) => ({
+    cut_id: s.cut_id,
+    channel: s.channel,
+    youtube_video_id: s.youtube_video_id,
+    video_title: s.video_title,
+    timestamp: `${formatMs(s.start_ms)}-${formatMs(s.end_ms)}`,
+    start_s: Math.floor(s.start_ms / 1000),
+    end_s: Math.floor(s.end_ms / 1000),
+    clip_type: s.clip_type,
+    pov: s.pov,
+    editing_effects: s.editing_effects,
+    visual_description: s.visual_description,
+    transcript_segment: s.transcript_segment,
+    why_it_fits: s.why_it_fits,
+    adaptation_notes: s.adaptation_notes,
+    signed_video_url: s.signed_video_url,
+  }));
+}
+
 server.tool(
   'suggest_similar_cuts',
-  `Retrieve grounded reference cuts from our Mogswamp (or other competitor) cut library for one or more scenes of a short.
-Every suggestion is anchored to a REAL indexed cut (cut_id + timestamp + video). The technique/composition is from the real cut; the subject can be adapted (adaptation_notes returns explicit swaps like "chicken → dolphin"). Use this BEFORE writing clipper_notes from scratch — prefer adapting a real precedent to inventing a shot.`,
+  `Retrieve grounded reference cuts from the competitor cut library for one or more EXISTING scenes of a short. Use this to refine clipper_notes AFTER scenes have been created. For brand-new script-to-scenes generation (no scenes yet), use find_similar_cuts_by_text instead.
+
+Every suggestion is anchored to a REAL indexed cut (cut_id + timestamp + video). Technique/composition from the real cut; subject can be adapted via adaptation_notes (e.g. "chicken → dolphin").`,
   {
-    short_id: z.number().describe('The short whose scenes we want suggestions for'),
-    scene_orders: z.array(z.number()).optional().describe('Optional subset of scene_order values (0-indexed). Omit to run for every scene.'),
-    k: z.number().optional().describe('How many suggestions per scene. Default 5, max 10.'),
+    short_id: z.number().describe('The short whose existing scenes we want suggestions for'),
+    scene_orders: z.array(z.number()).optional().describe('Optional subset of scene_order values. Omit to run for every scene.'),
+    k: z.number().optional().describe('How many suggestions per scene. Default 3, max 10.'),
     channel: z.string().optional().describe('Optional filter: e.g. "Mogswamp". Omit to search all indexed channels.'),
   },
   async ({ short_id, scene_orders, k, channel }) => {
-    const scenes: any[] = await apiRequest('GET', `/shorts/${short_id}/scenes`);
+    const allScenes: any[] = await apiRequest('GET', `/shorts/${short_id}/scenes`);
     const target = Array.isArray(scene_orders) && scene_orders.length > 0
-      ? scenes.filter(s => scene_orders.includes(s.scene_order))
-      : scenes;
+      ? allScenes.filter(s => scene_orders.includes(s.scene_order))
+      : allScenes;
+    const finalK = k ?? 3;
 
     const results = await Promise.all(target.map(async (scene) => {
+      const before = allScenes.filter(s => s.scene_order < scene.scene_order).slice(-2);
+      const after = allScenes.filter(s => s.scene_order > scene.scene_order).slice(0, 2);
+      const shortContext = [
+        ...before.map(s => `Before (#${s.scene_order}): ${s.script_line || ''}`),
+        ...after.map(s => `After (#${s.scene_order}): ${s.script_line || ''}`),
+      ].filter(Boolean).join(' | ');
+
       try {
-        const r = await apiRequest('POST', `/shorts/${short_id}/scenes/${scene.id}/similar-cuts`, {
-          k: k ?? 5,
-          channel,
-        });
+        const candidates = await queryCutsByText(scene.script_line || '', shortContext, finalK, channel);
         return {
           scene_order: scene.scene_order,
           scene_id: scene.id,
           script_line: scene.script_line,
-          candidates: r.suggestions.map((s: any) => ({
-            cut_id: s.cut_id,
-            channel: s.channel,
-            youtube_video_id: s.youtube_video_id,
-            video_title: s.video_title,
-            timestamp: `${formatMs(s.start_ms)}-${formatMs(s.end_ms)}`,
-            clip_type: s.clip_type,
-            pov: s.pov,
-            editing_effects: s.editing_effects,
-            visual_description: s.visual_description,
-            transcript_segment: s.transcript_segment,
-            why_it_fits: s.why_it_fits,
-            adaptation_notes: s.adaptation_notes,
-            signed_video_url: s.signed_video_url,
-          })),
+          candidates,
         };
       } catch (err: any) {
         return {
@@ -334,6 +359,24 @@ Every suggestion is anchored to a REAL indexed cut (cut_id + timestamp + video).
 
     return {
       content: [{ type: 'text' as const, text: JSON.stringify({ suggestions: results }, null, 2) }],
+    };
+  }
+);
+
+server.tool(
+  'find_similar_cuts_by_text',
+  `Search the competitor cut library by raw text — use this during script-to-scenes generation when scenes don't exist yet. Returns grounded cuts you can reference when writing clipper_notes. Cuts with clip_type "pop-culture" or "irl" are strong candidates for source-external treatment (editor sources the clip rather than clipper filming). Each returned cut includes a signed_video_url so you can cite the specific timestamp in the Mogswamp short.`,
+  {
+    script_line: z.string().describe('The narration fragment you plan to put in this scene'),
+    short_context: z.string().optional().describe('1-2 sentences of surrounding context (the short\u2019s topic / what scenes come before and after). Improves retrieval relevance.'),
+    k: z.number().optional().describe('How many suggestions to return. Default 3, max 10.'),
+    channel: z.string().optional().describe('Optional filter: e.g. "Mogswamp". Omit to search all indexed channels.'),
+  },
+  async ({ script_line, short_context, k, channel }) => {
+    const finalK = k ?? 3;
+    const candidates = await queryCutsByText(script_line, short_context || '', finalK, channel);
+    return {
+      content: [{ type: 'text' as const, text: JSON.stringify({ candidates }, null, 2) }],
     };
   }
 );
