@@ -7,6 +7,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import { ConfirmDialog } from './ui/confirm-dialog';
 import { MobileSceneForm } from './MobileSceneForm';
 import { SimilarCutsPanel } from './SimilarCutsPanel';
+import { sortScenesByScriptPosition } from '../utils/sceneOrder';
 
 interface SceneEditorProps {
   shortId: number;
@@ -588,28 +589,7 @@ export default function SceneEditor({ shortId, shortStatus, scriptContent, resea
 
   // Scenes ordered by their position in the script text (or grouped by link_group)
   const sortedScenes = React.useMemo(() => {
-    // First, get script-order sorted scenes
-    let ordered = [...scenes];
-    if (scriptContent) {
-      // Walk a cursor through the script so duplicate text binds to the next
-      // occurrence after the previous scene's end, not the first match from
-      // position 0 (which would place a later scene inside an earlier one).
-      let cursor = 0;
-      const withPos = ordered.map(s => {
-        if (!s.script_line) return { scene: s, pos: -1 };
-        let pos = scriptContent.indexOf(s.script_line, cursor);
-        if (pos === -1) pos = scriptContent.indexOf(s.script_line);
-        if (pos >= cursor) cursor = pos + s.script_line.length;
-        return { scene: s, pos };
-      });
-      withPos.sort((a, b) => {
-        if (a.pos === -1 && b.pos === -1) return 0;
-        if (a.pos === -1) return 1;
-        if (b.pos === -1) return -1;
-        return a.pos - b.pos;
-      });
-      ordered = withPos.map(p => p.scene);
-    }
+    const ordered = sortScenesByScriptPosition(scenes, scriptContent);
 
     if (!groupByLabel) return ordered;
 

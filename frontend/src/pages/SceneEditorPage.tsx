@@ -6,6 +6,7 @@ import { Short, Scene } from '../../../shared/types';
 import SceneEditor from '../components/SceneEditor';
 import jsPDF from 'jspdf';
 import { LintIssue, FormatReference } from '../services/api';
+import { sortScenesByScriptPosition } from '../utils/sceneOrder';
 
 // Must stay in sync with LINK_COLORS / getLinkGroupColor in SceneEditor.tsx so the
 // PDF label colors match what the user sees in the scene editor.
@@ -249,37 +250,7 @@ export default function SceneEditorPage() {
     if (!short) return;
     try {
       const rawScenes = await scenesApi.getAll(short.id);
-      // Match the SceneEditor UI: sort scenes by the position of their script_line
-      // within the main script text, not by scene_order. scene_order can drift from
-      // text order when scenes get inserted out of sequence, so relying on it makes
-      // the PDF number differ from what the clipper sees. See SceneEditor.tsx
-      // sortedScenes for the same logic.
-      const scriptContent = short.script_content || '';
-      // Track used positions so duplicate text maps to successive occurrences
-      const usedPos = new Set<number>();
-      const scenes = scriptContent
-        ? [...rawScenes]
-            .map(s => {
-              if (!s.script_line) return { scene: s, pos: -1 };
-              let searchFrom = 0;
-              let pos = -1;
-              while (searchFrom < scriptContent.length) {
-                const found = scriptContent.indexOf(s.script_line, searchFrom);
-                if (found === -1) break;
-                if (!usedPos.has(found)) { pos = found; break; }
-                searchFrom = found + 1;
-              }
-              if (pos !== -1) usedPos.add(pos);
-              return { scene: s, pos };
-            })
-            .sort((a, b) => {
-              if (a.pos === -1 && b.pos === -1) return 0;
-              if (a.pos === -1) return 1;
-              if (b.pos === -1) return -1;
-              return a.pos - b.pos;
-            })
-            .map(p => p.scene)
-        : rawScenes;
+      const scenes = sortScenesByScriptPosition(rawScenes, short.script_content || '');
       // Fetch image data URLs for scenes with images
       const imageDataUrls: Record<number, string> = {};
       const imagePromises = scenes
@@ -292,7 +263,7 @@ export default function SceneEditorPage() {
           } catch { /* skip */ }
         });
       await Promise.all(imagePromises);
-      exportScriptPdf(short.title, scriptContent, scenes, imageDataUrls);
+      exportScriptPdf(short.title, short.script_content || '', scenes, imageDataUrls);
     } catch (error) {
       console.error('Failed to export PDF:', error);
     }
