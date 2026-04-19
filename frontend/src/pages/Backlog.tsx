@@ -787,13 +787,29 @@ export default function Backlog() {
           <option value={0}>Any rating</option>
           {[5, 6, 7, 8, 9].map(r => <option key={r} value={r}>≥ {r}</option>)}
         </select>
-        <select value={sort} onChange={e => setSort(e.target.value as SortKey)} style={{
-          padding: isNarrow ? '8px 8px' : '5px 8px', fontSize: isNarrow ? 12 : 10,
-          color: 'var(--text-secondary)', background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-default)', borderRadius: 4,
-        }}>
-          {(Object.keys(SORT_LABELS) as SortKey[]).map(k => <option key={k} value={k}>{SORT_LABELS[k]}</option>)}
-        </select>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Sort</span>
+          {(Object.keys(SORT_LABELS) as SortKey[]).map(k => (
+            <button
+              key={k}
+              onClick={() => setSort(k)}
+              title={`Sort by ${SORT_LABELS[k]}`}
+              style={{
+                padding: isNarrow ? '6px 8px' : '4px 8px',
+                fontSize: isNarrow ? 11 : 10,
+                fontWeight: 700,
+                borderRadius: 4,
+                border: '1px solid var(--border-default)',
+                background: sort === k ? 'color-mix(in srgb, var(--gold) 18%, transparent)' : 'var(--bg-elevated)',
+                color: sort === k ? 'var(--gold)' : 'var(--text-secondary)',
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                whiteSpace: 'nowrap',
+              }}
+            >{SORT_LABELS[k]}</button>
+          ))}
+        </div>
       </div>
 
       {/* Split pane: list + preview (desktop) or list-only (mobile) */}
