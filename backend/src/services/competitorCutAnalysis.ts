@@ -224,6 +224,34 @@ export async function analyzeVideoCuts(params: {
 }
 
 /**
+ * Same salvage strategy as parseCutsJsonResilient but for the rerank
+ * response. Lower min-count (1) because even a single grounded suggestion is
+ * better than zero when the user just clicked the panel.
+ */
+function parseRerankJsonResilient(raw: string): Array<{ cut_id: number; why_it_fits: string; adaptation_notes: string[] }> {
+  try {
+    return JSON.parse(raw);
+  } catch (firstErr) {
+    const trimmed = raw.trim().replace(/^\[/, '').trim();
+    let depth = 0, lastGoodEnd = -1, inString = false, escape = false;
+    for (let i = 0; i < trimmed.length; i++) {
+      const ch = trimmed[i];
+      if (escape) { escape = false; continue; }
+      if (ch === '\\' && inString) { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) lastGoodEnd = i; }
+    }
+    if (lastGoodEnd < 0) throw firstErr;
+    const salvaged = '[' + trimmed.slice(0, lastGoodEnd + 1) + ']';
+    const parsed = JSON.parse(salvaged);
+    logger.warn('Salvaged truncated rerank JSON', { rescued: parsed.length, first_err: (firstErr as Error).message });
+    return parsed;
+  }
+}
+
+/**
  * Parse Gemini's JSON output, salvaging what we can if the response was
  * truncated mid-stream (happens occasionally — we've seen "Unterminated
  * string at position N" on videos with dense narration). Strategy:
@@ -562,7 +590,7 @@ export async function rerankCandidates(params: {
   const textPart = parts.find((p: any) => p.text && !p.thought) || parts[parts.length - 1];
   const text: string = textPart?.text ?? '';
   const jsonText = text.trim().replace(/^```json\n?/s, '').replace(/\n?```\s*$/s, '').trim();
-  const picks = JSON.parse(jsonText) as Array<{ cut_id: number; why_it_fits: string; adaptation_notes: string[] }>;
+  const picks = parseRerankJsonResilient(jsonText);
 
   const byId = new Map(candidates.map(c => [c.id, c]));
   const result: RankedSuggestion[] = [];
