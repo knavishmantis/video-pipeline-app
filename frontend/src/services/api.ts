@@ -689,6 +689,7 @@ export const scriptEngineApi = {
     angle?: string;
     q?: string;
     min_rating?: number;
+    sort?: 'recent' | 'rated';
   }): Promise<any[]> => {
     const response = await api.get('/script-engine/briefs', { params: opts });
     return response.data;

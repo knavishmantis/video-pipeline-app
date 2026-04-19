@@ -183,42 +183,55 @@ scriptEngineRouter.get('/briefs', async (req: Request, res: Response) => {
     const angle = req.query.angle as string;
     const q = (req.query.q as string || '').trim();
     const minRating = req.query.min_rating ? parseInt(req.query.min_rating as string, 10) : null;
+    const sort = req.query.sort === 'recent' ? 'recent' : 'rated';
 
-    let sql = `
-      SELECT rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.rating, rb.completed_at,
-        rb.created_at, rb.human_status, rb.summary,
-        i.title, i.source, i.hook, i.angle, i.is_time_sensitive
-      FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id
-      WHERE 1=1
-    `;
+    // DISTINCT ON (idea_id) picks the latest brief per idea — reruns + manual
+    // fixup scripts left ~140 duplicates in research_briefs, so the raw table
+    // has multiple rows per idea. The inner query applies WHERE filters and
+    // collapses to one row per idea; the outer query handles display sort.
     const params: any[] = [];
     let p = 1;
+    let where = '1=1';
     if (humanStatus === 'unreviewed') {
-      sql += ` AND rb.human_status IS NULL AND rb.verdict != 'rejected'`;
+      where += ` AND rb.human_status IS NULL AND rb.verdict != 'rejected'`;
     } else if (humanStatus === 'created' || humanStatus === 'skipped' || humanStatus === 'starred') {
-      sql += ` AND rb.human_status = $${p++}`;
+      where += ` AND rb.human_status = $${p++}`;
       params.push(humanStatus);
     }
     if (source) {
-      sql += ` AND i.source = $${p++}`;
+      where += ` AND i.source = $${p++}`;
       params.push(source);
     }
     if (angle) {
-      sql += ` AND i.angle = $${p++}`;
+      where += ` AND i.angle = $${p++}`;
       params.push(angle);
     }
     if (minRating !== null && !Number.isNaN(minRating)) {
-      sql += ` AND rb.rating >= $${p++}`;
+      where += ` AND rb.rating >= $${p++}`;
       params.push(minRating);
     }
     if (q) {
-      // Case-insensitive match against title, summary, AND full_brief so the
-      // search covers the whole brief body, not just the top.
-      sql += ` AND (i.title ILIKE $${p} OR rb.summary ILIKE $${p} OR rb.full_brief ILIKE $${p})`;
+      where += ` AND (i.title ILIKE $${p} OR rb.summary ILIKE $${p} OR rb.full_brief ILIKE $${p})`;
       params.push(`%${q}%`);
       p++;
     }
-    sql += ` ORDER BY rb.rating DESC NULLS LAST, rb.created_at DESC`;
+
+    const outerOrder = sort === 'recent'
+      ? 'created_at DESC'
+      : 'rating DESC NULLS LAST, created_at DESC';
+
+    const sql = `
+      SELECT * FROM (
+        SELECT DISTINCT ON (rb.idea_id)
+          rb.id, rb.idea_id, rb.verdict, rb.verdict_reason, rb.rating, rb.completed_at,
+          rb.created_at, rb.human_status, rb.summary,
+          i.title, i.source, i.hook, i.angle, i.is_time_sensitive
+        FROM research_briefs rb JOIN ideas i ON rb.idea_id = i.id
+        WHERE ${where}
+        ORDER BY rb.idea_id, rb.created_at DESC
+      ) latest
+      ORDER BY ${outerOrder}
+    `;
     const briefs = await seQuery(sql, params);
     res.json(briefs);
   } catch (error: any) {
@@ -229,7 +242,13 @@ scriptEngineRouter.get('/briefs', async (req: Request, res: Response) => {
 // GET /api/script-engine/briefs/counts — tab counts for Backlog header
 scriptEngineRouter.get('/briefs/counts', async (_req: Request, res: Response) => {
   try {
+    // Counts are taken on the latest-brief-per-idea view so they match /briefs.
     const rows = await seQuery(`
+      WITH rb AS (
+        SELECT DISTINCT ON (idea_id) id, idea_id, verdict, rating, human_status
+        FROM research_briefs
+        ORDER BY idea_id, created_at DESC
+      )
       SELECT
         COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected')::INTEGER AS unreviewed,
         COUNT(*) FILTER (WHERE rb.human_status = 'starred')::INTEGER AS starred,
@@ -240,7 +259,7 @@ scriptEngineRouter.get('/briefs/counts', async (_req: Request, res: Response) =>
         COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND rb.rating >= 8)::INTEGER AS high_unreviewed,
         COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND rb.rating BETWEEN 6 AND 7)::INTEGER AS mid_unreviewed,
         COUNT(*) FILTER (WHERE rb.human_status IS NULL AND rb.verdict != 'rejected' AND (rb.rating < 6 OR rb.rating IS NULL))::INTEGER AS low_unreviewed
-      FROM research_briefs rb
+      FROM rb
     `);
     res.json(rows[0] || { unreviewed: 0, starred: 0, created: 0, skipped: 0, total: 0, avg_rating_unreviewed: 0, high_unreviewed: 0, mid_unreviewed: 0, low_unreviewed: 0 });
   } catch (error: any) {

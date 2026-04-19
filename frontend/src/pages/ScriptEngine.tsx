@@ -65,6 +65,7 @@ export default function ScriptEngine() {
   const [selectedIdea, setSelectedIdea] = useState<any>(null);
   const [allIdeas, setAllIdeas] = useState<any[] | null>(null);
   const [allBriefs, setAllBriefs] = useState<any[] | null>(null);
+  const [briefsSort, setBriefsSort] = useState<'rated' | 'recent'>('rated');
   const [allScripts, setAllScripts] = useState<any[] | null>(null);
   const [selectedScript, setSelectedScript] = useState<any>(null);
   const [viewMode, setViewMode] = useState<'dashboard' | 'ideas' | 'briefs' | 'scripts'>('dashboard');
@@ -82,7 +83,9 @@ export default function ScriptEngine() {
   };
   const loadIdea = async (id: number) => { try { setSelectedIdea(await scriptEngineApi.getIdea(id)); } catch (e) { console.error(e); } };
   const loadAllIdeas = async (status?: string) => { try { setAllIdeas(await scriptEngineApi.getIdeas(status)); } catch (e) { console.error(e); } };
-  const loadAllBriefs = async () => { try { setAllBriefs(await scriptEngineApi.getBriefs()); } catch (e) { console.error(e); } };
+  const loadAllBriefs = async (sort: 'rated' | 'recent' = 'rated') => {
+    try { setAllBriefs(await scriptEngineApi.getBriefs({ sort })); } catch (e) { console.error(e); }
+  };
   const loadAllScripts = async () => { try { setAllScripts(await scriptEngineApi.getScripts()); } catch (e) { console.error(e); } };
   const loadScript = async (id: number) => { try { setSelectedScript(await scriptEngineApi.getScript(id)); } catch (e) { console.error(e); } };
   const updateScriptStatus = async (id: number, status: string) => {
@@ -229,6 +232,20 @@ export default function ScriptEngine() {
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
         <button onClick={() => { setViewMode('dashboard'); setAllBriefs(null); }} style={{ fontSize: '10px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase' }}>&larr; Dashboard</button>
         <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>All Research Briefs ({allBriefs?.length || data.briefStats?.total || 0})</span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <span style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Sort</span>
+          {(['rated', 'recent'] as const).map(k => (
+            <button key={k}
+              onClick={() => { setBriefsSort(k); loadAllBriefs(k); }}
+              style={{
+                fontSize: '9px', fontWeight: 700, padding: '3px 8px', borderRadius: '3px',
+                border: '1px solid var(--border-default)',
+                background: briefsSort === k ? 'color-mix(in srgb, var(--gold) 15%, transparent)' : 'transparent',
+                color: briefsSort === k ? 'var(--gold)' : 'var(--text-muted)',
+                cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em',
+              }}>{k === 'rated' ? 'Rating' : 'Newest'}</button>
+          ))}
+        </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
         {(allBriefs || data.recentBriefs)?.map((b: any) => (
@@ -492,7 +509,7 @@ export default function ScriptEngine() {
           <PNL style={{ flex: 1, maxHeight: '160px', overflow: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Research Briefs</span>
-              <button onClick={() => { setViewMode('briefs'); loadAllBriefs(); }} style={{ fontSize: '8px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>View all {data.briefStats?.total || 0} →</button>
+              <button onClick={() => { setViewMode('briefs'); loadAllBriefs(briefsSort); }} style={{ fontSize: '8px', color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 700 }}>View all {data.briefStats?.total || 0} →</button>
             </div>
             {data.recentBriefs?.map((b: any) => (
               <div key={b.id} onClick={() => loadIdea(b.idea_id)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', cursor: 'pointer', borderBottom: '1px solid var(--border-subtle)' }}
